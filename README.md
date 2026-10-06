@@ -1,0 +1,24 @@
+# 🌙 Histoires du soir
+
+App web (PWA) pour créer des histoires pour enfants :
+- **Gemini** écrit l'histoire avec des balises d'émotion ElevenLabs v3 (`[whispers]`, `[excited]`, `[giggles]`…)
+- **ElevenLabs** la raconte avec les bonnes intonations
+
+**App en ligne :** https://jonathanlaberge91-debug.github.io/histoires-du-soir/
+
+## Utilisation
+1. Ouvrir l'app dans Chrome (Android) → ⋮ → *Ajouter à l'écran d'accueil*
+2. ⚙️ Réglages : clé Gemini (aistudio.google.com/apikey) + clé ElevenLabs (permissions *Text to Speech* et *Voices read*)
+3. ✨ Créer → 🔊 Raconter
+
+Les clés et les histoires (avec l'audio) restent **uniquement sur l'appareil** (localStorage / IndexedDB). Aucune clé n'est dans ce dépôt — ne jamais en ajouter.
+
+Astuce : `…/#gemini=CLÉ&eleven=CLÉ&voice=VOICE_ID` enregistre les clés en un clic (elles sont retirées de l'adresse aussitôt).
+
+## Notes techniques
+- Fichier unique `index.html` (HTML/CSS/JS, sans dépendances) + `manifest.json`, `sw.js`, icônes
+- Le prompt Gemini (`SYSTEM_PROMPT`, `MOODS`, `LANGS`) est dans `index.html`
+- Modèles Gemini : `gemini-flash-latest` par défaut, repli automatique (`FALLBACK_MODELS`) si surcharge (503/429) ou modèle retiré (404)
+- ElevenLabs : modèle `eleven_v3` (balises audio), texte découpé en morceaux ≤ 2500 caractères puis MP3 concaténés
+- Compte ElevenLabs gratuit : 10 000 caractères/mois, voix de base seulement — les voix de la bibliothèque (dont les québécoises) exigent un forfait payant
+- Après une modification, incrémenter `CACHE` dans `sw.js` pour forcer la mise à jour sur le téléphone

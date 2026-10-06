@@ -1,0 +1,588 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1e1b4b">
+<title>Histoires du soir</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+  :root {
+    --bg: #0f0d2e; --card: #1e1b4b; --card2: #2a2668; --text: #f5f3ff; --muted: #a5a1d6;
+    --accent: #fbbf24; --accent2: #f472b6; --ok: #34d399; --err: #f87171; --r: 18px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  body { padding: env(safe-area-inset-top) 16px calc(90px + env(safe-area-inset-bottom)); min-height: 100vh;
+    background: radial-gradient(ellipse at top, #2e2a7a 0%, var(--bg) 60%) fixed; }
+  header { text-align: center; padding: 22px 0 8px; }
+  header h1 { margin: 0; font-size: 1.6rem; }
+  header p { margin: 4px 0 0; color: var(--muted); font-size: .9rem; }
+  .card { background: var(--card); border-radius: var(--r); padding: 16px; margin: 14px 0;
+    box-shadow: 0 6px 24px rgba(0,0,0,.25); }
+  label { display: block; font-size: .85rem; color: var(--muted); margin: 12px 0 6px; }
+  input, select, textarea { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid #3b3786;
+    background: var(--card2); color: var(--text); font-size: 1rem; font-family: inherit; }
+  textarea { min-height: 80px; resize: vertical; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { padding: 9px 14px; border-radius: 999px; background: var(--card2); border: 1px solid #3b3786;
+    color: var(--text); font-size: .9rem; cursor: pointer; user-select: none; }
+  .chip.on { background: var(--accent); color: #1e1b4b; border-color: var(--accent); font-weight: 600; }
+  button.big { width: 100%; padding: 16px; border: 0; border-radius: 14px; font-size: 1.1rem; font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #1e1b4b; margin-top: 16px; cursor: pointer; }
+  button.big:disabled { opacity: .5; }
+  button.sec { padding: 10px 14px; border-radius: 12px; border: 1px solid #3b3786; background: var(--card2);
+    color: var(--text); font-size: .95rem; cursor: pointer; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  h2 { margin: 0 0 6px; font-size: 1.25rem; }
+  .story { line-height: 1.7; font-size: 1.05rem; white-space: pre-wrap; }
+  .tag { display: inline-block; font-size: .7rem; padding: 1px 7px; border-radius: 8px; background: #4c1d95;
+    color: #ddd6fe; vertical-align: middle; margin: 0 2px; }
+  .hide-tags .tag { display: none; }
+  audio { width: 100%; margin-top: 12px; }
+  .status { font-size: .9rem; color: var(--muted); margin-top: 10px; min-height: 1.2em; }
+  .status.err { color: var(--err); } .status.ok { color: var(--ok); }
+  .progress { height: 6px; background: var(--card2); border-radius: 6px; overflow: hidden; margin-top: 8px; display: none; }
+  .progress > div { height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+  nav { position: fixed; left: 0; right: 0; bottom: 0; display: flex; background: #15123d;
+    border-top: 1px solid #2e2a7a; padding-bottom: env(safe-area-inset-bottom); z-index: 10; }
+  nav button { flex: 1; background: none; border: 0; color: var(--muted); padding: 12px 0 10px; font-size: .8rem; cursor: pointer; }
+  nav button span { display: block; font-size: 1.4rem; }
+  nav button.on { color: var(--accent); }
+  .view { display: none; } .view.on { display: block; }
+  .lib-item { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 14px;
+    background: var(--card2); margin-bottom: 8px; cursor: pointer; }
+  .lib-item .t { flex: 1; } .lib-item small { color: var(--muted); display: block; }
+  .hint { font-size: .8rem; color: var(--muted); margin-top: 6px; line-height: 1.4; }
+  .hint a { color: var(--accent); }
+  .spin { display: inline-block; width: 16px; height: 16px; border: 2px solid currentColor; border-right-color: transparent;
+    border-radius: 50%; animation: s .8s linear infinite; vertical-align: -3px; margin-right: 6px; }
+  @keyframes s { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<header>
+  <h1>🌙 Histoires du soir</h1>
+  <p>Écrites par Gemini · racontées par ElevenLabs</p>
+</header>
+
+<!-- ============ CRÉER ============ -->
+<section id="v-create" class="view on">
+  <div class="card">
+    <div class="row">
+      <div><label>Prénom de l'enfant</label><input id="name" placeholder="ex. Léa"></div>
+      <div><label>Âge</label><input id="age" type="number" min="2" max="12" value="5"></div>
+    </div>
+    <label>De quoi parle l'histoire ? (optionnel)</label>
+    <textarea id="idea" placeholder="ex. un dragon qui a peur du noir, un voyage sur la lune avec son toutou Max…"></textarea>
+
+    <label>Ambiance</label>
+    <div class="chips" data-group="mood">
+      <div class="chip on" data-v="dodo">😴 Douce pour dodo</div>
+      <div class="chip" data-v="aventure">🗺️ Aventure</div>
+      <div class="chip" data-v="drole">🤪 Drôle</div>
+      <div class="chip" data-v="magique">✨ Magique</div>
+      <div class="chip" data-v="animaux">🦊 Animaux</div>
+    </div>
+
+    <label>Durée</label>
+    <div class="chips" data-group="length">
+      <div class="chip" data-v="court">Courte (~3 min)</div>
+      <div class="chip on" data-v="moyen">Moyenne (~5 min)</div>
+      <div class="chip" data-v="long">Longue (~9 min)</div>
+    </div>
+
+    <label>Leçon / valeur (optionnel)</label>
+    <input id="moral" placeholder="ex. le partage, le courage, être gentil avec sa sœur">
+
+    <button class="big" id="btn-gen">✨ Créer l'histoire</button>
+    <div class="status" id="gen-status"></div>
+  </div>
+
+  <div class="card" id="story-card" style="display:none">
+    <h2 id="s-title"></h2>
+    <div class="actions">
+      <button class="sec" id="btn-read">🔊 Raconter</button>
+      <button class="sec" id="btn-tags">🏷️ Balises</button>
+      <button class="sec" id="btn-regen">🔁 Une autre</button>
+    </div>
+    <div class="progress" id="tts-prog"><div></div></div>
+    <div class="status" id="tts-status"></div>
+    <audio id="player" controls style="display:none"></audio>
+    <div class="actions" id="audio-actions" style="display:none">
+      <button class="sec" id="btn-dl">⬇️ Télécharger MP3</button>
+    </div>
+    <div class="story hide-tags" id="s-text" style="margin-top:14px"></div>
+  </div>
+</section>
+
+<!-- ============ BIBLIOTHÈQUE ============ -->
+<section id="v-lib" class="view">
+  <div class="card">
+    <h2>📚 Mes histoires</h2>
+    <p class="hint">Les histoires et leur audio sont gardés sur ton téléphone — les réécouter ne coûte aucun crédit.</p>
+    <div id="lib-list" style="margin-top:12px"></div>
+  </div>
+</section>
+
+<!-- ============ RÉGLAGES ============ -->
+<section id="v-set" class="view">
+  <div class="card">
+    <h2>⚙️ Réglages</h2>
+
+    <label>Clé API Gemini</label>
+    <input id="k-gemini" type="password" placeholder="AIza…">
+    <p class="hint">Gratuite sur <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a></p>
+
+    <label>Modèle Gemini</label>
+    <input id="m-gemini" value="gemini-flash-latest">
+    <p class="hint">gemini-flash-latest = toujours le Flash le plus récent. Si le modèle est surchargé, l'app en essaie un autre automatiquement.</p>
+
+    <label>Clé API ElevenLabs</label>
+    <input id="k-eleven" type="password" placeholder="sk_…">
+    <p class="hint">Sur <a href="https://elevenlabs.io/app/settings/api-keys" target="_blank">elevenlabs.io → API Keys</a>. Active les permissions « Text to Speech » et « Voices (read) ».</p>
+
+    <label>Voix</label>
+    <div style="display:flex; gap:8px">
+      <select id="voice" style="flex:1"><option value="">— charge les voix —</option></select>
+      <button class="sec" id="btn-voices">↻</button>
+    </div>
+    <input id="voice-id" placeholder="…ou colle un Voice ID" style="margin-top:8px">
+    <button class="sec" id="btn-preview" style="margin-top:8px">▶️ Écouter un extrait</button>
+
+    <label>Modèle de voix</label>
+    <select id="m-eleven">
+      <option value="eleven_v3">Eleven v3 — le plus expressif (recommandé)</option>
+      <option value="eleven_multilingual_v2">Multilingual v2 — plus stable, moins d'émotions</option>
+    </select>
+
+    <label>Style de lecture (v3)</label>
+    <select id="stability">
+      <option value="0">Créatif — très expressif</option>
+      <option value="0.5" selected>Naturel — équilibré</option>
+      <option value="1">Stable — régulier, peu de variation</option>
+    </select>
+
+    <label>Langue de l'histoire</label>
+    <select id="lang">
+      <option value="fr-qc">Français (Québec)</option>
+      <option value="fr-fr">Français (France)</option>
+      <option value="en">English</option>
+    </select>
+
+    <button class="big" id="btn-save">💾 Enregistrer</button>
+    <div class="status" id="set-status"></div>
+  </div>
+</section>
+
+<nav>
+  <button data-v="v-create" class="on"><span>✨</span>Créer</button>
+  <button data-v="v-lib"><span>📚</span>Histoires</button>
+  <button data-v="v-set"><span>⚙️</span>Réglages</button>
+</nav>
+
+<script>
+/* ==================== PROMPT GEMINI ==================== */
+const SYSTEM_PROMPT = `Tu es un auteur primé d'histoires pour enfants ET un directeur artistique pour la narration audio.
+Ton texte sera lu à voix haute par une voix de synthèse ElevenLabs (modèle v3) qui comprend des BALISES AUDIO entre crochets.
+Ton objectif : une histoire captivante, chaleureuse, adaptée à l'âge, ET un texte écrit pour l'OREILLE, qui sonne comme un vrai conteur passionné.
+
+## 1. Qualité de l'histoire
+- Structure claire : une ouverture qui accroche, un problème ou un désir, des péripéties (règle de trois quand c'est possible), un moment fort, une résolution rassurante, une fin douce.
+- Un héros attachant ; si un prénom d'enfant est fourni, l'enfant est le héros (ou son meilleur ami).
+- Des personnages secondaires aux personnalités bien distinctes (le timide, le grognon, le farceur…) pour que la voix puisse les jouer.
+- Des dialogues vivants : au moins le tiers de l'histoire en dialogues.
+- Des sons et onomatopées amusants (« Plouf ! », « Toc, toc, toc… », « Crrrac ! ») et, si ça s'y prête, une petite formule répétée que l'enfant peut anticiper.
+- Vocabulaire adapté à l'âge ; phrases courtes et rythmées, en variant la longueur pour la musicalité.
+- Rien d'effrayant pour de vrai : les méchants deviennent gentils ou ridicules ; jamais de violence, de mort ou de peur non résolue.
+- La leçon, s'il y en a une, se montre par l'action, jamais par un sermon.
+
+## 2. Écrire pour la voix (TRÈS IMPORTANT)
+Balises audio ElevenLabs v3 — toujours EN ANGLAIS, entre crochets, placées JUSTE AVANT la phrase qu'elles colorent :
+- Émotions : [excited] [happy] [curious] [surprised] [sad] [nervous] [scared] [relieved] [proud] [amazed] [mischievously] [grumpy] [warmly] [tenderly]
+- Manière de dire : [whispers] [softly] [shouting] [dramatically] [slowly] [quickly] [playfully] [mysteriously] [sleepy]
+- Réactions humaines : [laughs] [giggles] [chuckles] [sighs] [gasps] [yawns] [sniffs] [clears throat] [gulps]
+- Voix des personnages (juste avant leur réplique) : [deep voice] [squeaky voice] [old voice] [tiny voice] [booming voice]
+- Pauses : [pause] pour un vrai silence dramatique.
+
+Règles d'usage des balises :
+- Environ une balise toutes les une ou deux phrases ; jamais deux balises collées sauf combinaison voulue (ex. [whispers][excited]).
+- La NARRATION aussi est expressive : suspense en [mysteriously] ou [whispers], découvertes en [amazed], moments tendres en [warmly].
+- Chaque personnage garde la même balise de voix à chaque réplique pour être reconnaissable.
+- Les balises sont des indications de jeu : ne JAMAIS les mettre au milieu d'un mot ni les traduire.
+
+Ponctuation expressive (la voix la respecte) :
+- Points de suspension « … » pour le suspense et les hésitations.
+- Tirets « — » pour une interruption ou une pause courte.
+- Points d'exclamation et d'interrogation pour l'intonation.
+- MAJUSCULES sur UN mot pour l'insister, avec parcimonie (max une fois par paragraphe).
+- Allonger un son pour l'effet : « Ouuuuh… », « Trèèès loin ».
+
+Lisibilité pour la synthèse vocale :
+- Écris les nombres en lettres. Aucune abréviation, aucun emoji, aucun markdown, aucun astérisque, aucun titre dans le texte.
+- Dialogues TOUJOURS entre guillemets français « … » (jamais de guillemets droits "), avec une incise claire (« dit le renard ») pour savoir qui parle.
+- OBLIGATOIRE : découpe l'histoire en paragraphes courts (deux à quatre phrases), séparés par une ligne vide (\\n\\n dans le JSON). Chaque réplique de dialogue commence un nouveau paragraphe. Ces coupures donnent à la voix le temps de respirer.
+
+## 3. Format de sortie
+Réponds UNIQUEMENT en JSON : {"titre": "...", "histoire": "..."}.
+Le titre est court et magique, sans balise. L'histoire contient les balises audio et commence par une ouverture accrocheuse.`;
+
+const MOODS = {
+  dodo: `Histoire du soir pour s'endormir : rythme lent et apaisant, phrases douces, beaucoup de [softly], [warmly] et [whispers]. L'énergie DESCEND progressivement. Termine par le héros qui s'endort paisiblement, avec un [yawns] et une dernière phrase chuchotée qui souhaite bonne nuit à l'enfant.`,
+  aventure: `Histoire d'aventure : du suspense, des rebondissements, du courage, de l'élan ([excited], [dramatically], [gasps]). Finis par un retour au calme rassurant.`,
+  drole: `Histoire très drôle : situations absurdes, quiproquos, personnages loufoques, beaucoup de [laughs], [giggles], [playfully], des bruits rigolos. Une fin qui fait sourire.`,
+  magique: `Histoire merveilleuse : magie, émerveillement, lieux enchantés ([amazed], [mysteriously], [whispers]). Une ambiance féerique.`,
+  animaux: `Histoire d'animaux attachants qui parlent, chacun avec sa voix et sa personnalité bien distincte. Tendresse et amitié.`
+};
+const FALLBACK_MODELS = ['gemini-flash-latest', 'gemini-3.5-flash', 'gemini-3.7-flash', 'gemini-3.6-flash'];
+/* Voix de base ElevenLabs (utilisées si la clé n'a pas la permission « Voices read ») */
+const PREMADE_VOICES = [
+  ['XrExE9yKIg1WjnnlVkGX', 'Matilda — femme, chaleureuse, conteuse'],
+  ['FGY2WhTYpPnrIDTdsKH5', 'Laura — femme, enjouée'],
+  ['EXAVITQu4vr4xnSDxMaL', 'Sarah — femme, douce et rassurante'],
+  ['pFZP5JQG7iQjIQuC4Bku', 'Lily — femme, velouté'],
+  ['Xb7hH8MSUJpSbSDYk0k2', 'Alice — femme, claire'],
+  ['JBFqnCBsd6RMkjVDRZzb', 'George — homme, conteur chaleureux'],
+  ['nPczCjzI2devNBz1zQrb', 'Brian — homme, grave et posé'],
+  ['onwK4e9ZLuTAKqWW03F9', 'Daniel — homme, narrateur'],
+  ['IKne3meq5aSn9XLyUdCD', 'Charlie — homme, décontracté'],
+  ['pqHfZKP75CyOw3sBF5Ji', 'Bill — homme, grand-papa']
+];
+function fillPremade() {
+  const cur = $('voice-id').value;
+  $('voice').innerHTML = PREMADE_VOICES.map(([id, n]) => `<option value="${id}" ${id === cur ? 'selected' : ''}>${n}</option>`).join('');
+  if (!cur) $('voice-id').value = $('voice').value;
+}
+const LENGTHS = { court: 'environ 350 mots', moyen: 'environ 700 mots', long: 'environ 1200 mots' };
+const LANGS = {
+  'fr-qc': `Écris en français avec une saveur québécoise chaleureuse : quelques mots et images d'ici (la cabane à sucre, la tuque, la poudrerie, les bleuets, « mon trésor ») tout en restant un français clair et bien prononçable par une voix de synthèse — pas de joual écrit phonétiquement.`,
+  'fr-fr': `Écris en français standard, clair et chaleureux.`,
+  'en': `Write the story in English (tags stay in English too). Le JSON garde les clés "titre" et "histoire".`
+};
+
+/* ==================== UTILITAIRES ==================== */
+const $ = id => document.getElementById(id);
+const store = {
+  get: (k, d = '') => { try { return localStorage.getItem(k) ?? d; } catch { return d; } },
+  set: (k, v) => { try { localStorage.setItem(k, v); } catch {} }
+};
+function status(el, msg, cls = '') { el.className = 'status ' + cls; el.innerHTML = msg; }
+const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const stripTags = t => t.replace(/\[[^\]\n]{1,40}\]\s*/g, '');
+
+/* IndexedDB : bibliothèque d'histoires + audio */
+const DB = {
+  db: null,
+  open() {
+    if (this.db) return Promise.resolve(this.db);
+    return new Promise((res, rej) => {
+      const r = indexedDB.open('histoires', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('stories', { keyPath: 'id' });
+      r.onsuccess = () => res(this.db = r.result);
+      r.onerror = () => rej(r.error);
+    });
+  },
+  async tx(mode, fn) {
+    const db = await this.open();
+    return new Promise((res, rej) => {
+      const t = db.transaction('stories', mode), s = t.objectStore('stories');
+      const r = fn(s);
+      t.oncomplete = () => res(r && r.result);
+      t.onerror = () => rej(t.error);
+    });
+  },
+  put: s => DB.tx('readwrite', st => st.put(s)),
+  del: id => DB.tx('readwrite', st => st.delete(id)),
+  all: () => DB.tx('readonly', st => st.getAll()),
+  get: id => DB.tx('readonly', st => st.get(id))
+};
+
+/* ==================== ÉTAT ==================== */
+let current = null;      // { id, titre, histoire, audio?: Blob, createdAt }
+let audioUrl = null;
+
+/* ==================== NAVIGATION / CHIPS ==================== */
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === b.dataset.v));
+  if (b.dataset.v === 'v-lib') renderLib();
+  window.scrollTo(0, 0);
+});
+document.querySelectorAll('.chips').forEach(g => g.addEventListener('click', e => {
+  const c = e.target.closest('.chip'); if (!c) return;
+  g.querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x === c));
+}));
+const chipVal = g => document.querySelector(`.chips[data-group="${g}"] .chip.on`).dataset.v;
+
+/* ==================== RÉGLAGES ==================== */
+const SETTINGS = ['k-gemini', 'm-gemini', 'k-eleven', 'voice-id', 'm-eleven', 'stability', 'lang', 'name', 'age'];
+SETTINGS.forEach(id => { const v = store.get('set:' + id); if (v) $(id).value = v; });
+/* Import de clés par lien : …/#gemini=CLÉ&eleven=CLÉ (enregistrées puis retirées de l'adresse) */
+if (location.hash.length > 1) {
+  const h = new URLSearchParams(location.hash.slice(1));
+  if (h.get('gemini')) store.set('set:k-gemini', $('k-gemini').value = h.get('gemini'));
+  if (h.get('eleven')) store.set('set:k-eleven', $('k-eleven').value = h.get('eleven'));
+  if (h.get('voice')) store.set('set:voice-id', $('voice-id').value = h.get('voice'));
+  history.replaceState(null, '', location.pathname);
+}
+if (['gemini-2.5-flash', 'gemini-3.8-flash'].includes($('m-gemini').value)) $('m-gemini').value = 'gemini-flash-latest';
+function saveSettings() {
+  SETTINGS.forEach(id => store.set('set:' + id, $(id).value.trim()));
+  const sel = $('voice').value; if (sel) { $('voice-id').value = sel; store.set('set:voice-id', sel); }
+}
+$('btn-save').onclick = () => { saveSettings(); status($('set-status'), '✔ Réglages enregistrés', 'ok'); };
+$('voice').onchange = () => { if ($('voice').value) $('voice-id').value = $('voice').value; };
+
+async function loadVoices() {
+  const key = $('k-eleven').value.trim();
+  if (!key) return status($('set-status'), 'Entre d\'abord ta clé ElevenLabs.', 'err');
+  status($('set-status'), '<span class="spin"></span>Chargement des voix…');
+  try {
+    const r = await fetch('https://api.elevenlabs.io/v1/voices', { headers: { 'xi-api-key': key } });
+    if (!r.ok) throw new Error(await errText(r));
+    const { voices } = await r.json();
+    const cur = $('voice-id').value;
+    $('voice').innerHTML = '<option value="">— choisis une voix —</option>' + voices.map(v => {
+      const l = v.labels || {};
+      const info = [l.gender, l.accent, l.description || l.descriptive, l.use_case].filter(Boolean).join(' · ');
+      return `<option value="${v.voice_id}" ${v.voice_id === cur ? 'selected' : ''} data-prev="${v.preview_url || ''}">${esc(v.name)}${info ? ' — ' + esc(info) : ''}</option>`;
+    }).join('');
+    status($('set-status'), `✔ ${voices.length} voix chargées. Astuce : une voix « narration » ou « storytelling » donne le meilleur résultat.`, 'ok');
+  } catch (e) {
+    fillPremade();
+    status($('set-status'), /voices_read|permission/i.test(e.message)
+      ? 'Ta clé n\'a pas la permission « Voices (read) » : voici les voix de base d\'ElevenLabs. Elles fonctionnent toutes très bien.'
+      : 'Impossible de charger tes voix (' + e.message + ') : voici les voix de base.', /voices_read|permission/i.test(e.message) ? '' : 'err');
+  }
+}
+$('btn-voices').onclick = loadVoices;
+$('btn-preview').onclick = async () => {
+  const id = $('voice-id').value.trim() || $('voice').value;
+  if (!id) return status($('set-status'), 'Choisis une voix.', 'err');
+  saveSettings();
+  status($('set-status'), '<span class="spin"></span>Génération d\'un extrait…');
+  try {
+    const sample = $('lang').value === 'en'
+      ? '[warmly] Once upon a time… [whispers] in a forest full of secrets, [excited] a little fox found a GLOWING stone!'
+      : '[warmly] Il était une fois… [whispers] dans une forêt pleine de secrets, [excited] un petit renard qui trouva une pierre BRILLANTE !';
+    const blob = await tts(sample);
+    new Audio(URL.createObjectURL(blob)).play();
+    status($('set-status'), '✔ Lecture de l\'extrait', 'ok');
+  } catch (e) { status($('set-status'), 'Erreur : ' + e.message, 'err'); }
+};
+
+/* Réessaie automatiquement si le service est surchargé (429 / 5xx) */
+async function withRetry(fn, onRetry) {
+  for (let i = 1; ; i++) {
+    const r = await fn();
+    if (r.ok || i > 2 || !(r.status === 429 || r.status >= 500)) return r;
+    onRetry?.(i);
+    await new Promise(ok => setTimeout(ok, 2000 * 2 ** (i - 1)));
+  }
+}
+
+async function errText(r) {
+  try { const j = await r.json(); return j.error?.message || j.detail?.message || JSON.stringify(j.detail || j); }
+  catch { return 'HTTP ' + r.status; }
+}
+
+/* ==================== GEMINI ==================== */
+async function generateStory() {
+  const key = $('k-gemini').value.trim();
+  if (!key) throw new Error('Ajoute ta clé Gemini dans ⚙️ Réglages.');
+  const name = $('name').value.trim(), age = $('age').value || '5';
+  const idea = $('idea').value.trim(), moral = $('moral').value.trim();
+  const mood = chipVal('mood'), length = chipVal('length'), lang = $('lang').value;
+
+  const user = [
+    `Écris une histoire originale pour un enfant de ${age} ans.`,
+    name ? `Le héros s'appelle ${name}.` : `Invente un héros attachant.`,
+    idea ? `Idée de départ : ${idea}` : `Surprends-moi avec une idée originale et inattendue.`,
+    moral ? `Valeur à transmettre subtilement : ${moral}.` : '',
+    `Ambiance : ${MOODS[mood]}`,
+    `Longueur : ${LENGTHS[length]} (sans compter les balises).`,
+    LANGS[lang],
+    $('m-eleven').value === 'eleven_v3' ? '' : 'Mise en garde : la voix ne comprend PAS les balises. N\'en mets AUCUNE ; exprime les émotions uniquement par la ponctuation et les incises.'
+  ].filter(Boolean).join('\n');
+
+  // Modèle choisi, puis des plans B si celui-ci est surchargé ou retiré
+  const models = [...new Set([$('m-gemini').value.trim() || 'gemini-flash-latest', ...FALLBACK_MODELS])];
+  const body = JSON.stringify({
+    systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+    contents: [{ role: 'user', parts: [{ text: user }] }],
+    generationConfig: {
+      temperature: 1.0,
+      responseMimeType: 'application/json',
+      responseSchema: {
+        type: 'OBJECT',
+        properties: { titre: { type: 'STRING' }, histoire: { type: 'STRING' } },
+        required: ['titre', 'histoire']
+      }
+    }
+  });
+  let r;
+  for (const model of models) {
+    r = await withRetry(() => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, body
+    }), n => status($('gen-status'), `<span class="spin"></span>Gemini est occupé, nouvel essai (${n}/2)…`));
+    if (r.ok || !(r.status === 404 || r.status === 429 || r.status >= 500)) break;
+    status($('gen-status'), `<span class="spin"></span>${model} indisponible, essai d'un autre modèle…`);
+  }
+  if (!r.ok) throw new Error('Gemini : ' + await errText(r));
+  const data = await r.json();
+  const txt = (data.candidates?.[0]?.content?.parts || []).filter(p => !p.thought).map(p => p.text || '').join('');
+  if (!txt) throw new Error('Gemini n\'a rien renvoyé (' + (data.candidates?.[0]?.finishReason || data.promptFeedback?.blockReason || 'inconnu') + ').');
+  const j = JSON.parse(txt.replace(/^```(json)?|```$/g, '').trim());
+  return { titre: j.titre.trim(), histoire: j.histoire.replace(/\\n/g, '\n').trim() };
+}
+
+/* ==================== ELEVENLABS ==================== */
+async function tts(text) {
+  const key = $('k-eleven').value.trim();
+  const voice = $('voice-id').value.trim() || $('voice').value;
+  if (!key) throw new Error('Ajoute ta clé ElevenLabs dans ⚙️ Réglages.');
+  if (!voice) throw new Error('Choisis une voix dans ⚙️ Réglages.');
+  const model = $('m-eleven').value;
+  const body = { text: model === 'eleven_v3' ? text : stripTags(text), model_id: model };
+  body.voice_settings = model === 'eleven_v3'
+    ? { stability: parseFloat($('stability').value) }
+    : { stability: 0.4, similarity_boost: 0.8, style: 0.45, use_speaker_boost: true };
+  const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice}?output_format=mp3_44100_128`, {
+    method: 'POST',
+    headers: { 'xi-api-key': key, 'Content-Type': 'application/json', 'Accept': 'audio/mpeg' },
+    body: JSON.stringify(body)
+  });
+  if (!r.ok) throw new Error('ElevenLabs : ' + await errText(r));
+  return r.blob();
+}
+
+/* Découpe en morceaux ≤ max caractères, sur les paragraphes puis les phrases */
+function chunk(text, max = 2500) {
+  const parts = [];
+  let cur = '';
+  const push = s => { if (s.trim()) parts.push(s.trim()); };
+  for (const para of text.split(/\n\s*\n/)) {
+    const pieces = para.length > max ? para.match(/[^.!?…]+[.!?…»"]*\s*/g) || [para] : [para];
+    for (const p of pieces) {
+      if ((cur + '\n\n' + p).length > max) { push(cur); cur = p; }
+      else cur = cur ? cur + (pieces.length > 1 ? ' ' : '\n\n') + p : p;
+    }
+  }
+  push(cur);
+  return parts;
+}
+
+/* ==================== AFFICHAGE ==================== */
+function showStory(s) {
+  current = s;
+  $('story-card').style.display = 'block';
+  $('s-title').textContent = s.titre;
+  $('s-text').innerHTML = esc(s.histoire).replace(/\[([^\]\n]{1,40})\]/g, '<span class="tag">$1</span>');
+  status($('tts-status'), `${s.histoire.length.toLocaleString('fr-CA')} caractères ≈ crédits ElevenLabs utilisés`);
+  setAudio(s.audio || null);
+}
+function setAudio(blob) {
+  if (audioUrl) URL.revokeObjectURL(audioUrl);
+  audioUrl = blob ? URL.createObjectURL(blob) : null;
+  $('player').style.display = blob ? 'block' : 'none';
+  $('audio-actions').style.display = blob ? 'flex' : 'none';
+  $('btn-read').textContent = blob ? '▶️ Réécouter' : '🔊 Raconter';
+  if (blob) {
+    $('player').src = audioUrl;
+    if ('mediaSession' in navigator) navigator.mediaSession.metadata = new MediaMetadata({ title: current.titre, artist: 'Histoires du soir' });
+  } else $('player').removeAttribute('src');
+}
+
+/* ==================== ACTIONS ==================== */
+async function onGenerate() {
+  saveSettings();
+  const btn = $('btn-gen');
+  btn.disabled = $('btn-regen').disabled = true;
+  status($('gen-status'), '<span class="spin"></span>Gemini écrit ton histoire…');
+  try {
+    const s = await generateStory();
+    s.id = Date.now().toString(36);
+    s.createdAt = Date.now();
+    s.meta = { name: $('name').value.trim(), mood: chipVal('mood') };
+    await DB.put(s);
+    showStory(s);
+    status($('gen-status'), '✔ Histoire prête !', 'ok');
+    $('story-card').scrollIntoView({ behavior: 'smooth' });
+  } catch (e) { status($('gen-status'), e.message, 'err'); }
+  btn.disabled = $('btn-regen').disabled = false;
+}
+$('btn-gen').onclick = onGenerate;
+$('btn-regen').onclick = onGenerate;
+$('btn-tags').onclick = () => $('s-text').classList.toggle('hide-tags');
+
+$('btn-read').onclick = async () => {
+  if (!current) return;
+  if (current.audio) { $('player').play(); return; }
+  saveSettings();
+  const btn = $('btn-read'); btn.disabled = true;
+  const prog = $('tts-prog'), bar = prog.firstElementChild;
+  prog.style.display = 'block'; bar.style.width = '3%';
+  try {
+    const parts = chunk(current.histoire);
+    const blobs = [];
+    for (let i = 0; i < parts.length; i++) {
+      status($('tts-status'), `<span class="spin"></span>ElevenLabs enregistre la voix… (${i + 1}/${parts.length})`);
+      blobs.push(await tts(parts[i]));
+      bar.style.width = ((i + 1) / parts.length * 100) + '%';
+    }
+    current.audio = new Blob(blobs, { type: 'audio/mpeg' });
+    await DB.put(current);
+    setAudio(current.audio);
+    status($('tts-status'), '✔ Bonne écoute ! L\'audio est sauvegardé dans tes histoires.', 'ok');
+    $('player').play().catch(() => {});
+  } catch (e) { status($('tts-status'), e.message, 'err'); }
+  prog.style.display = 'none'; btn.disabled = false;
+};
+
+$('btn-dl').onclick = () => {
+  if (!current?.audio) return;
+  const a = document.createElement('a');
+  a.href = audioUrl;
+  a.download = current.titre.replace(/[^\p{L}\p{N} _-]/gu, '').trim() + '.mp3';
+  a.click();
+};
+
+/* ==================== BIBLIOTHÈQUE ==================== */
+async function renderLib() {
+  const list = (await DB.all()).sort((a, b) => b.createdAt - a.createdAt);
+  const el = $('lib-list');
+  if (!list.length) { el.innerHTML = '<p class="hint">Aucune histoire pour l\'instant. Crée la première ! ✨</p>'; return; }
+  el.innerHTML = list.map(s => `
+    <div class="lib-item" data-id="${s.id}">
+      <div style="font-size:1.5rem">${s.audio ? '🎧' : '📖'}</div>
+      <div class="t">${esc(s.titre)}<small>${new Date(s.createdAt).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long' })}${s.meta?.name ? ' · ' + esc(s.meta.name) : ''}</small></div>
+      <button class="sec" data-del="${s.id}">🗑️</button>
+    </div>`).join('');
+}
+$('lib-list').addEventListener('click', async e => {
+  const del = e.target.closest('[data-del]');
+  if (del) {
+    e.stopPropagation();
+    if (confirm('Supprimer cette histoire ?')) { await DB.del(del.dataset.del); renderLib(); }
+    return;
+  }
+  const item = e.target.closest('.lib-item'); if (!item) return;
+  showStory(await DB.get(item.dataset.id));
+  status($('gen-status'), '');
+  document.querySelector('nav button[data-v="v-create"]').click();
+  setTimeout(() => $('story-card').scrollIntoView({ behavior: 'smooth' }), 50);
+});
+
+/* Premier lancement : aller aux réglages si clés manquantes */
+if (!$('k-gemini').value || !$('k-eleven').value) {
+  document.querySelector('nav button[data-v="v-set"]').click();
+  status($('set-status'), '👋 Bienvenue ! Entre tes deux clés API, charge les voix (↻), puis enregistre.');
+} else loadVoices().then(() => { if (!$('set-status').classList.contains('err')) status($('set-status'), ''); });
+
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
