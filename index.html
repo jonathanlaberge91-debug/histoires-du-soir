@@ -79,6 +79,27 @@
     border-radius: 50%; animation: s .8s linear infinite; vertical-align: -3px; margin-right: 6px; }
   @keyframes s { to { transform: rotate(360deg); } }
 
+  .avec-micro { display: flex; gap: 8px; align-items: flex-start; }
+  .avec-micro > input, .avec-micro > textarea { flex: 1; min-width: 0; }
+  button.micro { padding: 11px 12px; flex: none; }
+  button.micro.rec { background: var(--err); border-color: var(--err); }
+  label.sec { display: inline-block; margin: 0; color: var(--text); }
+  #livre { display: none; }
+  @media print {
+    @page { size: letter; margin: 18mm; }
+    html, body { background: #fff !important; color: #222; padding: 0 !important; }
+    body > *:not(#livre) { display: none !important; }
+    #livre { display: block !important; font-family: Georgia, "Times New Roman", serif; color: #222; }
+    .l-couv { text-align: center; page-break-after: always; padding-top: 12mm; }
+    .l-couv img { max-width: 100%; max-height: 150mm; border-radius: 6mm; }
+    .l-couv h1 { font-size: 28pt; line-height: 1.2; margin: 12mm 0 4mm; }
+    .l-pour { font-size: 16pt; font-style: italic; margin: 0; }
+    .l-date { color: #777; font-size: 11pt; }
+    .l-texte p { font-size: 15pt; line-height: 1.6; margin: 0 0 5mm; text-align: justify; }
+    .l-texte p:first-child::first-letter { font-size: 42pt; float: left; line-height: .9; margin: 1mm 2mm 0 0; }
+    .l-fin { text-align: center !important; font-style: italic; margin-top: 12mm !important; }
+  }
+
   /* ===== Mode nuit : écran très sombre, texte en gros, lumière chaude ===== */
   #nuit-sortie { display: none; }
   body.nuit { background: #000; padding-top: 12px; }
@@ -98,7 +119,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>🌙 Histoires du soir</h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span style="opacity:.6">v10</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span style="opacity:.6">v11</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -113,6 +134,17 @@
 
     <label>De quoi parle l'histoire ? (optionnel)</label>
     <textarea id="idea" placeholder="ex. un dragon qui a peur du noir, un voyage sur la lune avec son toutou Max…"></textarea>
+
+    <label>📷 Partir d'un dessin (optionnel)</label>
+    <div class="actions" style="margin-top:0">
+      <label class="sec" for="dessin">📷 Prendre en photo ou choisir un dessin</label>
+      <button class="sec" id="dessin-retirer" style="display:none">✖ Retirer le dessin</button>
+    </div>
+    <input id="dessin" type="file" accept="image/*" style="display:none">
+    <img id="dessin-apercu" class="cover" alt="" style="display:none; max-height:240px; object-fit:contain; background:#fff">
+
+    <label>☀️ Sa journée (optionnel) — ce qui s'est vraiment passé aujourd'hui</label>
+    <textarea id="journee" placeholder="ex. Abby est allée au parc, elle a perdu sa mitaine rouge, grand-maman est venue souper…"></textarea>
 
     <label>Ambiance</label>
     <div class="chips" data-group="mood">
@@ -176,7 +208,11 @@
       <button class="sec" id="btn-suite">📖 La suite</button>
       <button class="sec" id="btn-regen">🔁 Une autre</button>
       <button class="sec" id="btn-tags">🏷️ Balises</button>
+      <button class="sec" id="btn-partager">🔗 Partager</button>
+      <button class="sec" id="btn-cast">📡 Haut-parleur</button>
+      <button class="sec" id="btn-livre">📕 Livre (PDF)</button>
     </div>
+    <audio id="cast-audio" preload="none" style="display:none"></audio>
     <div class="actions" id="phone-ctrl" style="display:none">
       <button class="sec" id="btn-ph-pause">⏸️ Pause</button>
       <button class="sec" id="btn-ph-stop">⏹️ Arrêter</button>
@@ -305,6 +341,8 @@
       </select>
       <label>Vitesse</label>
       <input id="ms-rate" type="range" min="-30" max="10" step="5" value="-10">
+      <label class="check"><input type="checkbox" id="opt-multivoix" checked>🎭 Une voix par personnage (Sylvie, Jean, Antoine, Thierry)</label>
+      <p class="hint">Gemini repère qui parle, et chaque personnage reçoit sa voix (plus grave pour un ogre, plus aiguë pour un enfant). La voix choisie ci-dessus reste celle du narrateur.</p>
       <button class="sec" id="btn-preview-ms" style="margin-top:8px">▶️ Écouter un extrait</button>
       <p class="hint">Les voix d'ici de la lecture à voix haute de Microsoft Edge, par le relais de ton serveur : gratuites, sans compte et sans limite. C'est un service non officiel : s'il cesse de répondre, l'app passe toute seule à la voix suivante. Elle lit sans les chuchotements ni les rires.</p>
     </div>
@@ -693,7 +731,7 @@ const chipVal = g => document.querySelector(`.chips[data-group="${g}"] .chip.on`
 /* ==================== RÉGLAGES ==================== */
 const SETTINGS = ['k-gemini', 'm-gemini', 'k-eleven', 'voice-id', 'm-eleven', 'stability', 'lang', 'name', 'age', 'friends',
   'engine', 'g-voice', 'p-voice', 'p-rate', 'musique-vol', 'drive-url', 'drive-key', 'k-gcloud', 'gc-voice', 'gc-rate', 'gc-plafond', 'ms-voice', 'ms-rate'];
-const CHECKS = ['opt-musique', 'opt-suivre', 'opt-image', 'opt-drive'];
+const CHECKS = ['opt-musique', 'opt-suivre', 'opt-image', 'opt-drive', 'opt-multivoix'];
 SETTINGS.forEach(id => { const v = store.get('set:' + id); if (v) $(id).value = v; });
 CHECKS.forEach(id => { const v = store.get('set:' + id); if (v) $(id).checked = v === '1'; });
 /* Import de clés par lien : …/#gemini=CLÉ&eleven=CLÉ (enregistrées puis retirées de l'adresse) */
@@ -858,14 +896,14 @@ function secours(nb, sauf) {
 const NOMS_VOIX = { edge: 'la voix québécoise Microsoft', eleven: 'ElevenLabs', gcloud: 'la voix québécoise Google', gemini: 'la voix Gemini', phone: 'la voix du téléphone' };
 
 /* ==================== GEMINI : TEXTE ==================== */
-async function appelGemini(user, schema, onStatus) {
+async function appelGemini(user, schema, onStatus, opts = {}) {
   const key = $('k-gemini').value.trim();
   if (!key) throw new Error('Ajoute ta clé Gemini dans ⚙️ Réglages.');
   const models = [...new Set([$('m-gemini').value.trim() || 'gemini-flash-latest', ...FALLBACK_MODELS])];
   const body = JSON.stringify({
-    systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-    contents: [{ role: 'user', parts: [{ text: user }] }],
-    generationConfig: { temperature: 1.0, responseMimeType: 'application/json', responseSchema: schema }
+    systemInstruction: { parts: [{ text: opts.system || SYSTEM_PROMPT }] },
+    contents: [{ role: 'user', parts: [{ text: user }, ...(opts.images || []).map(im => ({ inlineData: { mimeType: im.type, data: im.b64 } }))] }],
+    generationConfig: { temperature: opts.temperature ?? 1.0, responseMimeType: 'application/json', responseSchema: schema }
   });
   let r;
   for (const model of models) {
@@ -902,6 +940,8 @@ function consignes(opts = {}) {
     opts.sansIdee ? '' : (idea ? `Idée de départ : ${idea}` : `Surprends-moi avec une idée originale et inattendue.`),
     souciTxt ? `Petit défi de la vraie vie à apprivoiser : ${souciTxt}. Le héros vit une situation semblable, ressent la même émotion (nommée simplement, sans en faire un drame), découvre un ou deux trucs concrets qu'un enfant peut vraiment utiliser, et réussit. Ton rassurant, jamais moralisateur ; l'enfant doit se reconnaître et se sentir capable.` : '',
     moral ? `Valeur à transmettre subtilement : ${moral}.` : '',
+    !opts.sansIdee && $('journee').value.trim() ? `Ce qui s'est VRAIMENT passé aujourd'hui dans la vie de l'enfant : ${$('journee').value.trim()}. Transforme ces vrais moments en aventure : l'enfant doit les reconnaître (mêmes lieux, mêmes objets, mêmes personnes), mais tout devient extraordinaire et se termine bien.` : '',
+    !opts.sansIdee && dessin ? `L'enfant a fait le DESSIN joint en image. L'histoire raconte CE dessin : ses personnages, ses couleurs, ses détails (même un gribouillis devient quelque chose de magique). Décris-les pour que l'enfant reconnaisse son dessin et soit fier.` : '',
     `Ambiance : ${MOODS[mood]}`,
     LANGS[lang],
     $('engine').value === 'eleven' && $('m-eleven').value !== 'eleven_v3' ? 'Mise en garde : la voix ne comprend PAS les balises. N\'en mets AUCUNE ; exprime les émotions uniquement par la ponctuation et les incises.' : ''
@@ -911,7 +951,7 @@ function consignes(opts = {}) {
 /* Histoire complète */
 async function genererHistoire(onStatus) {
   const user = [...consignes(), `Longueur : ${LENGTHS[chipVal('length')]} (sans compter les balises).`].join('\n');
-  return appelGemini(user, SCHEMA, onStatus);
+  return appelGemini(user, SCHEMA, onStatus, { images: dessin ? [dessin] : [] });
 }
 
 /* Résumé de ce qui précède (pour les suites), sans balises et pas trop long */
@@ -949,7 +989,7 @@ async function genererPartie(s, choix, onStatus) {
       ? `Écris la PARTIE ${n} (la dernière, ${lg}) : commence par raconter le choix de l'enfant comme une évidence joyeuse, puis mène l'histoire à une belle fin (selon l'ambiance). Pas de nouveau choix. Dans « titre », redonne le même titre.`
       : `Écris la PARTIE ${n} (${lg}) ${n > 1 ? 'en commençant par raconter le choix de l\'enfant, ' : ''}et termine-la par une question à l'enfant qui propose DEUX possibilités claires et amusantes (dans le texte de l'histoire, avec une balise [excited] ou [whispers]), par exemple : « Que devrait faire Léa ? Entrer dans la grotte qui brille… ou suivre le petit hibou ? ». Dans « choixA » et « choixB », résume chaque possibilité en deux à cinq mots, dans le même ordre.${n > 1 ? ' Dans « titre », redonne le même titre.' : ''}`
   ].filter(Boolean).join('\n');
-  return appelGemini(user, derniere ? SCHEMA : SCHEMA_CHOIX, onStatus);
+  return appelGemini(user, derniere ? SCHEMA : SCHEMA_CHOIX, onStatus, { images: n === 1 && dessin ? [dessin] : [] });
 }
 
 /* ==================== GEMINI : IMAGE DE COUVERTURE ==================== */
@@ -1020,23 +1060,225 @@ async function tts(text) {
 /* ==================== VOIX QUÉBÉCOISE MICROSOFT (relais du serveur) ==================== */
 const URL_TTS_EDGE = location.hostname === '95.groupelaberge.ca' ? '/histoires/tts' : 'https://95.groupelaberge.ca/histoires/tts';
 let edgeEnPanne = false;
+/* Un morceau de texte → MP3 (voix, vitesse en %, hauteur en Hz) */
+async function edgeMorceau(texte, voix, vitesse, hauteur = 0) {
+  let r;
+  try {
+    r = await withRetry(() => fetch(URL_TTS_EDGE, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ texte, voix, vitesse, hauteur })
+    }));
+  } catch { throw new Error('Voix Microsoft : serveur injoignable'); }
+  if (!r.ok) throw new Error('Voix Microsoft : ' + await errText(r).catch(() => 'HTTP ' + r.status));
+  return r.blob();
+}
 async function ttsEdge(text, onStatus, prog) {
   const morceaux = chunk(stripTags(text), 2500), blobs = [];
   for (let i = 0; i < morceaux.length; i++) {
     onStatus?.(`<span class="spin"></span>Voix québécoise Microsoft… (${i + 1}/${morceaux.length})`);
-    let r;
-    try {
-      r = await withRetry(() => fetch(URL_TTS_EDGE, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ texte: morceaux[i], voix: $('ms-voice').value, vitesse: parseInt($('ms-rate').value, 10) })
-      }));
-    } catch { throw new Error('Voix Microsoft : serveur injoignable'); }
-    if (!r.ok) throw new Error('Voix Microsoft : ' + await errText(r).catch(() => 'HTTP ' + r.status));
-    blobs.push(await r.blob());
+    blobs.push(await edgeMorceau(morceaux[i], $('ms-voice').value, parseInt($('ms-rate').value, 10)));
     prog?.((i + 1) / morceaux.length);
   }
   return new Blob(blobs, { type: 'audio/mpeg' });
 }
+
+/* ───── Une voix par personnage ─────
+   Gemini découpe le texte (sans le changer) en narration et répliques, et décrit chaque personnage ;
+   chaque personnage reçoit une des 4 voix d'ici, avec une hauteur selon son âge. */
+const SYS_VOIX = `Tu prépares un livre audio à plusieurs voix. Tu ne réécris JAMAIS le texte : tu le recopies mot pour mot, dans l'ordre, en morceaux.`;
+const SCHEMA_VOIX = {
+  type: 'OBJECT',
+  properties: {
+    personnages: { type: 'ARRAY', items: { type: 'OBJECT', properties: {
+      nom: { type: 'STRING' }, genre: { type: 'STRING', enum: ['f', 'm'] }, age: { type: 'STRING', enum: ['enfant', 'adulte', 'vieux'] } },
+      required: ['nom', 'genre', 'age'] } },
+    segments: { type: 'ARRAY', items: { type: 'OBJECT', properties: { qui: { type: 'STRING' }, texte: { type: 'STRING' } }, required: ['qui', 'texte'] } }
+  },
+  required: ['personnages', 'segments']
+};
+const MS_HOMMES = ['fr-CA-JeanNeural', 'fr-CA-AntoineNeural', 'fr-CA-ThierryNeural'];
+async function distribuerRoles(texte, onStatus) {
+  const propre = paras(stripTags(texte)).join('\n\n');
+  const user = [
+    'Voici une histoire pour enfants. Découpe-la en morceaux pour une lecture à plusieurs voix.',
+    '- Recopie TOUT le texte, mot pour mot, sans rien ajouter, enlever ni corriger, dans l\'ordre.',
+    '- Un morceau est soit de la narration (qui = "narrateur"), soit les paroles d\'un personnage : seulement les mots entre guillemets « » qu\'il prononce, sans les guillemets. L\'incise (« dit le renard », « murmura Abby ») reste au narrateur.',
+    '- Dans « personnages », donne chaque personnage qui parle, avec exactement le même nom que dans « qui », son genre (f ou m) et son âge (enfant, adulte, vieux). Un animal ou une créature : choisis selon son caractère (un gros ours = m adulte, une petite souris = enfant).',
+    '---', propre
+  ].join('\n');
+  const j = await appelGemini(user, SCHEMA_VOIX, onStatus, { system: SYS_VOIX, temperature: 0.2 });
+  const total = (j.segments || []).reduce((n, x) => n + (x.texte || '').length, 0);
+  const attendu = propre.replace(/[«»]/g, '').length;
+  if (!j.segments?.length || total < attendu * 0.85 || total > attendu * 1.15) throw new Error('découpage des voix incomplet');
+  return j;
+}
+function attribuerVoix(personnages) {
+  const narr = $('ms-voice').value;
+  const hommes = MS_HOMMES.filter(v => v !== narr);
+  const roles = {};
+  let iH = 0, iF = 0;
+  for (const p of personnages) {
+    let voix, hauteur = 0, vitesse = 0;
+    if (p.genre === 'm') { voix = hommes[iH % hommes.length]; hauteur = -8 * Math.floor(iH / hommes.length); iH++; }
+    else { voix = 'fr-CA-SylvieNeural'; hauteur = (narr === 'fr-CA-SylvieNeural' ? 12 : 0) + 8 * iF; iF++; }
+    if (p.age === 'enfant') { hauteur += 22; vitesse += 6; }
+    else if (p.age === 'vieux') { hauteur -= 12; vitesse -= 12; }
+    roles[p.nom] = { voix, hauteur: Math.max(-40, Math.min(40, hauteur)), vitesse };
+  }
+  return roles;
+}
+async function ttsEdgeMulti(texte, onStatus, prog) {
+  onStatus('<span class="spin"></span>Gemini distribue les rôles…');
+  const j = await distribuerRoles(texte, onStatus);
+  const roles = attribuerVoix(j.personnages || []);
+  const narr = { voix: $('ms-voice').value, hauteur: 0, vitesse: 0 };
+  const base = parseInt($('ms-rate').value, 10);
+  const segs = [];                                             // morceaux voisins de la même voix : réunis
+  for (const x of j.segments) {
+    const t = (x.texte || '').trim(); if (!t) continue;
+    const qui = roles[x.qui] ? x.qui : 'narrateur';
+    const der = segs[segs.length - 1];
+    if (der && der.qui === qui && der.t.length + t.length < 2400) der.t += (qui === 'narrateur' ? '\n' : ' ') + t;
+    else segs.push({ qui, t });
+  }
+  const out = new Array(segs.length);
+  let fait = 0, k = 0;
+  const travailleur = async () => {
+    while (k < segs.length) {
+      const i = k++, r = roles[segs[i].qui] || narr;
+      out[i] = await edgeMorceau(segs[i].t, r.voix, base + r.vitesse, r.hauteur);
+      fait++;
+      onStatus(`<span class="spin"></span>Une voix par personnage (${Object.keys(roles).length} personnages)… ${fait}/${segs.length}`);
+      prog?.(fait / segs.length);
+    }
+  };
+  await Promise.all([travailleur(), travailleur(), travailleur()]);   // 3 à la fois
+  return new Blob(out, { type: 'audio/mpeg' });
+}
+
+/* ==================== DESSIN, DICTÉE ==================== */
+let dessin = null;   // { blob, b64, type } : le dessin de l'enfant (photo réduite)
+$('dessin').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  try {
+    const blob = await reduireImage(f);
+    dessin = { blob, b64: await b64(blob), type: blob.type || 'image/jpeg' };
+    const ap = $('dessin-apercu');
+    if (ap.dataset.url) URL.revokeObjectURL(ap.dataset.url);
+    ap.dataset.url = ap.src = URL.createObjectURL(blob);
+    ap.style.display = 'block'; $('dessin-retirer').style.display = '';
+  } catch (err) { status($('gen-status'), 'Photo illisible : ' + err.message, 'err'); }
+};
+$('dessin-retirer').onclick = () => {
+  dessin = null;
+  $('dessin-apercu').style.display = 'none'; $('dessin-retirer').style.display = 'none';
+};
+
+const Reco = window.SpeechRecognition || window.webkitSpeechRecognition;
+let ecoute = null;
+function dicter(id, btn) {
+  if (!Reco) return alert('La dictée n\'est pas offerte par ce navigateur (essaie Chrome).');
+  if (ecoute) { ecoute.stop(); return; }
+  const r = new Reco(), el = $(id);
+  r.lang = $('lang').value === 'en' ? 'en-US' : $('lang').value === 'fr-fr' ? 'fr-FR' : 'fr-CA';
+  r.continuous = true; r.interimResults = true;
+  const debut = el.value.trim() ? el.value.trim() + ' ' : '';
+  let final = '';
+  r.onresult = e => {
+    let encours = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) final += t + ' '; else encours += t;
+    }
+    el.value = debut + final + encours;
+  };
+  r.onerror = e => { if (e.error === 'not-allowed' || e.error === 'service-not-allowed') alert('Autorise le micro pour l\'app (Paramètres du téléphone → Apps → Chrome → Autorisations → Micro).'); };
+  r.onend = () => { ecoute = null; btn.textContent = '🎤'; btn.classList.remove('rec'); el.value = el.value.trim(); };
+  ecoute = r; btn.textContent = '⏹️'; btn.classList.add('rec');
+  r.start();
+}
+['friends', 'idea', 'journee', 'moral'].forEach(id => {
+  const el = $(id), b = document.createElement('button'), w = document.createElement('div');
+  b.type = 'button'; b.className = 'sec micro'; b.textContent = '🎤'; b.title = 'Dicter au micro';
+  b.onclick = () => dicter(id, b);
+  w.className = 'avec-micro';
+  el.parentNode.insertBefore(w, el); w.appendChild(el); w.appendChild(b);
+});
+
+/* ==================== PARTAGER, HAUT-PARLEUR, LIVRE ==================== */
+const URL_RELAIS = location.hostname === '95.groupelaberge.ca' ? '' : 'https://95.groupelaberge.ca';
+async function audioComplet(s) {
+  if (s.audio) return s.audio;
+  if (s.partAudio?.length && s.partAudio.every(Boolean)) return await concatAudio(s.partAudio);
+  return null;
+}
+/* Met l'histoire (texte, voix, couverture) sur ton serveur : lien pour la famille + adresse pour le haut-parleur */
+async function publier(s, st) {
+  const audio = await audioComplet(s);
+  const sig = [audio ? audio.size : 0, s.image ? s.image.size : 0, s.histoire.length].join(':');
+  if (s.partage?.sig === sig) return s.partage;
+  st?.('<span class="spin"></span>Préparation du lien…');
+  const corps = { titre: s.titre, texte: paras(stripTags(s.histoire)).join('\n\n'), prenom: s.meta?.name || '' };
+  if (audio) corps.audio = { b64: await b64(audio), type: audio.type || 'audio/mpeg' };
+  if (s.image) corps.image = { b64: await b64(s.image), type: s.image.type || 'image/jpeg' };
+  const r = await fetch(URL_RELAIS + '/histoires/partage', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corps) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || !j.ok) throw new Error(j.erreur || 'HTTP ' + r.status);
+  s.partage = { id: j.id, url: j.url, audio: j.audio, sig };
+  await DB.put(s);
+  return s.partage;
+}
+$('btn-partager').onclick = async () => {
+  const s = current; if (!s) return;
+  const st = (m, c) => status($('tts-status'), m, c);
+  if (!(await audioComplet(s)) && !confirm('Cette histoire n\'a pas encore de voix enregistrée : partager seulement le texte et l\'image ?\n\n(Touche « Raconter » d\'abord pour que la famille puisse aussi l\'écouter.)')) return;
+  try {
+    const p = await publier(s, st);
+    const texte = `🌙 « ${s.titre} » — une histoire du soir${s.meta?.name ? ' pour ' + s.meta.name : ''}`;
+    st(`🔗 Lien à partager : <a href="${esc(p.url)}" target="_blank">${esc(p.url)}</a>`, 'ok');
+    if (navigator.share) await navigator.share({ title: s.titre, text: texte, url: p.url }).catch(() => {});
+    else { await navigator.clipboard?.writeText(p.url).catch(() => {}); st(`🔗 Lien copié : <a href="${esc(p.url)}" target="_blank">${esc(p.url)}</a>`, 'ok'); }
+  } catch (e) { st('Partage : ' + esc(e.message), 'err'); }
+};
+$('btn-cast').onclick = async () => {
+  const s = current; if (!s) return;
+  const st = (m, c) => status($('tts-status'), m, c);
+  const a = $('cast-audio');
+  const planB = 'Plan B : ouvre l\'app <b>Google Home</b> → ton haut-parleur → <b>« Diffuser mon audio »</b>, puis touche ▶️ ici.';
+  if (!(await audioComplet(s))) return st('Touche d\'abord « 🔊 Raconter » : il faut la voix enregistrée pour l\'envoyer au haut-parleur.', 'err');
+  if (!a.remote) return st('Ce navigateur ne sait pas diffuser vers un haut-parleur. ' + planB, 'err');
+  // Le haut-parleur lit l'audio depuis ton serveur : il faut d'abord l'y mettre (puis retoucher le bouton,
+  // car le choix du haut-parleur doit suivre immédiatement un toucher).
+  const sig = s.partage?.sig;
+  if (!s.partage?.audio || sig !== [(await audioComplet(s)).size, s.image ? s.image.size : 0, s.histoire.length].join(':')) {
+    try { await publier(s, st); } catch (e) { return st('Haut-parleur : ' + esc(e.message), 'err'); }
+    return st('📡 Prêt ! Touche encore <b>📡 Haut-parleur</b> pour choisir l\'appareil.', 'ok');
+  }
+  try {
+    if (a.src !== s.partage.audio) a.src = s.partage.audio;
+    await a.remote.prompt();
+    a.play().catch(() => {});
+    st('📡 L\'histoire joue sur le haut-parleur.', 'ok');
+  } catch (e) {
+    if (e.name === 'NotAllowedError') return st('');
+    st((e.name === 'NotSupportedError' || e.name === 'NotFoundError' ? 'Aucun haut-parleur proposé ici. ' : 'Haut-parleur : ' + esc(e.message) + '. ') + planB, 'err');
+  }
+};
+$('btn-livre').onclick = () => {
+  const s = current; if (!s) return;
+  const L = $('livre');
+  L.querySelectorAll('img').forEach(i => URL.revokeObjectURL(i.src));
+  const img = s.image ? URL.createObjectURL(s.image) : '';
+  const date = new Date(s.createdAt).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric' });
+  L.innerHTML = `<section class="l-couv">${img ? `<img src="${img}" alt="">` : ''}<h1>${esc(s.titre)}</h1>` +
+    `${s.meta?.name ? `<p class="l-pour">Une histoire pour ${esc(s.meta.name)}</p>` : ''}<p class="l-date">${date}</p></section>` +
+    `<section class="l-texte">${paras(stripTags(s.histoire)).map(p => `<p>${esc(p)}</p>`).join('')}<p class="l-fin">— Fin —</p></section>`;
+  const imprimer = () => setTimeout(() => window.print(), 250);
+  const im = L.querySelector('img');
+  if (im && !im.complete) { im.onload = imprimer; im.onerror = imprimer; } else imprimer();
+  status($('tts-status'), '📕 Dans la fenêtre d\'impression, choisis « Enregistrer au format PDF » (ou ton imprimante).', 'ok');
+};
 
 /* ==================== VOIX QUÉBÉCOISE GOOGLE (Cloud Text-to-Speech) ==================== */
 const gcMois = () => 'gc:' + new Date().toISOString().slice(0, 7);
@@ -1361,6 +1603,8 @@ async function creer(fn, extra = {}) {
       meta: { name: $('name').value.trim(), friends: $('friends').value.trim(), mood: chipVal('mood') }, ...extra
     };
     if (extra.interactive) { s.parts = [{ texte: j.histoire, choixA: j.choixA, choixB: j.choixB }]; s.partAudio = []; }
+    if (s.avecDessin && dessin) { s.image = dessin.blob; s.dessin = true; }
+    delete s.avecDessin;
     await DB.put(s);
     showStory(s);
     driveSauver(s);
@@ -1372,8 +1616,8 @@ async function creer(fn, extra = {}) {
   btn.disabled = $('btn-regen').disabled = $('btn-suite').disabled = false;
 }
 function onGenerate() {
-  if (chipVal('format') === 'choix') return creer(st => genererPartie(null, null, st), { interactive: true });
-  return creer(genererHistoire);
+  if (chipVal('format') === 'choix') return creer(st => genererPartie(null, null, st), { interactive: true, avecDessin: true });
+  return creer(genererHistoire, { avecDessin: true });
 }
 $('btn-gen').onclick = onGenerate;
 $('btn-regen').onclick = onGenerate;
@@ -1418,6 +1662,10 @@ async function enregistrer(texte, onStatus, prog) {
   }
   if (moteur === 'edge') {
     try {
+      if ($('opt-multivoix').checked && $('k-gemini').value.trim()) {
+        try { return { blob: await ttsEdgeMulti(texte, onStatus, prog) }; }
+        catch (e) { if (/injoignable|Voix Microsoft/.test(e.message)) throw e; onStatus(`<span class="spin"></span>Une voix par personnage impossible (${esc(e.message)}) → une seule voix`); }
+      }
       return { blob: await ttsEdge(texte, onStatus, prog) };
     } catch (e) {
       if ($('engine').value !== 'auto') throw e;
@@ -1714,5 +1962,6 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.se
 /* Une nouvelle version vient de s'installer : on recharge une fois pour l'afficher */
 if ('serviceWorker' in navigator) { let vu = !!navigator.serviceWorker.controller; navigator.serviceWorker.addEventListener('controllerchange', () => { if (vu) location.reload(); vu = true; }); }
 </script>
+<div id="livre"></div>
 </body>
 </html>

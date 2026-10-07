@@ -11,7 +11,8 @@ NoNewPrivileges=yes
 ProtectSystem=strict
 ProtectHome=yes
 PrivateTmp=yes
-MemoryMax=300M
+MemoryMax=400M
+StateDirectory=histoires-tts
 
 [Install]
 WantedBy=multi-user.target

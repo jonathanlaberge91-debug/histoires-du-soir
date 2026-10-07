@@ -61,3 +61,14 @@ Astuce : `…/#gemini=CLÉ&eleven=CLÉ&voice=VOICE_ID` enregistre les clés en u
 - Ordre automatique : ElevenLabs (s'il reste des crédits) → Microsoft québécois → Google (si clé) → Gemini → téléphone.
 - « 📲 Ouvrir la version du serveur avec mes réglages » (sur GitHub Pages) : envoie tout au Drive, puis copie les réglages
   dans l'adresse (`#cfg=…`, jamais transmis au serveur) ; l'autre côté récupère les histoires du Drive.
+
+## v11 (2026-10-07)
+- **Une voix par personnage** (voix Microsoft) : Gemini découpe le texte en narration / répliques (`distribuerRoles`,
+  recopie mot pour mot, contrôle de longueur ±15 %), `attribuerVoix` donne Jean/Antoine/Thierry aux hommes, Sylvie aux
+  femmes, hauteur selon l'âge ; 3 morceaux enregistrés à la fois ; repli sur une seule voix si le découpage échoue.
+- **Dessin** : photo réduite à 900 px envoyée à Gemini avec la consigne ; devient la couverture.
+- **Sa journée** : vrais moments du jour transformés en aventure. **Dictée** 🎤 (Web Speech, fr-CA) sur les champs texte.
+- **Partager** : `POST /histoires/partage` sur le relais → page `https://95.groupelaberge.ca/histoires/ecouter/<id>`
+  (couverture, lecteur, texte) ; partages gardés dans `/var/lib/histoires-tts/partages`, plafond 3 Go (les plus vieux partent).
+- **Haut-parleur** : Remote Playback (`audio.remote.prompt()`) sur l'adresse publique de l'audio partagé ; plan B Google Home.
+- **Livre (PDF)** : mise en page d'impression (`@media print`, couverture + texte + « Fin ») puis `window.print()`.
