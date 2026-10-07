@@ -22,9 +22,14 @@
   header p { margin: 4px 0 0; color: var(--muted); font-size: .9rem; }
   .card { background: var(--card); border-radius: var(--r); padding: 16px; margin: 14px 0;
     box-shadow: 0 6px 24px rgba(0,0,0,.25); }
+  .sub { background: var(--card2); border-radius: 14px; padding: 12px; margin-top: 12px; }
   label { display: block; font-size: .85rem; color: var(--muted); margin: 12px 0 6px; }
   input, select, textarea { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid #3b3786;
     background: var(--card2); color: var(--text); font-size: 1rem; font-family: inherit; }
+  .sub input, .sub select { background: var(--card); }
+  input[type=checkbox] { width: auto; margin: 0 8px 0 0; transform: scale(1.3); }
+  input[type=range] { padding: 0; }
+  .check { display: flex; align-items: center; margin: 12px 0 0; color: var(--text); font-size: .95rem; }
   textarea { min-height: 80px; resize: vertical; }
   .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .chips { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -33,37 +38,64 @@
   .chip.on { background: var(--accent); color: #1e1b4b; border-color: var(--accent); font-weight: 600; }
   button.big { width: 100%; padding: 16px; border: 0; border-radius: 14px; font-size: 1.1rem; font-weight: 700;
     background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #1e1b4b; margin-top: 16px; cursor: pointer; }
-  button.big:disabled { opacity: .5; }
+  button.big:disabled, button.sec:disabled { opacity: .5; }
   button.sec { padding: 10px 14px; border-radius: 12px; border: 1px solid #3b3786; background: var(--card2);
     color: var(--text); font-size: .95rem; cursor: pointer; }
+  button.choix { flex: 1 1 45%; padding: 16px 12px; border-radius: 14px; border: 2px solid var(--accent);
+    background: var(--card2); color: var(--text); font-size: 1.05rem; font-weight: 700; cursor: pointer; }
   .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
   h2 { margin: 0 0 6px; font-size: 1.25rem; }
-  .story { line-height: 1.7; font-size: 1.05rem; white-space: pre-wrap; }
+  .chap { color: var(--accent); font-size: .85rem; font-weight: 600; }
+  .story { line-height: 1.7; font-size: 1.05rem; }
+  .story p { margin: 0 0 .9em; white-space: pre-wrap; padding: 2px 6px; border-radius: 8px; transition: background .4s; }
+  .story p.lit { background: rgba(251,191,36,.16); }
   .tag { display: inline-block; font-size: .7rem; padding: 1px 7px; border-radius: 8px; background: #4c1d95;
     color: #ddd6fe; vertical-align: middle; margin: 0 2px; }
   .hide-tags .tag { display: none; }
+  .cover { width: 100%; border-radius: 14px; margin: 6px 0 10px; display: block; }
   audio { width: 100%; margin-top: 12px; }
   .status { font-size: .9rem; color: var(--muted); margin-top: 10px; min-height: 1.2em; }
   .status.err { color: var(--err); } .status.ok { color: var(--ok); }
   .progress { height: 6px; background: var(--card2); border-radius: 6px; overflow: hidden; margin-top: 8px; display: none; }
   .progress > div { height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+  .quota { height: 8px; background: var(--card2); border-radius: 6px; overflow: hidden; margin-top: 6px; }
+  .quota > div { height: 100%; background: var(--ok); }
   nav { position: fixed; left: 0; right: 0; bottom: 0; display: flex; background: #15123d;
     border-top: 1px solid #2e2a7a; padding-bottom: env(safe-area-inset-bottom); z-index: 10; }
   nav button { flex: 1; background: none; border: 0; color: var(--muted); padding: 12px 0 10px; font-size: .8rem; cursor: pointer; }
   nav button span { display: block; font-size: 1.4rem; }
   nav button.on { color: var(--accent); }
   .view { display: none; } .view.on { display: block; }
-  .lib-item { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 14px;
+  .lib-item { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 14px;
     background: var(--card2); margin-bottom: 8px; cursor: pointer; }
-  .lib-item .t { flex: 1; } .lib-item small { color: var(--muted); display: block; }
+  .lib-item .t { flex: 1; min-width: 0; } .lib-item small { color: var(--muted); display: block; }
+  .lib-item .vign { width: 52px; height: 52px; border-radius: 10px; object-fit: cover; flex: none; background: var(--card);
+    display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+  .lib-item .star { background: none; border: 0; font-size: 1.4rem; cursor: pointer; padding: 4px; filter: grayscale(1); opacity: .5; }
+  .lib-item .star.on { filter: none; opacity: 1; }
   .hint { font-size: .8rem; color: var(--muted); margin-top: 6px; line-height: 1.4; }
   .hint a { color: var(--accent); }
   .spin { display: inline-block; width: 16px; height: 16px; border: 2px solid currentColor; border-right-color: transparent;
     border-radius: 50%; animation: s .8s linear infinite; vertical-align: -3px; margin-right: 6px; }
   @keyframes s { to { transform: rotate(360deg); } }
+
+  /* ===== Mode nuit : écran très sombre, texte en gros, lumière chaude ===== */
+  #nuit-sortie { display: none; }
+  body.nuit { background: #000; padding-top: 12px; }
+  body.nuit header, body.nuit nav, body.nuit #form-card, body.nuit #story-card .actions:not(#phone-ctrl):not(#choix-btns), body.nuit #story-card .sub,
+  body.nuit #tts-status, body.nuit #story-card h2, body.nuit .chap, body.nuit #cover, body.nuit #audio-actions { display: none !important; }
+  body.nuit #story-card { background: #000; box-shadow: none; padding: 8px 4px 120px; }
+  body.nuit .story { font-size: 1.55rem; line-height: 1.75; color: #6b5435; }
+  body.nuit .story p.lit { background: none; color: #e0b878; }
+  body.nuit .tag { display: none; }
+  body.nuit audio { opacity: .35; }
+  body.nuit #nuit-sortie { display: block; position: fixed; top: calc(10px + env(safe-area-inset-top)); right: 12px; z-index: 20;
+    background: #111; color: #6b5435; border: 1px solid #222; border-radius: 12px; padding: 8px 12px; font-size: 1rem; }
+  body.nuit #choix-zone .choix { background: #111; border-color: #6b5435; color: #e0b878; }
 </style>
 </head>
 <body>
+<button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>🌙 Histoires du soir</h1>
   <p>Écrites par Gemini · racontées par ElevenLabs</p>
@@ -71,11 +103,14 @@
 
 <!-- ============ CRÉER ============ -->
 <section id="v-create" class="view on">
-  <div class="card">
+  <div class="card" id="form-card">
     <div class="row">
       <div><label>Prénom de l'enfant</label><input id="name" placeholder="ex. Léa"></div>
       <div><label>Âge</label><input id="age" type="number" min="2" max="12" value="5"></div>
     </div>
+    <label>Avec qui ? Autres héros (optionnel)</label>
+    <input id="friends" placeholder="ex. son frère Max (3 ans) et son chien Biscuit">
+
     <label>De quoi parle l'histoire ? (optionnel)</label>
     <textarea id="idea" placeholder="ex. un dragon qui a peur du noir, un voyage sur la lune avec son toutou Max…"></textarea>
 
@@ -86,6 +121,34 @@
       <div class="chip" data-v="drole">🤪 Drôle</div>
       <div class="chip" data-v="magique">✨ Magique</div>
       <div class="chip" data-v="animaux">🦊 Animaux</div>
+      <div class="chip" data-v="pirates">🏴‍☠️ Pirates</div>
+      <div class="chip" data-v="chevaliers">🏰 Princesses et chevaliers</div>
+      <div class="chip" data-v="espace">🚀 Espace</div>
+      <div class="chip" data-v="dinos">🦕 Dinosaures</div>
+      <div class="chip" data-v="heros">🦸 Superhéros</div>
+      <div class="chip" data-v="hiver">⛄ Hiver et Noël</div>
+      <div class="chip" data-v="halloween">🎃 Halloween tout doux</div>
+    </div>
+
+    <label>Un petit souci à apprivoiser ? (optionnel)</label>
+    <div class="chips" data-group="souci">
+      <div class="chip on" data-v="">Aucun</div>
+      <div class="chip" data-v="noir">🌑 Peur du noir</div>
+      <div class="chip" data-v="ecole">🎒 École / garderie</div>
+      <div class="chip" data-v="bebe">👶 Nouveau bébé</div>
+      <div class="chip" data-v="docteur">🦷 Dentiste / médecin</div>
+      <div class="chip" data-v="lit">🛏️ Dormir dans son lit</div>
+      <div class="chip" data-v="proprete">🚽 Le pot</div>
+      <div class="chip" data-v="demenagement">📦 Déménagement</div>
+      <div class="chip" data-v="colere">😤 La colère</div>
+      <div class="chip" data-v="autre">✏️ Autre…</div>
+    </div>
+    <input id="souci-autre" placeholder="Décris le souci (ex. il ne veut pas se brosser les dents)" style="display:none; margin-top:8px">
+
+    <label>Format</label>
+    <div class="chips" data-group="format">
+      <div class="chip on" data-v="complete">📖 Histoire complète</div>
+      <div class="chip" data-v="choix">🔀 L'enfant choisit la suite</div>
     </div>
 
     <label>Durée</label>
@@ -103,19 +166,57 @@
   </div>
 
   <div class="card" id="story-card" style="display:none">
+    <img id="cover" class="cover" alt="" style="display:none">
+    <div class="chap" id="s-chap"></div>
     <h2 id="s-title"></h2>
     <div class="actions">
       <button class="sec" id="btn-read">🔊 Raconter</button>
-      <button class="sec" id="btn-tags">🏷️ Balises</button>
+      <button class="sec" id="btn-nuit">🌙 Mode nuit</button>
+      <button class="sec" id="btn-suite">📖 La suite</button>
       <button class="sec" id="btn-regen">🔁 Une autre</button>
+      <button class="sec" id="btn-tags">🏷️ Balises</button>
+    </div>
+    <div class="actions" id="phone-ctrl" style="display:none">
+      <button class="sec" id="btn-ph-pause">⏸️ Pause</button>
+      <button class="sec" id="btn-ph-stop">⏹️ Arrêter</button>
     </div>
     <div class="progress" id="tts-prog"><div></div></div>
     <div class="status" id="tts-status"></div>
     <audio id="player" controls style="display:none"></audio>
     <div class="actions" id="audio-actions" style="display:none">
-      <button class="sec" id="btn-dl">⬇️ Télécharger MP3</button>
+      <button class="sec" id="btn-dl">⬇️ Télécharger l'audio</button>
     </div>
+
+    <div class="sub" id="sleep-box">
+      <div style="font-weight:600">🌙 Après l'histoire</div>
+      <div class="row" style="margin-top:8px">
+        <select id="sl-son">
+          <option value="">Rien (silence)</option>
+          <option value="rose">Bruit doux</option>
+          <option value="pluie">Pluie</option>
+          <option value="vagues">Vagues</option>
+          <option value="brun">Bruit grave (ronron)</option>
+        </select>
+        <select id="sl-min">
+          <option value="10">10 minutes</option>
+          <option value="20">20 minutes</option>
+          <option value="30" selected>30 minutes</option>
+          <option value="45">45 minutes</option>
+          <option value="60">1 heure</option>
+        </select>
+      </div>
+      <div class="actions">
+        <button class="sec" id="sl-now">▶️ Démarrer maintenant</button>
+        <button class="sec" id="sl-stop">⏹️ Arrêter le son</button>
+      </div>
+      <div class="status" id="sl-status"></div>
+    </div>
+
     <div class="story hide-tags" id="s-text" style="margin-top:14px"></div>
+    <div id="choix-zone" style="display:none">
+      <div class="actions" id="choix-btns"></div>
+      <div class="status" id="choix-status"></div>
+    </div>
   </div>
 </section>
 
@@ -124,6 +225,12 @@
   <div class="card">
     <h2>📚 Mes histoires</h2>
     <p class="hint">Les histoires et leur audio sont gardés sur ton téléphone — les réécouter ne coûte aucun crédit.</p>
+    <input id="lib-q" placeholder="🔎 Rechercher (titre, prénom, mot de l'histoire…)" style="margin-top:10px">
+    <div class="chips" data-group="libf" style="margin-top:10px">
+      <div class="chip on" data-v="tout">Toutes</div>
+      <div class="chip" data-v="fav">⭐ Favoris</div>
+      <div class="chip" data-v="audio">🎧 Avec audio</div>
+    </div>
     <div id="lib-list" style="margin-top:12px"></div>
   </div>
 </section>
@@ -135,36 +242,93 @@
 
     <label>Clé API Gemini</label>
     <input id="k-gemini" type="password" placeholder="AIza…">
-    <p class="hint">Gratuite sur <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a></p>
+    <p class="hint">Gratuite sur <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a> — sert aussi pour la voix Gemini et les images.</p>
 
     <label>Modèle Gemini</label>
     <input id="m-gemini" value="gemini-flash-latest">
     <p class="hint">gemini-flash-latest = toujours le Flash le plus récent. Si le modèle est surchargé, l'app en essaie un autre automatiquement.</p>
 
-    <label>Clé API ElevenLabs</label>
-    <input id="k-eleven" type="password" placeholder="sk_…">
-    <p class="hint">Sur <a href="https://elevenlabs.io/app/settings/api-keys" target="_blank">elevenlabs.io → API Keys</a>. Active les permissions « Text to Speech » et « Voices (read) ».</p>
+    <label>Qui raconte ?</label>
+    <select id="engine">
+      <option value="auto">Automatique — ElevenLabs, puis la voix Gemini quand les crédits sont épuisés</option>
+      <option value="eleven">ElevenLabs seulement (la plus expressive)</option>
+      <option value="gemini">Voix Gemini (gratuite, expressive)</option>
+      <option value="phone">Voix du téléphone (gratuite, illimitée, hors ligne)</option>
+    </select>
 
-    <label>Voix</label>
-    <div style="display:flex; gap:8px">
-      <select id="voice" style="flex:1"><option value="">— charge les voix —</option></select>
-      <button class="sec" id="btn-voices">↻</button>
+    <div class="sub">
+      <div style="font-weight:600">ElevenLabs</div>
+      <label>Clé API ElevenLabs</label>
+      <input id="k-eleven" type="password" placeholder="sk_…">
+      <p class="hint">Sur <a href="https://elevenlabs.io/app/settings/api-keys" target="_blank">elevenlabs.io → API Keys</a>. Active les permissions « Text to Speech », « Voices (read) » et « User (read) » (pour voir les crédits restants).</p>
+
+      <label>Crédits du mois</label>
+      <div id="quota-txt" class="hint" style="margin-top:0">—</div>
+      <div class="quota"><div id="quota-bar" style="width:0"></div></div>
+      <button class="sec" id="btn-quota" style="margin-top:8px">↻ Vérifier les crédits</button>
+
+      <label>Voix</label>
+      <div style="display:flex; gap:8px">
+        <select id="voice" style="flex:1"><option value="">— charge les voix —</option></select>
+        <button class="sec" id="btn-voices">↻</button>
+      </div>
+      <input id="voice-id" placeholder="…ou colle un Voice ID" style="margin-top:8px">
+      <button class="sec" id="btn-preview" style="margin-top:8px">▶️ Écouter un extrait</button>
+
+      <label>Modèle de voix</label>
+      <select id="m-eleven">
+        <option value="eleven_v3">Eleven v3 — le plus expressif (recommandé)</option>
+        <option value="eleven_multilingual_v2">Multilingual v2 — plus stable, moins d'émotions</option>
+      </select>
+
+      <label>Style de lecture (v3)</label>
+      <select id="stability">
+        <option value="0">Créatif — très expressif</option>
+        <option value="0.5" selected>Naturel — équilibré</option>
+        <option value="1">Stable — régulier, peu de variation</option>
+      </select>
     </div>
-    <input id="voice-id" placeholder="…ou colle un Voice ID" style="margin-top:8px">
-    <button class="sec" id="btn-preview" style="margin-top:8px">▶️ Écouter un extrait</button>
 
-    <label>Modèle de voix</label>
-    <select id="m-eleven">
-      <option value="eleven_v3">Eleven v3 — le plus expressif (recommandé)</option>
-      <option value="eleven_multilingual_v2">Multilingual v2 — plus stable, moins d'émotions</option>
-    </select>
+    <div class="sub">
+      <div style="font-weight:600">Voix Gemini (gratuite)</div>
+      <label>Voix</label>
+      <select id="g-voice">
+        <option value="Sulafat">Sulafat — femme, chaleureuse</option>
+        <option value="Achernar">Achernar — femme, très douce</option>
+        <option value="Vindemiatrix">Vindemiatrix — femme, tendre</option>
+        <option value="Aoede">Aoede — femme, légère</option>
+        <option value="Leda">Leda — femme, jeune</option>
+        <option value="Despina">Despina — femme, veloutée</option>
+        <option value="Gacrux">Gacrux — femme, grand-maman</option>
+        <option value="Enceladus">Enceladus — homme, calme et soufflé</option>
+        <option value="Algieba">Algieba — homme, doux</option>
+        <option value="Charon">Charon — homme, posé</option>
+        <option value="Puck">Puck — homme, enjoué</option>
+        <option value="Iapetus">Iapetus — homme, clair</option>
+      </select>
+      <button class="sec" id="btn-preview-g" style="margin-top:8px">▶️ Écouter un extrait</button>
+      <p class="hint">Gratuite avec ta clé Gemini, mais limitée en nombre d'appels par minute : une histoire peut prendre une minute ou deux à enregistrer.</p>
+    </div>
 
-    <label>Style de lecture (v3)</label>
-    <select id="stability">
-      <option value="0">Créatif — très expressif</option>
-      <option value="0.5" selected>Naturel — équilibré</option>
-      <option value="1">Stable — régulier, peu de variation</option>
-    </select>
+    <div class="sub">
+      <div style="font-weight:600">Voix du téléphone</div>
+      <label>Voix</label>
+      <select id="p-voice"><option value="">Par défaut</option></select>
+      <label>Vitesse</label>
+      <input id="p-rate" type="range" min="0.6" max="1.2" step="0.05" value="0.9">
+      <button class="sec" id="btn-preview-p" style="margin-top:8px">▶️ Écouter un extrait</button>
+      <p class="hint">Les voix « Français (Canada) » donnent l'accent d'ici. Pour en ajouter : Paramètres du téléphone → Synthèse vocale → Google → Installer les données vocales.</p>
+    </div>
+
+    <div class="sub">
+      <div style="font-weight:600">Pendant l'histoire</div>
+      <label class="check"><input type="checkbox" id="opt-musique">🎵 Musique douce en fond (boîte à musique)</label>
+      <label>Volume de la musique</label>
+      <input id="musique-vol" type="range" min="0.05" max="0.6" step="0.05" value="0.2">
+      <label class="check"><input type="checkbox" id="opt-suivre" checked>📜 Le texte suit la lecture</label>
+      <label class="check"><input type="checkbox" id="opt-image" checked>🖼️ Image de couverture (Gemini)</label>
+      <p class="hint">L'image demande un modèle d'images Gemini : avec certaines clés gratuites, elle n'est pas disponible (l'histoire se crée quand même).</p>
+    </div>
 
     <label>Langue de l'histoire</label>
     <select id="lang">
@@ -235,9 +399,28 @@ const MOODS = {
   aventure: `Histoire d'aventure : du suspense, des rebondissements, du courage, de l'élan ([excited], [dramatically], [gasps]). Finis par un retour au calme rassurant.`,
   drole: `Histoire très drôle : situations absurdes, quiproquos, personnages loufoques, beaucoup de [laughs], [giggles], [playfully], des bruits rigolos. Une fin qui fait sourire.`,
   magique: `Histoire merveilleuse : magie, émerveillement, lieux enchantés ([amazed], [mysteriously], [whispers]). Une ambiance féerique.`,
-  animaux: `Histoire d'animaux attachants qui parlent, chacun avec sa voix et sa personnalité bien distincte. Tendresse et amitié.`
+  animaux: `Histoire d'animaux attachants qui parlent, chacun avec sa voix et sa personnalité bien distincte. Tendresse et amitié.`,
+  pirates: `Histoire de pirates : un bateau, une carte au trésor, des perroquets bavards, le capitaine au grand cœur, des « Hissez les voiles ! » ([booming voice], [excited], [mischievously]). Les pirates sont rigolos, jamais méchants pour de vrai ; le vrai trésor est souvent l'amitié.`,
+  chevaliers: `Histoire de princesses et de chevaliers : un château, un royaume, une quête, une princesse courageuse qui agit autant que le chevalier, un dragon qui devient un ami ([dramatically], [amazed], [warmly]).`,
+  espace: `Histoire dans l'espace : une fusée, des planètes colorées, des étoiles, des extraterrestres sympathiques aux voix rigolotes ([amazed], [squeaky voice], [whispers]). Le compte à rebours « dix, neuf, huit… » et le décollage sont des moments forts.`,
+  dinos: `Histoire de dinosaures : des dinosaures attachants (le gros tyrannosaure au cœur tendre, le petit tricératops curieux), des volcans, des fougères géantes, des pas qui font BOUM ([booming voice], [excited], [giggles]).`,
+  heros: `Histoire de superhéros : l'enfant découvre un super-pouvoir original (parler aux nuages, courir aussi vite qu'un écureuil…), aide les autres et apprend que la gentillesse est le plus grand pouvoir ([excited], [proud], [dramatically]).`,
+  hiver: `Histoire d'hiver et du temps des fêtes : la neige qui crisse, les bonshommes de neige, le chocolat chaud, les lutins, le traîneau, la magie de Noël ([warmly], [amazed], [whispers]). Ambiance douillette et lumineuse.`,
+  halloween: `Histoire d'Halloween TOUT DOUX : citrouilles, petits fantômes timides, une sorcière gentille et maladroite, des déguisements ; un léger frisson qui devient rire ([mysteriously], [giggles], [whispers]). Absolument rien de vraiment effrayant.`
+};
+const SOUCIS = {
+  noir: 'la peur du noir au moment de dormir',
+  ecole: 'aller à l\'école ou à la garderie (se séparer de papa et maman, se faire des amis)',
+  bebe: 'l\'arrivée d\'un nouveau bébé dans la famille (jalousie, place de grand frère ou grande sœur)',
+  docteur: 'aller chez le dentiste ou le médecin sans avoir peur',
+  lit: 'dormir tout seul dans son lit toute la nuit',
+  proprete: 'apprendre à aller sur le pot ou à la toilette',
+  demenagement: 'déménager dans une nouvelle maison',
+  colere: 'apprendre à reconnaître et calmer sa colère'
 };
 const FALLBACK_MODELS = ['gemini-flash-latest', 'gemini-3.5-flash', 'gemini-3.7-flash', 'gemini-3.6-flash'];
+const TTS_MODELS = ['gemini-2.5-flash-preview-tts', 'gemini-2.5-flash-tts', 'gemini-2.5-pro-preview-tts'];
+const IMAGE_MODELS = ['gemini-2.5-flash-image', 'gemini-2.5-flash-image-preview', 'gemini-2.0-flash-preview-image-generation'];
 /* Voix de base ElevenLabs (utilisées si la clé n'a pas la permission « Voices read ») */
 const PREMADE_VOICES = [
   ['XrExE9yKIg1WjnnlVkGX', 'Matilda — femme, chaleureuse, conteuse'],
@@ -257,10 +440,16 @@ function fillPremade() {
   if (!cur) $('voice-id').value = $('voice').value;
 }
 const LENGTHS = { court: 'environ 350 mots', moyen: 'environ 700 mots', long: 'environ 1200 mots' };
+const LENGTHS_PART = { court: 'environ 150 mots', moyen: 'environ 250 mots', long: 'environ 400 mots' };
 const LANGS = {
   'fr-qc': `Écris en français avec une saveur québécoise chaleureuse : quelques mots et images d'ici (la cabane à sucre, la tuque, la poudrerie, les bleuets, « mon trésor ») tout en restant un français clair et bien prononçable par une voix de synthèse — pas de joual écrit phonétiquement.`,
   'fr-fr': `Écris en français standard, clair et chaleureux.`,
   'en': `Write the story in English (tags stay in English too). Le JSON garde les clés "titre" et "histoire".`
+};
+const VOICE_STYLE = {
+  'fr-qc': 'Raconte cette histoire pour enfants à voix haute, en français avec un accent québécois, comme un conteur chaleureux au moment du coucher : voix douce et expressive, une voix différente pour chaque personnage, de vraies pauses aux points de suspension',
+  'fr-fr': 'Raconte cette histoire pour enfants à voix haute, en français, comme un conteur chaleureux au moment du coucher : voix douce et expressive, une voix différente pour chaque personnage, de vraies pauses aux points de suspension',
+  'en': 'Read this children\'s story aloud like a warm bedtime storyteller: soft and expressive, a different voice for each character, real pauses at the ellipses'
 };
 
 /* ==================== UTILITAIRES ==================== */
@@ -270,10 +459,13 @@ const store = {
   set: (k, v) => { try { localStorage.setItem(k, v); } catch {} }
 };
 function status(el, msg, cls = '') { el.className = 'status ' + cls; el.innerHTML = msg; }
-const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const stripTags = t => t.replace(/\[[^\]\n]{1,40}\]\s*/g, '');
+const sleep = ms => new Promise(ok => setTimeout(ok, ms));
+const paras = t => t.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+const fmt = n => Math.round(n).toLocaleString('fr-CA');
 
-/* IndexedDB : bibliothèque d'histoires + audio */
+/* IndexedDB : bibliothèque d'histoires + audio + images */
 const DB = {
   db: null,
   open() {
@@ -300,9 +492,128 @@ const DB = {
   get: id => DB.tx('readonly', st => st.get(id))
 };
 
+/* ==================== AUDIO : WAV, bruits doux, boîte à musique ==================== */
+function wavFromPcm16(pcm, rate) {          // pcm : Uint8Array (16 bits, mono, petit-boutiste)
+  const h = new DataView(new ArrayBuffer(44));
+  const w = (o, s) => [...s].forEach((c, i) => h.setUint8(o + i, c.charCodeAt(0)));
+  w(0, 'RIFF'); h.setUint32(4, 36 + pcm.length, true); w(8, 'WAVE'); w(12, 'fmt ');
+  h.setUint32(16, 16, true); h.setUint16(20, 1, true); h.setUint16(22, 1, true);
+  h.setUint32(24, rate, true); h.setUint32(28, rate * 2, true); h.setUint16(32, 2, true); h.setUint16(34, 16, true);
+  w(36, 'data'); h.setUint32(40, pcm.length, true);
+  return new Blob([h, pcm], { type: 'audio/wav' });
+}
+function wavFromFloat(f, rate) {
+  const pcm = new Uint8Array(f.length * 2), dv = new DataView(pcm.buffer);
+  for (let i = 0; i < f.length; i++) dv.setInt16(i * 2, Math.max(-1, Math.min(1, f[i])) * 32767, true);
+  return wavFromPcm16(pcm, rate);
+}
+/* Plusieurs morceaux → un seul fichier (MP3 bout à bout, ou WAV recollés). null si mélangés. */
+async function concatAudio(blobs) {
+  if (!blobs.length) return null;
+  if (blobs.length === 1) return blobs[0];
+  const types = new Set(blobs.map(b => b.type));
+  if (types.size > 1) return null;
+  if (blobs[0].type === 'audio/mpeg') return new Blob(blobs, { type: 'audio/mpeg' });
+  const datas = await Promise.all(blobs.map(async b => new Uint8Array(await b.arrayBuffer()).slice(44)));
+  const rate = new DataView(await blobs[0].slice(24, 28).arrayBuffer()).getUint32(0, true);
+  const tout = new Uint8Array(datas.reduce((n, d) => n + d.length, 0));
+  let o = 0; for (const d of datas) { tout.set(d, o); o += d.length; }
+  return wavFromPcm16(tout, rate);
+}
+
+const RATE_FOND = 22050;
+/* Bruits doux en boucle de 30 s (fondu enchaîné aux bords pour une boucle sans clic) */
+function genererBruit(type) {
+  const n = RATE_FOND * 30, f = new Float32Array(n);
+  let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0, brun = 0, lp = 0;
+  for (let i = 0; i < n; i++) {
+    const w = Math.random() * 2 - 1;
+    b0 = .99886 * b0 + w * .0555179; b1 = .99332 * b1 + w * .0750759; b2 = .969 * b2 + w * .153852;
+    b3 = .8665 * b3 + w * .3104856; b4 = .55 * b4 + w * .5329522; b5 = -.7616 * b5 - w * .016898;
+    const rose = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * .5362) * .11; b6 = w * .115926;
+    brun = (brun + .02 * w) / 1.02;
+    let v;
+    if (type === 'rose') v = rose * .55;
+    else if (type === 'brun') v = brun * 3.2;
+    else if (type === 'vagues') {
+      const houle = .3 + .7 * Math.pow(.5 - .5 * Math.cos(2 * Math.PI * i / (RATE_FOND * 10)), 2);   // vague aux 10 s
+      v = brun * 3.2 * houle + rose * .12 * houle;
+    } else {                                                   // pluie : souffle clair + gouttes
+      lp += .35 * (w - lp);
+      v = (w - lp) * .18 + rose * .25;
+      if (Math.random() < .0009) v += (Math.random() * .5) * (Math.random() < .5 ? -1 : 1);
+    }
+    f[i] = v;
+  }
+  const x = RATE_FOND;                                         // fondu enchaîné d'une seconde
+  for (let i = 0; i < x; i++) { const a = i / x; f[i] = f[i] * a + f[n - x + i] * (1 - a); }
+  return wavFromFloat(f.subarray(0, n - x), RATE_FOND);
+}
+/* Boîte à musique : berceuse pentatonique en boucle (≈ 26 s) */
+function genererMusique() {
+  const temps = .8, mel = [72, 76, 79, 76, 74, 72, 69, 72, 74, 76, 79, 81, 79, 76, 74, 0,
+                           76, 79, 81, 79, 76, 74, 72, 74, 76, 74, 72, 69, 67, 69, 72, 0];
+  const basse = [48, 45, 41, 43, 48, 45, 41, 43];
+  const n = Math.round(RATE_FOND * temps * mel.length), f = new Float32Array(n);
+  const note = (midi, debut, amp, decay) => {
+    const fr = 440 * Math.pow(2, (midi - 69) / 12), d = Math.round(debut * RATE_FOND), long = Math.round(RATE_FOND * decay * 4);
+    for (let k = 0; k < long; k++) {
+      const t = k / RATE_FOND, e = amp * Math.exp(-t / decay) * Math.min(1, k / 80);
+      f[(d + k) % n] += e * (Math.sin(2 * Math.PI * fr * t) + .28 * Math.sin(4 * Math.PI * fr * t) + .08 * Math.sin(6 * Math.PI * fr * t));
+    }
+  };
+  mel.forEach((m, i) => m && note(m, i * temps, .22, .9));
+  basse.forEach((m, i) => note(m, i * temps * 4, .16, 1.8));
+  return wavFromFloat(f, RATE_FOND);
+}
+const fonds = {};   // cache des fichiers générés
+const urlFond = k => fonds[k] || (fonds[k] = URL.createObjectURL(k === 'musique' ? genererMusique() : genererBruit(k)));
+
+/* Musique douce pendant la narration */
+const musique = new Audio(); musique.loop = true;
+function musiqueJouer() {
+  if (!$('opt-musique').checked) return;
+  if (!musique.src) musique.src = urlFond('musique');
+  musique.volume = parseFloat($('musique-vol').value);
+  musique.play().catch(() => {});
+}
+function musiquePause() { musique.pause(); }
+
+/* Son d'endormissement (après l'histoire), avec fondu à la fin */
+const ambiance = new Audio(); ambiance.loop = true;
+let ambFin = 0, ambTimer = null;
+function ambianceDemarrer() {
+  const type = $('sl-son').value;
+  if (!type) { status($('sl-status'), 'Choisis un son.', 'err'); return; }
+  const min = parseInt($('sl-min').value, 10);
+  ambiance.src = urlFond(type); ambiance.volume = .55; ambiance.play().catch(() => {});
+  ambFin = Date.now() + min * 60000;
+  clearInterval(ambTimer);
+  ambTimer = setInterval(() => {
+    const reste = ambFin - Date.now();
+    if (reste <= 0) return ambianceArreter();
+    if (reste < 90000) ambiance.volume = Math.max(0, .55 * reste / 90000);   // fondu sur 1 min 30
+  }, 2000);
+  const h = new Date(ambFin);
+  status($('sl-status'), `🌙 ${$('sl-son').selectedOptions[0].text} jusqu'à ${h.getHours()}h${String(h.getMinutes()).padStart(2, '0')}`, 'ok');
+}
+function ambianceArreter() {
+  clearInterval(ambTimer); ambiance.pause(); ambiance.currentTime = 0;
+  status($('sl-status'), '');
+}
+$('sl-now').onclick = ambianceDemarrer;
+$('sl-stop').onclick = ambianceArreter;
+['sl-son', 'sl-min'].forEach(id => { const v = store.get('set:' + id); if (v) $(id).value = v; $(id).onchange = () => store.set('set:' + id, $(id).value); });
+function finDeLecture() {
+  musiquePause();
+  if ($('sl-son').value) ambianceDemarrer();
+}
+
 /* ==================== ÉTAT ==================== */
-let current = null;      // { id, titre, histoire, audio?: Blob, createdAt }
+let current = null;      // { id, titre, histoire, audio?, image?, fav?, chap?, serie?, interactive?, parts?, partAudio? }
 let audioUrl = null;
+let file = [];           // lecture en cours : [{ url, debut, fin }] (paragraphes couverts)
+let fileIdx = 0;
 
 /* ==================== NAVIGATION / CHIPS ==================== */
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
@@ -314,12 +625,17 @@ document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
 document.querySelectorAll('.chips').forEach(g => g.addEventListener('click', e => {
   const c = e.target.closest('.chip'); if (!c) return;
   g.querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x === c));
+  if (g.dataset.group === 'souci') $('souci-autre').style.display = c.dataset.v === 'autre' ? 'block' : 'none';
+  if (g.dataset.group === 'libf') renderLib();
 }));
 const chipVal = g => document.querySelector(`.chips[data-group="${g}"] .chip.on`).dataset.v;
 
 /* ==================== RÉGLAGES ==================== */
-const SETTINGS = ['k-gemini', 'm-gemini', 'k-eleven', 'voice-id', 'm-eleven', 'stability', 'lang', 'name', 'age'];
+const SETTINGS = ['k-gemini', 'm-gemini', 'k-eleven', 'voice-id', 'm-eleven', 'stability', 'lang', 'name', 'age', 'friends',
+  'engine', 'g-voice', 'p-voice', 'p-rate', 'musique-vol'];
+const CHECKS = ['opt-musique', 'opt-suivre', 'opt-image'];
 SETTINGS.forEach(id => { const v = store.get('set:' + id); if (v) $(id).value = v; });
+CHECKS.forEach(id => { const v = store.get('set:' + id); if (v) $(id).checked = v === '1'; });
 /* Import de clés par lien : …/#gemini=CLÉ&eleven=CLÉ (enregistrées puis retirées de l'adresse) */
 if (location.hash.length > 1) {
   const h = new URLSearchParams(location.hash.slice(1));
@@ -331,10 +647,13 @@ if (location.hash.length > 1) {
 if (['gemini-2.5-flash', 'gemini-3.8-flash'].includes($('m-gemini').value)) $('m-gemini').value = 'gemini-flash-latest';
 function saveSettings() {
   SETTINGS.forEach(id => store.set('set:' + id, $(id).value.trim()));
+  CHECKS.forEach(id => store.set('set:' + id, $(id).checked ? '1' : '0'));
   const sel = $('voice').value; if (sel) { $('voice-id').value = sel; store.set('set:voice-id', sel); }
 }
 $('btn-save').onclick = () => { saveSettings(); status($('set-status'), '✔ Réglages enregistrés', 'ok'); };
 $('voice').onchange = () => { if ($('voice').value) $('voice-id').value = $('voice').value; };
+$('musique-vol').oninput = () => { musique.volume = parseFloat($('musique-vol').value); };
+CHECKS.forEach(id => $(id).onchange = () => { store.set('set:' + id, $(id).checked ? '1' : '0'); if (id === 'opt-musique' && !$(id).checked) musiquePause(); });
 
 async function loadVoices() {
   const key = $('k-eleven').value.trim();
@@ -359,20 +678,30 @@ async function loadVoices() {
   }
 }
 $('btn-voices').onclick = loadVoices;
+const EXTRAIT = () => $('lang').value === 'en'
+  ? '[warmly] Once upon a time… [whispers] in a forest full of secrets, [excited] a little fox found a GLOWING stone!'
+  : '[warmly] Il était une fois… [whispers] dans une forêt pleine de secrets, [excited] un petit renard qui trouva une pierre BRILLANTE !';
 $('btn-preview').onclick = async () => {
   const id = $('voice-id').value.trim() || $('voice').value;
   if (!id) return status($('set-status'), 'Choisis une voix.', 'err');
   saveSettings();
   status($('set-status'), '<span class="spin"></span>Génération d\'un extrait…');
   try {
-    const sample = $('lang').value === 'en'
-      ? '[warmly] Once upon a time… [whispers] in a forest full of secrets, [excited] a little fox found a GLOWING stone!'
-      : '[warmly] Il était une fois… [whispers] dans une forêt pleine de secrets, [excited] un petit renard qui trouva une pierre BRILLANTE !';
-    const blob = await tts(sample);
+    const blob = await tts(EXTRAIT());
     new Audio(URL.createObjectURL(blob)).play();
     status($('set-status'), '✔ Lecture de l\'extrait', 'ok');
   } catch (e) { status($('set-status'), 'Erreur : ' + e.message, 'err'); }
 };
+$('btn-preview-g').onclick = async () => {
+  saveSettings();
+  status($('set-status'), '<span class="spin"></span>Gemini enregistre un extrait…');
+  try {
+    const blob = await ttsGemini(EXTRAIT(), m => status($('set-status'), '<span class="spin"></span>' + m));
+    new Audio(URL.createObjectURL(blob)).play();
+    status($('set-status'), '✔ Lecture de l\'extrait (voix Gemini)', 'ok');
+  } catch (e) { status($('set-status'), 'Erreur : ' + e.message, 'err'); }
+};
+$('btn-preview-p').onclick = () => { saveSettings(); parler([stripTags(EXTRAIT())], () => {}, () => {}); };
 
 /* Réessaie automatiquement si le service est surchargé (429 / 5xx) */
 async function withRetry(fn, onRetry) {
@@ -380,7 +709,7 @@ async function withRetry(fn, onRetry) {
     const r = await fn();
     if (r.ok || i > 2 || !(r.status === 429 || r.status >= 500)) return r;
     onRetry?.(i);
-    await new Promise(ok => setTimeout(ok, 2000 * 2 ** (i - 1)));
+    await sleep(2000 * 2 ** (i - 1));
   }
 }
 
@@ -389,54 +718,183 @@ async function errText(r) {
   catch { return 'HTTP ' + r.status; }
 }
 
-/* ==================== GEMINI ==================== */
-async function generateStory() {
+/* ==================== CRÉDITS ELEVENLABS ==================== */
+const moisCle = () => 'el:' + new Date().toISOString().slice(0, 7);
+const utiliseLocal = () => parseInt(store.get(moisCle(), '0'), 10) || 0;
+function noterUtilise(n) { store.set(moisCle(), String(utiliseLocal() + n)); quotaCache = null; }
+let quotaCache = null;
+/* { utilise, limite, reste, reset?, estime } — l'API si la clé a « User (read) », sinon le compte de l'app */
+async function quotaEleven(force) {
+  if (!force && quotaCache && Date.now() - quotaCache.at < 120000) return quotaCache;
+  const key = $('k-eleven').value.trim();
+  let q = null;
+  if (key) {
+    try {
+      const r = await fetch('https://api.elevenlabs.io/v1/user/subscription', { headers: { 'xi-api-key': key } });
+      if (r.ok) {
+        const j = await r.json();
+        q = { utilise: j.character_count, limite: j.character_limit, reset: j.next_character_count_reset_unix, estime: false };
+      }
+    } catch {}
+  }
+  if (!q) q = { utilise: utiliseLocal(), limite: 10000, estime: true };
+  q.reste = Math.max(0, q.limite - q.utilise);
+  q.at = Date.now();
+  return quotaCache = q;
+}
+async function afficherQuota(force) {
+  const q = await quotaEleven(force);
+  const reset = q.reset ? ` · remis à zéro le ${new Date(q.reset * 1000).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long' })}` : '';
+  $('quota-txt').innerHTML = `Il reste <b>${fmt(q.reste)}</b> caractères sur ${fmt(q.limite)}${reset}` +
+    (q.estime ? '<br>(estimé par l\'app — ajoute la permission « User (read) » à ta clé pour le chiffre exact)' : '');
+  $('quota-bar').style.width = (q.limite ? q.reste / q.limite * 100 : 0) + '%';
+  $('quota-bar').style.background = q.reste < 2000 ? 'var(--err)' : q.reste < 5000 ? 'var(--accent)' : 'var(--ok)';
+  return q;
+}
+$('btn-quota').onclick = () => afficherQuota(true);
+
+/* Quelle voix va raconter ce texte ? */
+async function choisirMoteur(nb) {
+  const m = $('engine').value;
+  if (m !== 'auto') return { moteur: m };
+  const kE = $('k-eleven').value.trim(), kG = $('k-gemini').value.trim();
+  if (!kE) return { moteur: kG ? 'gemini' : 'phone', raison: 'pas de clé ElevenLabs' };
+  const q = await quotaEleven();
+  if (q.reste >= nb + 50) return { moteur: 'eleven' };
+  return { moteur: kG ? 'gemini' : 'phone', raison: `crédits ElevenLabs épuisés (${fmt(q.reste)} restants, il en faut ${fmt(nb)})` };
+}
+
+/* ==================== GEMINI : TEXTE ==================== */
+async function appelGemini(user, schema, onStatus) {
   const key = $('k-gemini').value.trim();
   if (!key) throw new Error('Ajoute ta clé Gemini dans ⚙️ Réglages.');
-  const name = $('name').value.trim(), age = $('age').value || '5';
-  const idea = $('idea').value.trim(), moral = $('moral').value.trim();
-  const mood = chipVal('mood'), length = chipVal('length'), lang = $('lang').value;
-
-  const user = [
-    `Écris une histoire originale pour un enfant de ${age} ans.`,
-    name ? `Le héros s'appelle ${name}.` : `Invente un héros attachant.`,
-    idea ? `Idée de départ : ${idea}` : `Surprends-moi avec une idée originale et inattendue.`,
-    moral ? `Valeur à transmettre subtilement : ${moral}.` : '',
-    `Ambiance : ${MOODS[mood]}`,
-    `Longueur : ${LENGTHS[length]} (sans compter les balises).`,
-    LANGS[lang],
-    $('m-eleven').value === 'eleven_v3' ? '' : 'Mise en garde : la voix ne comprend PAS les balises. N\'en mets AUCUNE ; exprime les émotions uniquement par la ponctuation et les incises.'
-  ].filter(Boolean).join('\n');
-
-  // Modèle choisi, puis des plans B si celui-ci est surchargé ou retiré
   const models = [...new Set([$('m-gemini').value.trim() || 'gemini-flash-latest', ...FALLBACK_MODELS])];
   const body = JSON.stringify({
     systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
     contents: [{ role: 'user', parts: [{ text: user }] }],
-    generationConfig: {
-      temperature: 1.0,
-      responseMimeType: 'application/json',
-      responseSchema: {
-        type: 'OBJECT',
-        properties: { titre: { type: 'STRING' }, histoire: { type: 'STRING' } },
-        required: ['titre', 'histoire']
-      }
-    }
+    generationConfig: { temperature: 1.0, responseMimeType: 'application/json', responseSchema: schema }
   });
   let r;
   for (const model of models) {
     r = await withRetry(() => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, body
-    }), n => status($('gen-status'), `<span class="spin"></span>Gemini est occupé, nouvel essai (${n}/2)…`));
+    }), n => onStatus(`<span class="spin"></span>Gemini est occupé, nouvel essai (${n}/2)…`));
     if (r.ok || !(r.status === 404 || r.status === 429 || r.status >= 500)) break;
-    status($('gen-status'), `<span class="spin"></span>${model} indisponible, essai d'un autre modèle…`);
+    onStatus(`<span class="spin"></span>${model} indisponible, essai d'un autre modèle…`);
   }
   if (!r.ok) throw new Error('Gemini : ' + await errText(r));
   const data = await r.json();
   const txt = (data.candidates?.[0]?.content?.parts || []).filter(p => !p.thought).map(p => p.text || '').join('');
   if (!txt) throw new Error('Gemini n\'a rien renvoyé (' + (data.candidates?.[0]?.finishReason || data.promptFeedback?.blockReason || 'inconnu') + ').');
   const j = JSON.parse(txt.replace(/^```(json)?|```$/g, '').trim());
-  return { titre: j.titre.trim(), histoire: j.histoire.replace(/\\n/g, '\n').trim() };
+  if (j.histoire) j.histoire = j.histoire.replace(/\\n/g, '\n').trim();
+  if (j.titre) j.titre = j.titre.trim();
+  return j;
+}
+const SCHEMA = { type: 'OBJECT', properties: { titre: { type: 'STRING' }, histoire: { type: 'STRING' } }, required: ['titre', 'histoire'] };
+const SCHEMA_CHOIX = { type: 'OBJECT', properties: { titre: { type: 'STRING' }, histoire: { type: 'STRING' }, choixA: { type: 'STRING' }, choixB: { type: 'STRING' } },
+  required: ['titre', 'histoire', 'choixA', 'choixB'] };
+
+/* Les consignes communes, d'après le formulaire */
+function consignes(opts = {}) {
+  const name = $('name').value.trim(), age = $('age').value || '5';
+  const friends = $('friends').value.trim();
+  const idea = $('idea').value.trim(), moral = $('moral').value.trim();
+  const mood = chipVal('mood'), lang = $('lang').value;
+  const souci = chipVal('souci'), souciTxt = souci === 'autre' ? $('souci-autre').value.trim() : SOUCIS[souci];
+  return [
+    `Écris une histoire originale pour un enfant de ${age} ans.`,
+    name ? `Le héros s'appelle ${name}.` : `Invente un héros attachant.`,
+    friends ? `Autres héros de l'histoire, aussi importants que le héros principal (chacun a son rôle, ses répliques et un moment où il aide) : ${friends}.` : '',
+    opts.sansIdee ? '' : (idea ? `Idée de départ : ${idea}` : `Surprends-moi avec une idée originale et inattendue.`),
+    souciTxt ? `Petit défi de la vraie vie à apprivoiser : ${souciTxt}. Le héros vit une situation semblable, ressent la même émotion (nommée simplement, sans en faire un drame), découvre un ou deux trucs concrets qu'un enfant peut vraiment utiliser, et réussit. Ton rassurant, jamais moralisateur ; l'enfant doit se reconnaître et se sentir capable.` : '',
+    moral ? `Valeur à transmettre subtilement : ${moral}.` : '',
+    `Ambiance : ${MOODS[mood]}`,
+    LANGS[lang],
+    $('engine').value === 'eleven' && $('m-eleven').value !== 'eleven_v3' ? 'Mise en garde : la voix ne comprend PAS les balises. N\'en mets AUCUNE ; exprime les émotions uniquement par la ponctuation et les incises.' : ''
+  ].filter(Boolean);
+}
+
+/* Histoire complète */
+async function genererHistoire(onStatus) {
+  const user = [...consignes(), `Longueur : ${LENGTHS[chipVal('length')]} (sans compter les balises).`].join('\n');
+  return appelGemini(user, SCHEMA, onStatus);
+}
+
+/* Résumé de ce qui précède (pour les suites), sans balises et pas trop long */
+function contexte(texte) {
+  const t = stripTags(texte);
+  return t.length <= 6000 ? t : t.slice(0, 1500) + '\n[…]\n' + t.slice(-4000);
+}
+
+/* Le chapitre suivant d'une histoire */
+async function genererSuite(prec, onStatus) {
+  const user = [
+    `Voici le chapitre ${prec.chap || 1} d'une série d'histoires du soir, intitulé « ${prec.titre} » :`,
+    '---', contexte(prec.histoire), '---',
+    `Écris le CHAPITRE ${(prec.chap || 1) + 1} : une NOUVELLE aventure complète avec les mêmes personnages (mêmes noms, mêmes personnalités, mêmes voix), qui commence par un petit rappel en une ou deux phrases de ce qui s'est passé avant, et qui se termine pour de bon (on peut l'écouter seul).`,
+    ...consignes({ sansIdee: true }).slice(1),
+    $('idea').value.trim() ? `Idée pour ce chapitre : ${$('idea').value.trim()}` : '',
+    `Longueur : ${LENGTHS[chipVal('length')]} (sans compter les balises).`,
+    'Le titre est celui du nouveau chapitre (sans le mot « chapitre »).'
+  ].filter(Boolean).join('\n');
+  return appelGemini(user, SCHEMA, onStatus);
+}
+
+/* Histoire dont l'enfant choisit la suite : 3 parties, 2 choix */
+const NB_PARTIES = 3;
+async function genererPartie(s, choix, onStatus) {
+  const n = (s?.parts?.length || 0) + 1;
+  const derniere = n === NB_PARTIES;
+  const lg = LENGTHS_PART[chipVal('length')];
+  const base = n === 1 ? consignes() : consignes({ sansIdee: true });
+  const user = [
+    ...base,
+    `C'est une histoire INTERACTIVE en ${NB_PARTIES} parties : à la fin des parties 1 et 2, l'enfant choisit ce que fait le héros.`,
+    n > 1 ? `Voici l'histoire jusqu'ici :\n---\n${contexte(s.histoire)}\n---\nL'enfant a choisi : « ${choix} ».` : '',
+    derniere
+      ? `Écris la PARTIE ${n} (la dernière, ${lg}) : commence par raconter le choix de l'enfant comme une évidence joyeuse, puis mène l'histoire à une belle fin (selon l'ambiance). Pas de nouveau choix. Dans « titre », redonne le même titre.`
+      : `Écris la PARTIE ${n} (${lg}) ${n > 1 ? 'en commençant par raconter le choix de l\'enfant, ' : ''}et termine-la par une question à l'enfant qui propose DEUX possibilités claires et amusantes (dans le texte de l'histoire, avec une balise [excited] ou [whispers]), par exemple : « Que devrait faire Léa ? Entrer dans la grotte qui brille… ou suivre le petit hibou ? ». Dans « choixA » et « choixB », résume chaque possibilité en deux à cinq mots, dans le même ordre.${n > 1 ? ' Dans « titre », redonne le même titre.' : ''}`
+  ].filter(Boolean).join('\n');
+  return appelGemini(user, derniere ? SCHEMA : SCHEMA_CHOIX, onStatus);
+}
+
+/* ==================== GEMINI : IMAGE DE COUVERTURE ==================== */
+async function genererImage(s) {
+  const key = $('k-gemini').value.trim();
+  const prompt = `Illustration de couverture pour un livre d'histoires pour enfants, style aquarelle douce et lumineuse, couleurs tendres, ambiance chaleureuse du soir, format paysage. AUCUN texte, aucune lettre dans l'image. Titre de l'histoire : « ${s.titre} ». Scène : ${stripTags(s.histoire).slice(0, 700)}`;
+  let derniere = '';
+  for (const model of IMAGE_MODELS) {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseModalities: ['TEXT', 'IMAGE'] } })
+    });
+    if (!r.ok) { derniere = await errText(r); continue; }
+    const d = await r.json();
+    const p = (d.candidates?.[0]?.content?.parts || []).find(x => x.inlineData?.data);
+    if (!p) { derniere = 'pas d\'image renvoyée'; continue; }
+    const bin = Uint8Array.from(atob(p.inlineData.data), c => c.charCodeAt(0));
+    return reduireImage(new Blob([bin], { type: p.inlineData.mimeType || 'image/png' }));
+  }
+  throw new Error(derniere || 'aucun modèle d\'images disponible');
+}
+async function reduireImage(blob) {           // ≤ 900 px de large, en JPEG : la bibliothèque reste légère
+  try {
+    const img = await createImageBitmap(blob);
+    const k = Math.min(1, 900 / img.width);
+    const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    return await new Promise(ok => c.toBlob(b => ok(b || blob), 'image/jpeg', .85));
+  } catch { return blob; }
+}
+function imageEnFond(s) {
+  if (!$('opt-image').checked || !$('k-gemini').value.trim() || s.image) return;
+  genererImage(s).then(async img => {
+    s.image = img; await DB.put(s);
+    if (current && current.id === s.id) afficherCouverture(s);
+  }).catch(e => {
+    if (current && current.id === s.id) status($('gen-status'), `✔ Histoire prête ! (image de couverture non disponible : ${esc(e.message.slice(0, 120))})`, 'ok');
+  });
 }
 
 /* ==================== ELEVENLABS ==================== */
@@ -455,9 +913,102 @@ async function tts(text) {
     headers: { 'xi-api-key': key, 'Content-Type': 'application/json', 'Accept': 'audio/mpeg' },
     body: JSON.stringify(body)
   });
-  if (!r.ok) throw new Error('ElevenLabs : ' + await errText(r));
+  if (!r.ok) {
+    const m = await errText(r);
+    const e = new Error('ElevenLabs : ' + m);
+    e.quota = r.status === 401 && /quota|credits|exceed/i.test(m) || /quota_exceeded/i.test(m);
+    throw e;
+  }
+  noterUtilise(body.text.length);
   return r.blob();
 }
+
+/* ==================== VOIX GEMINI ==================== */
+async function ttsGemini(text, onStatus) {
+  const key = $('k-gemini').value.trim();
+  if (!key) throw new Error('Ajoute ta clé Gemini dans ⚙️ Réglages.');
+  const morceaux = chunk(stripTags(text), 1400);
+  const pcm = [];
+  let model = TTS_MODELS[0];
+  for (let i = 0; i < morceaux.length; i++) {
+    for (let essai = 1; ; essai++) {
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: `${VOICE_STYLE[$('lang').value]} :\n\n${morceaux[i]}` }] }],
+          generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: $('g-voice').value } } } }
+        })
+      });
+      if (r.ok) {
+        const d = await r.json();
+        const p = (d.candidates?.[0]?.content?.parts || []).find(x => x.inlineData?.data);
+        if (!p) throw new Error('Voix Gemini : pas d\'audio renvoyé');
+        pcm.push(Uint8Array.from(atob(p.inlineData.data), c => c.charCodeAt(0)));
+        onStatus?.(`Voix Gemini… (${i + 1}/${morceaux.length})`);
+        break;
+      }
+      const msg = await errText(r);
+      if (r.status === 404) {                                   // modèle retiré : le suivant
+        const k = TTS_MODELS.indexOf(model) + 1;
+        if (k >= TTS_MODELS.length) throw new Error('Voix Gemini : aucun modèle de voix disponible (' + msg + ')');
+        model = TTS_MODELS[k]; continue;
+      }
+      if ((r.status === 429 || r.status >= 500) && essai <= 5) {
+        // limite par minute du forfait gratuit : on attend le délai demandé par Google
+        const s = Math.min(65, parseInt((/retry in ([\d.]+)s/i.exec(msg) || /"retryDelay":\s*"(\d+)s"/.exec(msg) || [])[1] || '20', 10) + 2);
+        for (let k = s; k > 0; k--) { onStatus?.(`Voix Gemini : limite par minute atteinte, reprise dans ${k} s… (${i + 1}/${morceaux.length})`); await sleep(1000); }
+        continue;
+      }
+      throw new Error('Voix Gemini : ' + msg);
+    }
+  }
+  const tout = new Uint8Array(pcm.reduce((n, p) => n + p.length, 0));
+  let o = 0; for (const p of pcm) { tout.set(p, o); o += p.length; }
+  return wavFromPcm16(tout, 24000);
+}
+
+/* ==================== VOIX DU TÉLÉPHONE ==================== */
+function voixTelephone() {
+  const v = speechSynthesis.getVoices();
+  const lang = $('lang').value === 'en' ? 'en' : 'fr';
+  const cur = store.get('set:p-voice');
+  const l = v.filter(x => x.lang.toLowerCase().startsWith(lang))
+    .sort((a, b) => (b.lang === 'fr-CA') - (a.lang === 'fr-CA') || a.name.localeCompare(b.name));
+  $('p-voice').innerHTML = '<option value="">Par défaut</option>' +
+    l.map(x => `<option value="${esc(x.name)}" ${x.name === cur ? 'selected' : ''}>${esc(x.name)} (${x.lang})</option>`).join('');
+}
+if ('speechSynthesis' in window) { voixTelephone(); speechSynthesis.onvoiceschanged = voixTelephone; }
+let parole = null;   // { actif, pause }
+function parler(listeParas, surPara, surFin) {
+  speechSynthesis.cancel();
+  const voix = speechSynthesis.getVoices().find(v => v.name === $('p-voice').value);
+  const lang = $('lang').value === 'en' ? 'en-US' : $('lang').value === 'fr-fr' ? 'fr-FR' : 'fr-CA';
+  parole = { actif: true, pause: false };
+  const etat = parole;
+  let i = 0;
+  const suivant = () => {
+    if (!etat.actif) return;
+    if (i >= listeParas.length) { etat.actif = false; surFin(); return; }
+    const u = new SpeechSynthesisUtterance(listeParas[i]);
+    if (voix) u.voice = voix;
+    u.lang = voix?.lang || lang;
+    u.rate = parseFloat($('p-rate').value) || .9;
+    const k = i;
+    u.onstart = () => surPara(k);
+    u.onend = () => { i++; setTimeout(suivant, 350); };
+    u.onerror = () => { i++; setTimeout(suivant, 100); };
+    speechSynthesis.speak(u);
+  };
+  suivant();
+}
+function arreterParole() { if (parole) parole.actif = false; speechSynthesis.cancel(); $('phone-ctrl').style.display = 'none'; musiquePause(); }
+$('btn-ph-stop').onclick = arreterParole;
+$('btn-ph-pause').onclick = () => {
+  if (!parole) return;
+  if (parole.pause) { speechSynthesis.resume(); musiqueJouer(); } else { speechSynthesis.pause(); musiquePause(); }
+  parole.pause = !parole.pause;
+  $('btn-ph-pause').textContent = parole.pause ? '▶️ Reprendre' : '⏸️ Pause';
+};
 
 /* Découpe en morceaux ≤ max caractères, sur les paragraphes puis les phrases */
 function chunk(text, max = 2500) {
@@ -476,97 +1027,321 @@ function chunk(text, max = 2500) {
 }
 
 /* ==================== AFFICHAGE ==================== */
+function afficherCouverture(s) {
+  const img = $('cover');
+  if (img.dataset.url) URL.revokeObjectURL(img.dataset.url);
+  if (s.image) { img.dataset.url = img.src = URL.createObjectURL(s.image); img.style.display = 'block'; }
+  else { img.style.display = 'none'; img.removeAttribute('src'); img.dataset.url = ''; }
+}
+/* Paragraphes de chaque partie (histoire interactive) : [début, fin) */
+function plagesParties(s) {
+  if (!s.parts) return [[0, paras(s.histoire).length]];
+  const out = []; let d = 0;
+  for (const p of s.parts) { const n = paras(p.texte).length; out.push([d, d + n]); d += n; }
+  return out;
+}
 function showStory(s) {
+  arreterParole();
   current = s;
   $('story-card').style.display = 'block';
+  afficherCouverture(s);
+  $('s-chap').textContent = s.chap > 1 ? `Chapitre ${s.chap}` : s.interactive ? '🔀 L\'enfant choisit la suite' : '';
   $('s-title').textContent = s.titre;
-  $('s-text').innerHTML = esc(s.histoire).replace(/\[([^\]\n]{1,40})\]/g, '<span class="tag">$1</span>');
-  status($('tts-status'), `${s.histoire.length.toLocaleString('fr-CA')} caractères ≈ crédits ElevenLabs utilisés`);
-  setAudio(s.audio || null);
+  $('s-text').innerHTML = paras(s.histoire).map((p, i) =>
+    `<p data-i="${i}">${esc(p).replace(/\[([^\]\n]{1,40})\]/g, '<span class="tag">$1</span>')}</p>`).join('');
+  const enCours = s.interactive && s.parts.length < NB_PARTIES;
+  $('btn-suite').style.display = enCours ? 'none' : '';
+  majChoix();
+  setAudio(s);
+  infoCredits();
 }
-function setAudio(blob) {
+async function infoCredits() {
+  if (!current) return;
+  const s = current;
+  if (s.audio || (s.interactive && s.partAudio?.[s.parts.length - 1])) return;
+  const t = texteALire(s);
+  const { moteur, raison } = await choisirMoteur(t.length);
+  if (s !== current) return;
+  const nom = { eleven: 'ElevenLabs', gemini: 'la voix Gemini (gratuite)', phone: 'la voix du téléphone (gratuite)' }[moteur];
+  let m = `${fmt(t.length)} caractères · sera lue par ${nom}`;
+  if (moteur === 'eleven') { const q = await quotaEleven(); m += ` · il te restera ${fmt(q.reste - t.length)} caractères ce mois-ci`; }
+  if (raison) m += ` (${raison})`;
+  status($('tts-status'), m);
+}
+/* Texte à lire maintenant : toute l'histoire, ou la dernière partie d'une histoire interactive pas finie */
+function texteALire(s) {
+  if (s.interactive && s.parts.length < NB_PARTIES) return s.parts[s.parts.length - 1].texte;
+  return s.histoire;
+}
+function setAudio(s) {
   if (audioUrl) URL.revokeObjectURL(audioUrl);
+  const blob = s.audio || null;
   audioUrl = blob ? URL.createObjectURL(blob) : null;
-  $('player').style.display = blob ? 'block' : 'none';
+  const aDuSon = !!blob || (s.partAudio || []).some(Boolean);
+  $('player').style.display = aDuSon ? 'block' : 'none';
   $('audio-actions').style.display = blob ? 'flex' : 'none';
-  $('btn-read').textContent = blob ? '▶️ Réécouter' : '🔊 Raconter';
+  $('btn-dl').textContent = blob?.type === 'audio/wav' ? '⬇️ Télécharger l\'audio (WAV)' : '⬇️ Télécharger MP3';
+  const pret = blob || (s.interactive && s.partAudio?.[s.parts.length - 1]);
+  $('btn-read').textContent = pret ? '▶️ Réécouter' : '🔊 Raconter';
+  file = []; fileIdx = 0;
   if (blob) {
+    file = [{ url: audioUrl, debut: 0, fin: paras(s.histoire).length, texte: s.histoire }];
     $('player').src = audioUrl;
-    if ('mediaSession' in navigator) navigator.mediaSession.metadata = new MediaMetadata({ title: current.titre, artist: 'Histoires du soir' });
+    if ('mediaSession' in navigator) navigator.mediaSession.metadata = new MediaMetadata({ title: s.titre, artist: 'Histoires du soir' });
   } else $('player').removeAttribute('src');
 }
 
-/* ==================== ACTIONS ==================== */
-async function onGenerate() {
-  saveSettings();
-  const btn = $('btn-gen');
-  btn.disabled = $('btn-regen').disabled = true;
-  status($('gen-status'), '<span class="spin"></span>Gemini écrit ton histoire…');
+/* Le texte suit la lecture : on éclaire le paragraphe lu (au prorata du texte, sans les balises) */
+let litIdx = -1;
+function eclairer(i) {
+  if (i === litIdx) return;
+  document.querySelectorAll('#s-text p.lit').forEach(p => p.classList.remove('lit'));
+  litIdx = i;
+  if (i < 0 || !$('opt-suivre').checked) return;
+  const p = document.querySelector(`#s-text p[data-i="${i}"]`);
+  if (!p) return;
+  p.classList.add('lit');
+  p.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+$('player').addEventListener('timeupdate', () => {
+  const pl = $('player'), seg = file[fileIdx];
+  if (!seg || !pl.duration || !isFinite(pl.duration)) return;
+  const ps = paras(seg.texte).map(p => stripTags(p).length + 20);   // + un peu pour la respiration entre paragraphes
+  const total = ps.reduce((a, b) => a + b, 0);
+  let cible = pl.currentTime / pl.duration * total, k = 0;
+  while (k < ps.length - 1 && cible > ps[k]) { cible -= ps[k]; k++; }
+  eclairer(seg.debut + k);
+});
+$('player').addEventListener('play', musiqueJouer);
+$('player').addEventListener('pause', () => { if (!$('player').ended) musiquePause(); });
+$('player').addEventListener('ended', () => {
+  if (fileIdx + 1 < file.length) { fileIdx++; $('player').src = file[fileIdx].url; $('player').play().catch(() => {}); return; }
+  eclairer(-1);
+  if (!(current?.interactive && current.parts.length < NB_PARTIES)) finDeLecture(); else musiquePause();
+});
+function jouerFile(f) {
+  file = f; fileIdx = 0;
+  $('player').style.display = 'block';
+  $('player').src = f[0].url;
+  $('player').play().catch(() => {});
+}
+
+/* ==================== CHOIX (histoire interactive) ==================== */
+function majChoix() {
+  const s = current, zone = $('choix-zone');
+  if (!s?.interactive || s.parts.length >= NB_PARTIES) { zone.style.display = 'none'; return; }
+  const p = s.parts[s.parts.length - 1];
+  zone.style.display = 'block';
+  $('choix-btns').innerHTML = `<button class="choix" data-c="A">🅰️ ${esc(p.choixA)}</button><button class="choix" data-c="B">🅱️ ${esc(p.choixB)}</button>`;
+  status($('choix-status'), `Partie ${s.parts.length} sur ${NB_PARTIES} — à toi de choisir !`);
+}
+$('choix-btns').addEventListener('click', async e => {
+  const b = e.target.closest('[data-c]'); if (!b || !current) return;
+  const s = current, p = s.parts[s.parts.length - 1];
+  const choix = b.dataset.c === 'A' ? p.choixA : p.choixB;
+  p.choisi = choix;
+  document.querySelectorAll('#choix-btns button').forEach(x => x.disabled = true);
+  arreterParole(); $('player').pause();
+  status($('choix-status'), `<span class="spin"></span>Tu as choisi « ${esc(choix)} » ! Gemini écrit la suite…`);
   try {
-    const s = await generateStory();
-    s.id = Date.now().toString(36);
-    s.createdAt = Date.now();
-    s.meta = { name: $('name').value.trim(), mood: chipVal('mood') };
+    const j = await genererPartie(s, choix, m => status($('choix-status'), m));
+    s.parts.push({ texte: j.histoire, choixA: j.choixA, choixB: j.choixB });
+    s.histoire = s.parts.map(x => x.texte).join('\n\n');
     await DB.put(s);
     showStory(s);
-    status($('gen-status'), '✔ Histoire prête !', 'ok');
+    const debut = plagesParties(s)[s.parts.length - 1][0];
+    document.querySelector(`#s-text p[data-i="${debut}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    $('btn-read').click();                                     // on raconte la nouvelle partie tout de suite
+  } catch (err) {
+    status($('choix-status'), err.message, 'err');
+    document.querySelectorAll('#choix-btns button').forEach(x => x.disabled = false);
+  }
+});
+
+/* ==================== ACTIONS ==================== */
+async function creer(fn, extra = {}) {
+  saveSettings();
+  const btn = $('btn-gen');
+  btn.disabled = $('btn-regen').disabled = $('btn-suite').disabled = true;
+  const st = m => status($('gen-status'), m);
+  st('<span class="spin"></span>Gemini écrit ton histoire…');
+  try {
+    const j = await fn(st);
+    const s = {
+      id: Date.now().toString(36), createdAt: Date.now(), titre: j.titre, histoire: j.histoire,
+      meta: { name: $('name').value.trim(), friends: $('friends').value.trim(), mood: chipVal('mood') }, ...extra
+    };
+    if (extra.interactive) { s.parts = [{ texte: j.histoire, choixA: j.choixA, choixB: j.choixB }]; s.partAudio = []; }
+    await DB.put(s);
+    showStory(s);
+    st('✔ Histoire prête !');
+    $('gen-status').className = 'status ok';
+    imageEnFond(s);
     $('story-card').scrollIntoView({ behavior: 'smooth' });
   } catch (e) { status($('gen-status'), e.message, 'err'); }
-  btn.disabled = $('btn-regen').disabled = false;
+  btn.disabled = $('btn-regen').disabled = $('btn-suite').disabled = false;
+}
+function onGenerate() {
+  if (chipVal('format') === 'choix') return creer(st => genererPartie(null, null, st), { interactive: true });
+  return creer(genererHistoire);
 }
 $('btn-gen').onclick = onGenerate;
 $('btn-regen').onclick = onGenerate;
+$('btn-suite').onclick = () => {
+  if (!current) return;
+  const prec = current;
+  document.querySelector('#form-card').scrollIntoView({ behavior: 'smooth' });
+  creer(st => genererSuite(prec, st), { serie: prec.serie || prec.id, chap: (prec.chap || 1) + 1 });
+};
 $('btn-tags').onclick = () => $('s-text').classList.toggle('hide-tags');
 
+/* Mode nuit : écran noir, texte en gros, l'écran reste allumé */
+let verrouEcran = null;
+$('btn-nuit').onclick = async () => {
+  document.body.classList.add('nuit');
+  try { verrouEcran = await navigator.wakeLock?.request('screen'); } catch {}
+  (document.querySelector('#s-text p.lit') || $('s-text')).scrollIntoView({ block: 'center' });
+};
+$('nuit-sortie').onclick = () => {
+  document.body.classList.remove('nuit');
+  try { verrouEcran?.release(); } catch {} verrouEcran = null;
+};
+
+/* Fabrique l'audio d'un texte avec le bon moteur (repli automatique si ElevenLabs est à sec) */
+async function enregistrer(texte, onStatus, prog) {
+  let { moteur, raison } = await choisirMoteur(texte.length);
+  if (raison) onStatus(`<span class="spin"></span>${raison} → voix ${moteur === 'gemini' ? 'Gemini' : 'du téléphone'}`);
+  if (moteur === 'eleven') {
+    try {
+      const parts = chunk(texte), blobs = [];
+      for (let i = 0; i < parts.length; i++) {
+        onStatus(`<span class="spin"></span>ElevenLabs enregistre la voix… (${i + 1}/${parts.length})`);
+        blobs.push(await tts(parts[i]));
+        prog((i + 1) / parts.length);
+      }
+      return { blob: new Blob(blobs, { type: 'audio/mpeg' }) };
+    } catch (e) {
+      if (!(e.quota && $('engine').value === 'auto')) throw e;
+      moteur = $('k-gemini').value.trim() ? 'gemini' : 'phone';
+      onStatus(`<span class="spin"></span>Crédits ElevenLabs épuisés → voix ${moteur === 'gemini' ? 'Gemini' : 'du téléphone'}`);
+    }
+  }
+  if (moteur === 'gemini') {
+    prog(.05);
+    const blob = await ttsGemini(texte, m => { onStatus('<span class="spin"></span>' + m); const r = /\((\d+)\/(\d+)\)/.exec(m); if (r) prog(r[1] / r[2]); });
+    return { blob };
+  }
+  return { telephone: true };
+}
+
 $('btn-read').onclick = async () => {
-  if (!current) return;
-  if (current.audio) { $('player').play(); return; }
+  const s = current;
+  if (!s) return;
+  const plages = plagesParties(s);
+  const interactifEnCours = s.interactive && s.parts.length < NB_PARTIES;
+  const segPart = k => ({ url: URL.createObjectURL(s.partAudio[k]), debut: plages[k][0], fin: plages[k][1], texte: s.parts[k].texte });
+  // Partie à enregistrer (histoire à choix) : la dernière arrivée si elle n'a pas de son, sinon la première sans son
+  let iPart = 0;
+  if (s.interactive) {
+    s.partAudio = s.partAudio || [];
+    const der = s.parts.length - 1, manque = s.parts.findIndex((p, k) => !s.partAudio[k]);
+    if (interactifEnCours || !s.partAudio[der]) iPart = der;
+    else if (manque >= 0) iPart = manque;
+    else {                                                     // tout est enregistré : on réécoute sans rien dépenser
+      if (s.audio) { setAudio(s); $('player').play().catch(() => {}); } else jouerFile(s.parts.map((p, k) => segPart(k)));
+      return;
+    }
+    if (s.partAudio[iPart]) { jouerFile([segPart(iPart)]); return; }
+  } else if (s.audio) {                                        // déjà enregistré : on réécoute sans rien dépenser
+    setAudio(s); $('player').play().catch(() => {});
+    return;
+  }
   saveSettings();
   const btn = $('btn-read'); btn.disabled = true;
-  const prog = $('tts-prog'), bar = prog.firstElementChild;
-  prog.style.display = 'block'; bar.style.width = '3%';
+  const progEl = $('tts-prog'), bar = progEl.firstElementChild;
+  progEl.style.display = 'block'; bar.style.width = '3%';
+  const st = m => status($('tts-status'), m);
   try {
-    const parts = chunk(current.histoire);
-    const blobs = [];
-    for (let i = 0; i < parts.length; i++) {
-      status($('tts-status'), `<span class="spin"></span>ElevenLabs enregistre la voix… (${i + 1}/${parts.length})`);
-      blobs.push(await tts(parts[i]));
-      bar.style.width = ((i + 1) / parts.length * 100) + '%';
+    const texte = s.interactive ? s.parts[iPart].texte : s.histoire;
+    const r = await enregistrer(texte, st, f => bar.style.width = Math.max(3, f * 100) + '%');
+    if (r.telephone) {
+      progEl.style.display = 'none'; btn.disabled = false;
+      const d = s.interactive ? plages[iPart][0] : 0;
+      st('🔊 Voix du téléphone (rien n\'est enregistré : elle lit en direct)');
+      $('phone-ctrl').style.display = 'flex'; $('btn-ph-pause').textContent = '⏸️ Pause';
+      musiqueJouer();
+      parler(paras(texte).map(stripTags), k => eclairer(d + k), () => {
+        $('phone-ctrl').style.display = 'none'; eclairer(-1);
+        if (!interactifEnCours) finDeLecture(); else musiquePause();
+      });
+      return;
     }
-    current.audio = new Blob(blobs, { type: 'audio/mpeg' });
-    await DB.put(current);
-    setAudio(current.audio);
+    if (s.interactive) {
+      s.partAudio[iPart] = r.blob;
+      if (s.parts.length === NB_PARTIES && s.partAudio.length === NB_PARTIES && s.partAudio.every(Boolean)) s.audio = await concatAudio(s.partAudio);
+      await DB.put(s);
+      setAudio(s);
+      jouerFile([{ url: URL.createObjectURL(r.blob), debut: plages[iPart][0], fin: plages[iPart][1], texte }]);
+    } else {
+      s.audio = r.blob;
+      await DB.put(s);
+      setAudio(s);
+      $('player').play().catch(() => {});
+    }
     status($('tts-status'), '✔ Bonne écoute ! L\'audio est sauvegardé dans tes histoires.', 'ok');
-    $('player').play().catch(() => {});
   } catch (e) { status($('tts-status'), e.message, 'err'); }
-  prog.style.display = 'none'; btn.disabled = false;
+  progEl.style.display = 'none'; btn.disabled = false;
 };
 
 $('btn-dl').onclick = () => {
   if (!current?.audio) return;
   const a = document.createElement('a');
   a.href = audioUrl;
-  a.download = current.titre.replace(/[^\p{L}\p{N} _-]/gu, '').trim() + '.mp3';
+  a.download = current.titre.replace(/[^\p{L}\p{N} _-]/gu, '').trim() + (current.audio.type === 'audio/wav' ? '.wav' : '.mp3');
   a.click();
 };
 
 /* ==================== BIBLIOTHÈQUE ==================== */
+let vignettes = [];
 async function renderLib() {
-  const list = (await DB.all()).sort((a, b) => b.createdAt - a.createdAt);
+  vignettes.forEach(u => URL.revokeObjectURL(u)); vignettes = [];
+  const q = $('lib-q').value.trim().toLowerCase(), f = chipVal('libf');
+  let list = (await DB.all()).sort((a, b) => b.createdAt - a.createdAt);
+  if (f === 'fav') list = list.filter(s => s.fav);
+  if (f === 'audio') list = list.filter(s => s.audio);
+  if (q) list = list.filter(s => [s.titre, s.histoire, s.meta?.name, s.meta?.friends].join(' ').toLowerCase().includes(q));
   const el = $('lib-list');
-  if (!list.length) { el.innerHTML = '<p class="hint">Aucune histoire pour l\'instant. Crée la première ! ✨</p>'; return; }
-  el.innerHTML = list.map(s => `
-    <div class="lib-item" data-id="${s.id}">
-      <div style="font-size:1.5rem">${s.audio ? '🎧' : '📖'}</div>
-      <div class="t">${esc(s.titre)}<small>${new Date(s.createdAt).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long' })}${s.meta?.name ? ' · ' + esc(s.meta.name) : ''}</small></div>
+  if (!list.length) {
+    el.innerHTML = `<p class="hint">${q || f !== 'tout' ? 'Aucune histoire ne correspond.' : 'Aucune histoire pour l\'instant. Crée la première ! ✨'}</p>`;
+    return;
+  }
+  el.innerHTML = list.map(s => {
+    let vign = `<div class="vign">${s.audio ? '🎧' : s.interactive ? '🔀' : '📖'}</div>`;
+    if (s.image) { const u = URL.createObjectURL(s.image); vignettes.push(u); vign = `<img class="vign" src="${u}" alt="">`; }
+    const quand = new Date(s.createdAt).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long' });
+    const det = [quand, s.chap > 1 ? `chapitre ${s.chap}` : '', s.interactive ? (s.parts?.length < NB_PARTIES ? 'à choix (pas finie)' : 'à choix') : '',
+      s.meta?.name ? esc(s.meta.name) : '', s.audio ? '🎧 sans crédit' : ''].filter(Boolean).join(' · ');
+    return `<div class="lib-item" data-id="${s.id}">${vign}
+      <div class="t">${esc(s.titre)}<small>${det}</small></div>
+      <button class="star ${s.fav ? 'on' : ''}" data-fav="${s.id}" title="Favori">⭐</button>
       <button class="sec" data-del="${s.id}">🗑️</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
+$('lib-q').addEventListener('input', () => renderLib());
 $('lib-list').addEventListener('click', async e => {
   const del = e.target.closest('[data-del]');
   if (del) {
     e.stopPropagation();
     if (confirm('Supprimer cette histoire ?')) { await DB.del(del.dataset.del); renderLib(); }
+    return;
+  }
+  const fav = e.target.closest('[data-fav]');
+  if (fav) {
+    e.stopPropagation();
+    const s = await DB.get(fav.dataset.fav); s.fav = !s.fav; await DB.put(s);
+    fav.classList.toggle('on', s.fav);
+    if (chipVal('libf') === 'fav') renderLib();
     return;
   }
   const item = e.target.closest('.lib-item'); if (!item) return;
@@ -577,10 +1352,13 @@ $('lib-list').addEventListener('click', async e => {
 });
 
 /* Premier lancement : aller aux réglages si clés manquantes */
-if (!$('k-gemini').value || !$('k-eleven').value) {
+if (!$('k-gemini').value || (!$('k-eleven').value && $('engine').value === 'eleven')) {
   document.querySelector('nav button[data-v="v-set"]').click();
-  status($('set-status'), '👋 Bienvenue ! Entre tes deux clés API, charge les voix (↻), puis enregistre.');
-} else loadVoices().then(() => { if (!$('set-status').classList.contains('err')) status($('set-status'), ''); });
+  status($('set-status'), '👋 Bienvenue ! Entre ta clé Gemini (et ElevenLabs si tu l\'as), puis enregistre.');
+} else if ($('k-eleven').value) {
+  loadVoices().then(() => { if (!$('set-status').classList.contains('err')) status($('set-status'), ''); });
+}
+if ($('k-eleven').value) afficherQuota();
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>

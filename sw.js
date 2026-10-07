@@ -1,5 +1,5 @@
 // Cache l'interface pour un démarrage instantané ; les appels API passent toujours par le réseau.
-const CACHE = 'histoires-v5';
+const CACHE = 'histoires-v6';
 const FILES = ['./', 'index.html', 'manifest.json', 'icon.svg', 'icon-192.png', 'icon-512.png'];
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(
