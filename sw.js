@@ -1,7 +1,7 @@
 // Cache l'interface pour un démarrage instantané ; les appels API passent toujours par le réseau.
 // Toujours le réseau d'abord, SANS le cache HTTP du navigateur (GitHub Pages garde les pages 10 min) :
 // une nouvelle version arrive dès la réouverture. Le cache ne sert que hors ligne.
-const CACHE = 'histoires-v12';
+const CACHE = 'histoires-v13';
 const FILES = ['./', 'index.html', 'manifest.json', 'icon.svg', 'icon-192.png', 'icon-512.png'];
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES.map(f => new Request(f, { cache: 'reload' })))).then(() => self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(

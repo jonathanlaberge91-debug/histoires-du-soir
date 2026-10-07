@@ -340,7 +340,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v12</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v13</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -817,6 +817,17 @@ const store = {
 function status(el, msg, cls = '') { el.className = 'status ' + cls; el.innerHTML = msg; }
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const stripTags = t => t.replace(/\[[^\]\n]{1,40}\]\s*/g, '');
+/* Texte écrit pour ElevenLabs v3, lu par une autre voix : on enlève ce qu'elle prononcerait mal.
+   « Ouuuuh » → « Ouh », « Crrrac » → « Crac », « Trèèès » → « Très », « BRILLANTE » → « brillante ». */
+function pourVoixSimple(t) {
+  return stripTags(t)
+    .replace(/(\p{L})\1{2,}/gu, '$1')
+    .replace(/(?<!\p{L})\p{Lu}{3,}(?!\p{L})/gu, (mot, pos, tout) => {
+      const avant = tout.slice(0, pos).trimEnd();
+      const bas = mot.toLowerCase();
+      return !avant || /[.!?…«»—\n]$/.test(avant) ? bas[0].toUpperCase() + bas.slice(1) : bas;
+    });
+}
 const sleep = ms => new Promise(ok => setTimeout(ok, ms));
 const paras = t => t.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
 const fmt = n => Math.round(n).toLocaleString('fr-CA');
@@ -1184,6 +1195,26 @@ const SCHEMA = { type: 'OBJECT', properties: { titre: { type: 'STRING' }, histoi
 const SCHEMA_CHOIX = { type: 'OBJECT', properties: { titre: { type: 'STRING' }, histoire: { type: 'STRING' }, choixA: { type: 'STRING' }, choixB: { type: 'STRING' } },
   required: ['titre', 'histoire', 'choixA', 'choixB'] };
 
+/* Quelle voix va raconter ? On l'estime AVANT d'écrire, pour adapter le texte :
+   ElevenLabs v3 comprend les balises et les effets ; les autres voix les prononcent mal. */
+let voixSimple = false;
+const LONGUEUR_ESTIMEE = { court: 2600, moyen: 5000, long: 8500 };
+async function preparerEcriture(nbCaracteres) {
+  try {
+    const { moteur } = await choisirMoteur(nbCaracteres || LONGUEUR_ESTIMEE[chipVal('length')] || 5000);
+    voixSimple = !(moteur === 'eleven' && $('m-eleven').value === 'eleven_v3');
+  } catch { voixSimple = true; }
+  return voixSimple;
+}
+const CONSIGNE_VOIX_SIMPLE = `TRÈS IMPORTANT — VOIX DE SYNTHÈSE SIMPLE. Cette histoire sera lue par une voix qui NE comprend PAS les balises audio et prononce mal les effets écrits. Remplace les règles « Balises audio » et « Ponctuation expressive » de la section 2 par celles-ci :
+- AUCUNE balise entre crochets, nulle part.
+- Aucun son étiré : jamais « Ouuuuh », « Trèèès », « Crrrac », « Vrouuum ». Écris « Ouh », « très », « crac », « vroum ».
+- Aucun mot en MAJUSCULES.
+- Onomatopées courtes, connues, qui se prononcent comme elles s'écrivent : vroum, plouf, boum, crac, toc toc, miaou, ouaf, atchoum. Pas de lettres répétées, pas d'onomatopée inventée imprononçable.
+- Les émotions et les façons de parler passent par les mots du récit : « chuchota-t-elle tout bas », « dit-il en riant », « soupira le hibou », « cria-t-il de toutes ses forces », « répondit-elle d'une toute petite voix ».
+- Les pauses passent par la ponctuation : points de suspension, virgules, phrases courtes, paragraphes courts.
+- Garde des dialogues vivants avec une incise claire pour savoir qui parle : chaque personnage peut être lu par une voix différente.`;
+
 /* Les consignes communes, d'après le formulaire */
 function consignes(opts = {}) {
   const name = $('name').value.trim(), age = $('age').value || '5';
@@ -1202,7 +1233,7 @@ function consignes(opts = {}) {
     !opts.sansIdee && dessin ? `L'enfant a fait le DESSIN joint en image. L'histoire raconte CE dessin : ses personnages, ses couleurs, ses détails (même un gribouillis devient quelque chose de magique). Décris-les pour que l'enfant reconnaisse son dessin et soit fier.` : '',
     `Ambiance : ${MOODS[mood]}`,
     LANGS[lang],
-    $('engine').value === 'eleven' && $('m-eleven').value !== 'eleven_v3' ? 'Mise en garde : la voix ne comprend PAS les balises. N\'en mets AUCUNE ; exprime les émotions uniquement par la ponctuation et les incises.' : ''
+    voixSimple ? CONSIGNE_VOIX_SIMPLE : ''
   ].filter(Boolean);
 }
 
@@ -1296,7 +1327,7 @@ async function tts(text) {
   if (!key) throw new Error('Ajoute ta clé ElevenLabs dans ⚙️ Réglages.');
   if (!voice) throw new Error('Choisis une voix dans ⚙️ Réglages.');
   const model = $('m-eleven').value;
-  const body = { text: model === 'eleven_v3' ? text : stripTags(text), model_id: model };
+  const body = { text: model === 'eleven_v3' ? text : pourVoixSimple(text), model_id: model };
   body.voice_settings = model === 'eleven_v3'
     ? { stability: parseFloat($('stability').value) }
     : { stability: 0.4, similarity_boost: 0.8, style: 0.45, use_speaker_boost: true };
@@ -1331,7 +1362,7 @@ async function edgeMorceau(texte, voix, vitesse, hauteur = 0) {
   return r.blob();
 }
 async function ttsEdge(text, onStatus, prog) {
-  const morceaux = chunk(stripTags(text), 2500), blobs = [];
+  const morceaux = chunk(pourVoixSimple(text), 2500), blobs = [];
   for (let i = 0; i < morceaux.length; i++) {
     onStatus?.(`<span class="spin"></span>Voix québécoise Microsoft… (${i + 1}/${morceaux.length})`);
     blobs.push(await edgeMorceau(morceaux[i], $('ms-voice').value, parseInt($('ms-rate').value, 10)));
@@ -1356,7 +1387,7 @@ const SCHEMA_VOIX = {
 };
 const MS_HOMMES = ['fr-CA-JeanNeural', 'fr-CA-AntoineNeural', 'fr-CA-ThierryNeural'];
 async function distribuerRoles(texte, onStatus) {
-  const propre = paras(stripTags(texte)).join('\n\n');
+  const propre = paras(pourVoixSimple(texte)).join('\n\n');
   const user = [
     'Voici une histoire pour enfants. Découpe-la en morceaux pour une lecture à plusieurs voix.',
     '- Recopie TOUT le texte, mot pour mot, sans rien ajouter, enlever ni corriger, dans l\'ordre.',
@@ -1583,7 +1614,7 @@ async function ttsGcloud(text, onStatus, prog) {
   if (!key) throw new Error('Ajoute ta clé Google Cloud dans ⚙️ Réglages.');
   const voix = gcVoix();
   if (!voix) throw new Error('Choisis une voix québécoise Google dans ⚙️ Réglages (bouton ↻).');
-  const propre = stripTags(text);
+  const propre = pourVoixSimple(text);
   if (gcUtilise() + propre.length > gcPlafond()) {
     const e = new Error(`plafond du mois atteint pour la voix Google (${fmt(gcUtilise())} / ${fmt(gcPlafond())})`); e.quota = true; throw e;
   }
@@ -1615,7 +1646,7 @@ async function ttsGcloud(text, onStatus, prog) {
 async function ttsGemini(text, onStatus) {
   const key = $('k-gemini').value.trim();
   if (!key) throw new Error('Ajoute ta clé Gemini dans ⚙️ Réglages.');
-  const morceaux = chunk(stripTags(text), 1400);
+  const morceaux = chunk(pourVoixSimple(text), 1400);
   const pcm = [];
   let model = TTS_MODELS[0];
   for (let i = 0; i < morceaux.length; i++) {
@@ -1833,6 +1864,7 @@ $('choix-btns').addEventListener('click', async e => {
   arreterParole(); $('player').pause();
   status($('choix-status'), `<span class="spin"></span>Tu as choisi « ${esc(choix)} » ! Gemini écrit la suite…`);
   try {
+    voixSimple = s.ecriture === 'simple';                     // même écriture que le début de l'histoire
     const j = await genererPartie(s, choix, m => status($('choix-status'), m));
     s.parts.push({ texte: j.histoire, choixA: j.choixA, choixB: j.choixB });
     s.histoire = s.parts.map(x => x.texte).join('\n\n');
@@ -1855,12 +1887,14 @@ async function creer(fn, extra = {}) {
   const st = m => status($('gen-status'), m);
   st('<span class="spin"></span>Gemini écrit ton histoire…');
   try {
+    await preparerEcriture(extra.interactive ? LONGUEUR_ESTIMEE[chipVal('length')] / 2 : 0);
     const j = await fn(st);
     const s = {
       id: Date.now().toString(36), createdAt: Date.now(), titre: j.titre, histoire: j.histoire,
       meta: { name: $('name').value.trim(), friends: $('friends').value.trim(), mood: chipVal('mood') }, ...extra
     };
     if (extra.interactive) { s.parts = [{ texte: j.histoire, choixA: j.choixA, choixB: j.choixB }]; s.partAudio = []; }
+    s.ecriture = voixSimple ? 'simple' : 'eleven';
     if (s.avecDessin && dessin) { s.image = dessin.blob; s.dessin = true; }
     delete s.avecDessin;
     await DB.put(s);
@@ -1985,7 +2019,7 @@ $('btn-read').onclick = async () => {
       st('🔊 Voix du téléphone (rien n\'est enregistré : elle lit en direct)');
       $('phone-ctrl').style.display = 'flex'; $('btn-ph-pause').textContent = '⏸️ Pause';
       musiqueJouer();
-      parler(paras(texte).map(stripTags), k => eclairer(d + k), () => {
+      parler(paras(texte).map(pourVoixSimple), k => eclairer(d + k), () => {
         $('phone-ctrl').style.display = 'none'; eclairer(-1);
         if (!interactifEnCours) finDeLecture(); else musiquePause();
       });

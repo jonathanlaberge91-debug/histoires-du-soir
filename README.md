@@ -77,3 +77,7 @@ Astuce : `…/#gemini=CLÉ&eleven=CLÉ&voice=VOICE_ID` enregistre les clés en u
 - `html[data-look]` = veilleuse | livre | doudou (jetons CSS), choisi dans Réglages → Apparence, gardé dans `set:theme` et posé avant l'affichage.
 - Les groupes de pastilles deviennent des choix qui s'ouvrent (`.picker`) : menu sous la ligne (Veilleuse), tuiles + grille (Livre), volet du bas (Doudou).
 - Réglages en sections repliables, cartes « Qui raconte ? » (le `<select id=engine>` caché reste la source), seuls les réglages de la voix choisie s'affichent, enregistrement automatique.
+
+## v13 — écrire pour la voix qui raconte (2026-10-07)
+- `preparerEcriture()` estime la voix AVANT d'écrire (`choisirMoteur` + longueur estimée) : tout sauf ElevenLabs v3 → `CONSIGNE_VOIX_SIMPLE` (pas de balises, sons étirés, majuscules ; onomatopées simples ; émotions par les mots). `s.ecriture` = simple | eleven (les parties d'une histoire à choix gardent la même).
+- `pourVoixSimple()` : filet de sécurité à la lecture pour toutes les voix sauf v3 (« Ouuuuh » → « Ouh », majuscules → minuscules).
