@@ -45,3 +45,9 @@ Astuce : `…/#gemini=CLÉ&eleven=CLÉ&voice=VOICE_ID` enregistre les clés en u
   « ⚙️ Configurer l'app » du Drive, dont le lien (`#drive=…&driveKey=…`) configure l'app. Jamais dans le dépôt.
 - App : envoi automatique (création, image, audio, choix, favori) ; « Tout envoyer » ; « Récupérer mes histoires du Drive ».
   Supprimer une histoire dans l'app ne la supprime PAS du Drive.
+
+## Voix québécoise Google (v9)
+- Google Cloud Text-to-Speech (`texttospeech.googleapis.com/v1/text:synthesize`, voix `fr-CA-*`, Chirp3-HD en premier),
+  clé API dans Réglages (restreinte au site + à l'API). Texte sans balises, morceaux de 1500 caractères, MP3.
+- Compteur local par mois (`gc:AAAA-MM`) et plafond réglable (900 000 par défaut) : au-delà, l'app passe à la voix suivante.
+- Ordre en mode Automatique : ElevenLabs → Google québécois → Gemini → téléphone.
