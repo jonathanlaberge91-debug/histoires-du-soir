@@ -98,7 +98,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>🌙 Histoires du soir</h1>
-  <p>Écrites par Gemini · racontées par ElevenLabs · <span style="opacity:.6">v7</span></p>
+  <p>Écrites par Gemini · racontées par ElevenLabs · <span style="opacity:.6">v8</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -169,6 +169,7 @@
     <img id="cover" class="cover" alt="" style="display:none">
     <div class="chap" id="s-chap"></div>
     <h2 id="s-title"></h2>
+    <div class="hint" id="drive-info" style="margin-top:0"></div>
     <div class="actions">
       <button class="sec" id="btn-read">🔊 Raconter</button>
       <button class="sec" id="btn-nuit">🌙 Mode nuit</button>
@@ -231,6 +232,8 @@
       <div class="chip" data-v="fav">⭐ Favoris</div>
       <div class="chip" data-v="audio">🎧 Avec audio</div>
     </div>
+    <div class="actions"><button class="sec" id="btn-drive-recup">☁️ Récupérer mes histoires du Drive</button></div>
+    <div class="status" id="recup-status"></div>
     <div id="lib-list" style="margin-top:12px"></div>
   </div>
 </section>
@@ -328,6 +331,20 @@
       <label class="check"><input type="checkbox" id="opt-suivre" checked>📜 Le texte suit la lecture</label>
       <label class="check"><input type="checkbox" id="opt-image" checked>🖼️ Image de couverture (Gemini)</label>
       <p class="hint">L'image demande un modèle d'images Gemini : avec certaines clés gratuites, elle n'est pas disponible (l'histoire se crée quand même).</p>
+    </div>
+
+    <div class="sub">
+      <div style="font-weight:600">☁️ Sauvegarde Google Drive</div>
+      <label class="check"><input type="checkbox" id="opt-drive" checked>Sauvegarder chaque histoire dans mon Drive (texte, audio, image)</label>
+      <label>Adresse du service</label>
+      <input id="drive-url" placeholder="https://script.google.com/macros/s/…/exec">
+      <label>Clé de sauvegarde</label>
+      <input id="drive-key" type="password" placeholder="se remplit toute seule avec le lien du Drive">
+      <p class="hint">Rangées dans Drive → « Histoires du soir » → un dossier par enfant → un dossier par histoire (Google Doc + audio + image). Les favoris ont aussi un raccourci dans « ⭐ Favoris ». Le plus simple : touche le lien du document « ⚙️ Configurer l'app » dans ce dossier, il remplit tout.</p>
+      <div class="actions">
+        <button class="sec" id="btn-drive-tout">☁️ Tout envoyer maintenant</button>
+      </div>
+      <div class="status" id="drive-status"></div>
     </div>
 
     <label>Langue de l'histoire</label>
@@ -632,8 +649,8 @@ const chipVal = g => document.querySelector(`.chips[data-group="${g}"] .chip.on`
 
 /* ==================== RÉGLAGES ==================== */
 const SETTINGS = ['k-gemini', 'm-gemini', 'k-eleven', 'voice-id', 'm-eleven', 'stability', 'lang', 'name', 'age', 'friends',
-  'engine', 'g-voice', 'p-voice', 'p-rate', 'musique-vol'];
-const CHECKS = ['opt-musique', 'opt-suivre', 'opt-image'];
+  'engine', 'g-voice', 'p-voice', 'p-rate', 'musique-vol', 'drive-url', 'drive-key'];
+const CHECKS = ['opt-musique', 'opt-suivre', 'opt-image', 'opt-drive'];
 SETTINGS.forEach(id => { const v = store.get('set:' + id); if (v) $(id).value = v; });
 CHECKS.forEach(id => { const v = store.get('set:' + id); if (v) $(id).checked = v === '1'; });
 /* Import de clés par lien : …/#gemini=CLÉ&eleven=CLÉ (enregistrées puis retirées de l'adresse) */
@@ -642,6 +659,15 @@ if (location.hash.length > 1) {
   if (h.get('gemini')) store.set('set:k-gemini', $('k-gemini').value = h.get('gemini'));
   if (h.get('eleven')) store.set('set:k-eleven', $('k-eleven').value = h.get('eleven'));
   if (h.get('voice')) store.set('set:voice-id', $('voice-id').value = h.get('voice'));
+  if (h.get('drive') && h.get('driveKey')) {          // lien du document « ⚙️ Configurer l'app » du Drive
+    store.set('set:drive-url', $('drive-url').value = h.get('drive'));
+    store.set('set:drive-key', $('drive-key').value = h.get('driveKey'));
+    $('opt-drive').checked = true; store.set('set:opt-drive', '1');
+    setTimeout(() => {
+      alert('☁️ Sauvegarde Google Drive activée ! Tes histoires vont être rangées dans Drive → « Histoires du soir ».');
+      driveToutEnvoyer();
+    }, 500);
+  }
   history.replaceState(null, '', location.pathname);
 }
 if (['gemini-2.5-flash', 'gemini-3.8-flash'].includes($('m-gemini').value)) $('m-gemini').value = 'gemini-flash-latest';
@@ -891,6 +917,7 @@ function imageEnFond(s) {
   if (!$('opt-image').checked || !$('k-gemini').value.trim() || s.image) return;
   genererImage(s).then(async img => {
     s.image = img; await DB.put(s);
+    driveSauver(s);
     if (current && current.id === s.id) afficherCouverture(s);
   }).catch(e => {
     if (current && current.id === s.id) status($('gen-status'), `✔ Histoire prête ! (image de couverture non disponible : ${esc(e.message.slice(0, 120))})`, 'ok');
@@ -1054,6 +1081,7 @@ function showStory(s) {
   majChoix();
   setAudio(s);
   infoCredits();
+  majDriveInfo();
 }
 async function infoCredits() {
   if (!current) return;
@@ -1174,6 +1202,7 @@ async function creer(fn, extra = {}) {
     if (extra.interactive) { s.parts = [{ texte: j.histoire, choixA: j.choixA, choixB: j.choixB }]; s.partAudio = []; }
     await DB.put(s);
     showStory(s);
+    driveSauver(s);
     st('✔ Histoire prête !');
     $('gen-status').className = 'status ok';
     imageEnFond(s);
@@ -1280,11 +1309,13 @@ $('btn-read').onclick = async () => {
       s.partAudio[iPart] = r.blob;
       if (s.parts.length === NB_PARTIES && s.partAudio.length === NB_PARTIES && s.partAudio.every(Boolean)) s.audio = await concatAudio(s.partAudio);
       await DB.put(s);
+      driveSauver(s);
       setAudio(s);
       jouerFile([{ url: URL.createObjectURL(r.blob), debut: plages[iPart][0], fin: plages[iPart][1], texte }]);
     } else {
       s.audio = r.blob;
       await DB.put(s);
+      driveSauver(s);
       setAudio(s);
       $('player').play().catch(() => {});
     }
@@ -1299,6 +1330,111 @@ $('btn-dl').onclick = () => {
   a.href = audioUrl;
   a.download = current.titre.replace(/[^\p{L}\p{N} _-]/gu, '').trim() + (current.audio.type === 'audio/wav' ? '.wav' : '.mp3');
   a.click();
+};
+
+/* ==================== SAUVEGARDE GOOGLE DRIVE ==================== */
+/* Le service (Google Apps Script, dossier drive/ du dépôt) tourne avec le compte de Jonathan et range
+   chaque histoire dans son Drive. L'app lui envoie le texte, et l'audio / l'image seulement s'ils ont changé. */
+const b64 = blob => new Promise((ok, ko) => {
+  const r = new FileReader();
+  r.onload = () => ok(String(r.result).split(',')[1]);
+  r.onerror = () => ko(r.error);
+  r.readAsDataURL(blob);
+});
+const deB64 = (s, type) => new Blob([Uint8Array.from(atob(s), c => c.charCodeAt(0))], { type });
+const driveActif = () => $('opt-drive').checked && $('drive-url').value.trim() && $('drive-key').value.trim();
+async function driveRep(r) {
+  let j; try { j = await r.json(); } catch { throw new Error('réponse illisible du service Drive (HTTP ' + r.status + ')'); }
+  if (!j.ok) throw new Error(j.erreur || 'erreur du service Drive');
+  return j;
+}
+async function drivePost(corps) {
+  // Requête « simple » (texte brut, sans en-tête) : Google Apps Script l'accepte depuis une autre adresse.
+  return driveRep(await fetch($('drive-url').value.trim(), { method: 'POST', body: JSON.stringify({ k: $('drive-key').value.trim(), ...corps }) }));
+}
+async function driveGet(params) {
+  const u = new URL($('drive-url').value.trim());
+  u.searchParams.set('k', $('drive-key').value.trim());
+  for (const [k, v] of Object.entries(params)) u.searchParams.set(k, v);
+  return driveRep(await fetch(u));
+}
+let driveFile = Promise.resolve(), driveErreur = '';
+function driveSauver(s) {
+  if (!s || !driveActif()) return;
+  const id = s.id;
+  driveFile = driveFile.then(() => driveEnvoyer(id)).catch(() => {});
+  return driveFile;
+}
+async function driveEnvoyer(id) {
+  const s = await DB.get(id);
+  if (!s || (s.interactive && !s.parts?.length)) return;
+  const { audio, image, partAudio, drive, driveAudio, driveImage, driveAttente, ...story } = s;
+  const corps = { a: 'sauver', story };
+  const sigA = audio ? audio.size + ':' + audio.type : '', sigI = image ? String(image.size) : '';
+  if (audio && driveAudio !== sigA) corps.audio = { b64: await b64(audio), type: audio.type || 'audio/mpeg' };
+  if (image && driveImage !== sigI) corps.image = { b64: await b64(image), type: image.type || 'image/jpeg' };
+  const maj = async champs => {
+    const s2 = await DB.get(id); if (!s2) return;
+    Object.assign(s2, champs);
+    if (!champs.driveAttente) delete s2.driveAttente;
+    await DB.put(s2);
+    if (current && current.id === id) { Object.assign(current, champs); if (!champs.driveAttente) delete current.driveAttente; majDriveInfo(); }
+  };
+  try {
+    const j = await drivePost(corps);
+    driveErreur = '';
+    const champs = { drive: { at: Date.now(), dossier: j.dossier } };
+    if (corps.audio) champs.driveAudio = sigA;
+    if (corps.image) champs.driveImage = sigI;
+    await maj(champs);
+  } catch (e) {
+    driveErreur = e.message;
+    await maj({ driveAttente: true });
+  }
+}
+function majDriveInfo() {
+  const el = $('drive-info'), s = current;
+  if (!s || !driveActif()) { el.innerHTML = ''; return; }
+  if (s.drive && !s.driveAttente) {
+    el.innerHTML = `☁️ Sauvegardée dans Drive${s.drive.dossier ? ` · <a href="${esc(s.drive.dossier)}" target="_blank">ouvrir le dossier</a>` : ''}`;
+  } else if (s.driveAttente) {
+    el.innerHTML = `☁️ Pas encore sauvegardée${driveErreur ? ' (' + esc(driveErreur.slice(0, 100)) + ')' : ''} — nouvel essai à la prochaine ouverture`;
+  } else el.innerHTML = '☁️ Envoi vers Drive…';
+}
+async function driveToutEnvoyer() {
+  if (!driveActif()) return status($('drive-status'), 'Active la sauvegarde et remplis l\'adresse et la clé (ou touche le lien du document du Drive).', 'err');
+  const list = await DB.all();
+  if (!list.length) return status($('drive-status'), 'Aucune histoire à envoyer pour l\'instant.', 'ok');
+  let n = 0;
+  for (const s of list) {
+    status($('drive-status'), `<span class="spin"></span>Envoi vers Drive… (${++n}/${list.length}) ${esc(s.titre)}`);
+    await driveSauver(s);
+  }
+  status($('drive-status'), driveErreur ? 'Erreur : ' + esc(driveErreur) : `✔ ${list.length} histoire(s) dans ton Drive → « Histoires du soir »`, driveErreur ? 'err' : 'ok');
+}
+$('btn-drive-tout').onclick = () => { saveSettings(); driveToutEnvoyer(); };
+$('btn-drive-recup').onclick = async () => {
+  if (!driveActif()) return status($('recup-status'), 'Active d\'abord la sauvegarde Drive dans ⚙️ Réglages (lien du document « ⚙️ Configurer l\'app »).', 'err');
+  const st = (m, c) => status($('recup-status'), m, c);
+  try {
+    st('<span class="spin"></span>Lecture de ton Drive…');
+    const { histoires } = await driveGet({ a: 'liste' });
+    const ici = new Set((await DB.all()).map(s => s.id));
+    const manquent = histoires.filter(h => !ici.has(h.id));
+    if (!manquent.length) return st(`✔ Rien à récupérer : les ${histoires.length} histoire(s) du Drive sont déjà ici.`, 'ok');
+    let n = 0;
+    for (const h of manquent) {
+      st(`<span class="spin"></span>Récupération… (${++n}/${manquent.length}) ${esc(h.titre || '')}`);
+      const j = await driveGet({ a: 'charger', id: h.id });
+      const s = j.story;
+      if (j.audio) { s.audio = deB64(j.audio.b64, j.audio.type); s.driveAudio = s.audio.size + ':' + s.audio.type; }
+      if (j.image) { s.image = deB64(j.image.b64, j.image.type); s.driveImage = String(s.image.size); }
+      s.drive = { at: Date.now() };
+      await DB.put(s);
+      renderLib();
+    }
+    st(`✔ ${manquent.length} histoire(s) récupérée(s) du Drive.`, 'ok');
+  } catch (e) { st('Erreur : ' + esc(e.message), 'err'); }
 };
 
 /* ==================== BIBLIOTHÈQUE ==================== */
@@ -1320,7 +1456,7 @@ async function renderLib() {
     if (s.image) { const u = URL.createObjectURL(s.image); vignettes.push(u); vign = `<img class="vign" src="${u}" alt="">`; }
     const quand = new Date(s.createdAt).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long' });
     const det = [quand, s.chap > 1 ? `chapitre ${s.chap}` : '', s.interactive ? (s.parts?.length < NB_PARTIES ? 'à choix (pas finie)' : 'à choix') : '',
-      s.meta?.name ? esc(s.meta.name) : '', s.audio ? '🎧 sans crédit' : ''].filter(Boolean).join(' · ');
+      s.meta?.name ? esc(s.meta.name) : '', s.audio ? '🎧 sans crédit' : '', s.drive && !s.driveAttente ? '☁️' : ''].filter(Boolean).join(' · ');
     return `<div class="lib-item" data-id="${s.id}">${vign}
       <div class="t">${esc(s.titre)}<small>${det}</small></div>
       <button class="star ${s.fav ? 'on' : ''}" data-fav="${s.id}" title="Favori">⭐</button>
@@ -1340,6 +1476,7 @@ $('lib-list').addEventListener('click', async e => {
   if (fav) {
     e.stopPropagation();
     const s = await DB.get(fav.dataset.fav); s.fav = !s.fav; await DB.put(s);
+    driveSauver(s);
     fav.classList.toggle('on', s.fav);
     if (chipVal('libf') === 'fav') renderLib();
     return;
@@ -1359,6 +1496,8 @@ if (!$('k-gemini').value || (!$('k-eleven').value && $('engine').value === 'elev
   loadVoices().then(() => { if (!$('set-status').classList.contains('err')) status($('set-status'), ''); });
 }
 if ($('k-eleven').value) afficherQuota();
+/* Histoires pas encore sauvegardées dans le Drive (hors ligne, erreur) : on réessaie à l'ouverture */
+if (driveActif()) setTimeout(async () => { for (const s of await DB.all()) if (s.driveAttente || !s.drive) await driveSauver(s); }, 3000);
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(r => r.update()).catch(() => {});
 /* Une nouvelle version vient de s'installer : on recharge une fois pour l'afficher */

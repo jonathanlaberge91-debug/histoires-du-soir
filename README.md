@@ -35,3 +35,13 @@ Astuce : `…/#gemini=CLÉ&eleven=CLÉ&voice=VOICE_ID` enregistre les clés en u
   générés en JS, en boucle, avec minuterie et fondu.
 - **Image de couverture** : modèles d'images Gemini (`IMAGE_MODELS`), réduite à 900 px JPEG ; facultative (pas dispo avec toutes les clés gratuites).
 - **Bibliothèque** : recherche, favoris ⭐, filtre « avec audio », vignettes.
+
+## Sauvegarde Google Drive (v8)
+- Service Google Apps Script dans `drive/` (projet `1YSy2ygl…`, déployé en application web « exécuter en tant que moi,
+  accès : tout le monde »). Mise à jour : `cd drive && clasp push -f && clasp update-deployment <id du déploiement>`.
+- Rangement : Drive → `Histoires du soir/<prénom>/<AAAA-MM-JJ> — <titre>/` (Google Doc, audio, `couverture.jpg`, `infos.json`)
+  + raccourcis dans `⭐ Favoris/`.
+- Clé secrète créée par le script à sa première ouverture (propriétés du script) et écrite seulement dans le document
+  « ⚙️ Configurer l'app » du Drive, dont le lien (`#drive=…&driveKey=…`) configure l'app. Jamais dans le dépôt.
+- App : envoi automatique (création, image, audio, choix, favori) ; « Tout envoyer » ; « Récupérer mes histoires du Drive ».
+  Supprimer une histoire dans l'app ne la supprime PAS du Drive.
