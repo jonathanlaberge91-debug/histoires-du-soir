@@ -98,7 +98,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>🌙 Histoires du soir</h1>
-  <p>Écrites par Gemini · racontées par ElevenLabs · <span style="opacity:.6">v9</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span style="opacity:.6">v10</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -253,7 +253,8 @@
 
     <label>Qui raconte ?</label>
     <select id="engine">
-      <option value="auto">Automatique — ElevenLabs, puis la voix québécoise Google, puis Gemini</option>
+      <option value="auto">Automatique — ElevenLabs, puis la voix québécoise Microsoft (gratuite)</option>
+      <option value="edge">🍁 Voix québécoise Microsoft (gratuite, illimitée)</option>
       <option value="eleven">ElevenLabs seulement (la plus expressive)</option>
       <option value="gcloud">Voix québécoise Google (gratuite jusqu'au plafond du mois)</option>
       <option value="gemini">Voix Gemini (gratuite, expressive)</option>
@@ -291,6 +292,21 @@
         <option value="0.5" selected>Naturel — équilibré</option>
         <option value="1">Stable — régulier, peu de variation</option>
       </select>
+    </div>
+
+    <div class="sub">
+      <div style="font-weight:600">🍁 Voix québécoise Microsoft (gratuite)</div>
+      <label>Voix</label>
+      <select id="ms-voice">
+        <option value="fr-CA-SylvieNeural">Sylvie — femme</option>
+        <option value="fr-CA-AntoineNeural">Antoine — homme</option>
+        <option value="fr-CA-JeanNeural">Jean — homme</option>
+        <option value="fr-CA-ThierryNeural">Thierry — homme</option>
+      </select>
+      <label>Vitesse</label>
+      <input id="ms-rate" type="range" min="-30" max="10" step="5" value="-10">
+      <button class="sec" id="btn-preview-ms" style="margin-top:8px">▶️ Écouter un extrait</button>
+      <p class="hint">Les voix d'ici de la lecture à voix haute de Microsoft Edge, par le relais de ton serveur : gratuites, sans compte et sans limite. C'est un service non officiel : s'il cesse de répondre, l'app passe toute seule à la voix suivante. Elle lit sans les chuchotements ni les rires.</p>
     </div>
 
     <div class="sub">
@@ -373,6 +389,13 @@
       <option value="fr-fr">Français (France)</option>
       <option value="en">English</option>
     </select>
+
+    <div class="sub" id="transfert-box" style="display:none">
+      <div style="font-weight:600">📲 Version de ton serveur</div>
+      <p class="hint">L'app est aussi sur ton serveur : <b>95.groupelaberge.ca/histoires</b> (bouton « Histoires » de l'app Maison). Ce bouton y copie tes clés et tes réglages, puis récupère tes histoires depuis le Drive.</p>
+      <button class="sec" id="btn-transfert">📲 Ouvrir la version du serveur avec mes réglages</button>
+      <div class="status" id="transfert-status"></div>
+    </div>
 
     <button class="big" id="btn-save">💾 Enregistrer</button>
     <div class="status" id="set-status"></div>
@@ -669,13 +692,27 @@ const chipVal = g => document.querySelector(`.chips[data-group="${g}"] .chip.on`
 
 /* ==================== RÉGLAGES ==================== */
 const SETTINGS = ['k-gemini', 'm-gemini', 'k-eleven', 'voice-id', 'm-eleven', 'stability', 'lang', 'name', 'age', 'friends',
-  'engine', 'g-voice', 'p-voice', 'p-rate', 'musique-vol', 'drive-url', 'drive-key', 'k-gcloud', 'gc-voice', 'gc-rate', 'gc-plafond'];
+  'engine', 'g-voice', 'p-voice', 'p-rate', 'musique-vol', 'drive-url', 'drive-key', 'k-gcloud', 'gc-voice', 'gc-rate', 'gc-plafond', 'ms-voice', 'ms-rate'];
 const CHECKS = ['opt-musique', 'opt-suivre', 'opt-image', 'opt-drive'];
 SETTINGS.forEach(id => { const v = store.get('set:' + id); if (v) $(id).value = v; });
 CHECKS.forEach(id => { const v = store.get('set:' + id); if (v) $(id).checked = v === '1'; });
 /* Import de clés par lien : …/#gemini=CLÉ&eleven=CLÉ (enregistrées puis retirées de l'adresse) */
 if (location.hash.length > 1) {
   const h = new URLSearchParams(location.hash.slice(1));
+  if (h.get('cfg')) {                                   // transfert depuis l'autre adresse de l'app
+    try {
+      const c = JSON.parse(decodeURIComponent(escape(atob(h.get('cfg').replace(/-/g, '+').replace(/_/g, '/')))));
+      for (const [k, v] of Object.entries(c)) {
+        if (SETTINGS.includes(k)) { store.set('set:' + k, v); $(k).value = v; }
+        if (CHECKS.includes(k)) { store.set('set:' + k, v ? '1' : '0'); $(k).checked = !!v; }
+      }
+      setTimeout(async () => {
+        alert('📲 Réglages copiés ! Tes histoires vont être récupérées depuis le Drive.');
+        document.querySelector('nav button[data-v="v-lib"]').click();
+        if (driveActif()) $('btn-drive-recup').click();
+      }, 600);
+    } catch (e) { setTimeout(() => alert('Le transfert des réglages a échoué : ' + e.message), 300); }
+  }
   if (h.get('gemini')) store.set('set:k-gemini', $('k-gemini').value = h.get('gemini'));
   if (h.get('eleven')) store.set('set:k-eleven', $('k-eleven').value = h.get('eleven'));
   if (h.get('voice')) store.set('set:voice-id', $('voice-id').value = h.get('voice'));
@@ -813,11 +850,12 @@ async function choisirMoteur(nb) {
 }
 /* Voix de secours, dans l'ordre : québécoise Google (sous le plafond), Gemini, téléphone */
 function secours(nb, sauf) {
+  if (sauf !== 'edge' && !edgeEnPanne) return 'edge';
   if (sauf !== 'gcloud' && $('k-gcloud').value.trim() && gcVoix() && gcUtilise() + nb <= gcPlafond()) return 'gcloud';
   if (sauf !== 'gemini' && $('k-gemini').value.trim()) return 'gemini';
   return 'phone';
 }
-const NOMS_VOIX = { eleven: 'ElevenLabs', gcloud: 'la voix québécoise Google', gemini: 'la voix Gemini', phone: 'la voix du téléphone' };
+const NOMS_VOIX = { edge: 'la voix québécoise Microsoft', eleven: 'ElevenLabs', gcloud: 'la voix québécoise Google', gemini: 'la voix Gemini', phone: 'la voix du téléphone' };
 
 /* ==================== GEMINI : TEXTE ==================== */
 async function appelGemini(user, schema, onStatus) {
@@ -977,6 +1015,27 @@ async function tts(text) {
   }
   noterUtilise(body.text.length);
   return r.blob();
+}
+
+/* ==================== VOIX QUÉBÉCOISE MICROSOFT (relais du serveur) ==================== */
+const URL_TTS_EDGE = location.hostname === '95.groupelaberge.ca' ? '/histoires/tts' : 'https://95.groupelaberge.ca/histoires/tts';
+let edgeEnPanne = false;
+async function ttsEdge(text, onStatus, prog) {
+  const morceaux = chunk(stripTags(text), 2500), blobs = [];
+  for (let i = 0; i < morceaux.length; i++) {
+    onStatus?.(`<span class="spin"></span>Voix québécoise Microsoft… (${i + 1}/${morceaux.length})`);
+    let r;
+    try {
+      r = await withRetry(() => fetch(URL_TTS_EDGE, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ texte: morceaux[i], voix: $('ms-voice').value, vitesse: parseInt($('ms-rate').value, 10) })
+      }));
+    } catch { throw new Error('Voix Microsoft : serveur injoignable'); }
+    if (!r.ok) throw new Error('Voix Microsoft : ' + await errText(r).catch(() => 'HTTP ' + r.status));
+    blobs.push(await r.blob());
+    prog?.((i + 1) / morceaux.length);
+  }
+  return new Blob(blobs, { type: 'audio/mpeg' });
 }
 
 /* ==================== VOIX QUÉBÉCOISE GOOGLE (Cloud Text-to-Speech) ==================== */
@@ -1357,6 +1416,16 @@ async function enregistrer(texte, onStatus, prog) {
       onStatus(`<span class="spin"></span>Crédits ElevenLabs épuisés → ${NOMS_VOIX[moteur]}`);
     }
   }
+  if (moteur === 'edge') {
+    try {
+      return { blob: await ttsEdge(texte, onStatus, prog) };
+    } catch (e) {
+      if ($('engine').value !== 'auto') throw e;
+      edgeEnPanne = true;                                     // pour cette session : on n'insiste pas
+      moteur = secours(texte.length, 'edge');
+      onStatus(`<span class="spin"></span>${e.message} → ${NOMS_VOIX[moteur]}`);
+    }
+  }
   if (moteur === 'gcloud') {
     try {
       return { blob: await ttsGcloud(texte, onStatus, prog) };
@@ -1607,6 +1676,33 @@ if (!$('k-gemini').value || (!$('k-eleven').value && $('engine').value === 'elev
   loadVoices().then(() => { if (!$('set-status').classList.contains('err')) status($('set-status'), ''); });
 }
 if ($('k-eleven').value) afficherQuota();
+/* Voix québécoise Microsoft : extrait */
+$('btn-preview-ms').onclick = async () => {
+  saveSettings();
+  status($('set-status'), '<span class="spin"></span>Enregistrement d\'un extrait…');
+  try {
+    const blob = await ttsEdge(stripTags(EXTRAIT()));
+    new Audio(URL.createObjectURL(blob)).play();
+    status($('set-status'), '✔ Lecture de l\'extrait (voix québécoise Microsoft)', 'ok');
+  } catch (e) { status($('set-status'), 'Erreur : ' + e.message, 'err'); }
+};
+
+/* Version du serveur : on y copie tous les réglages (dans l'adresse, après le #, jamais envoyés au serveur) */
+const SUR_SERVEUR = location.hostname === '95.groupelaberge.ca';
+if (!SUR_SERVEUR) $('transfert-box').style.display = 'block';
+$('btn-transfert').onclick = async () => {
+  saveSettings();
+  if (driveActif()) {                                   // d'abord, tout ce qui est ici part dans le Drive
+    status($('transfert-status'), '<span class="spin"></span>Envoi de tes histoires vers le Drive avant le transfert…');
+    await driveToutEnvoyer();
+  }
+  const c = {};
+  SETTINGS.forEach(k => { if ($(k).value.trim()) c[k] = $(k).value.trim(); });
+  CHECKS.forEach(k => c[k] = $(k).checked);
+  const cfg = btoa(unescape(encodeURIComponent(JSON.stringify(c)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  location.href = 'https://95.groupelaberge.ca/histoires/#cfg=' + cfg;
+};
+
 /* Voix québécoise Google : voix et compteur du mois ; coller la clé suffit (les voix se chargent seules) */
 gcAfficher();
 if ($('k-gcloud').value.trim()) gcChargerVoix().then(() => { if (!$('set-status').classList.contains('err')) status($('set-status'), ''); });

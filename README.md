@@ -51,3 +51,13 @@ Astuce : `…/#gemini=CLÉ&eleven=CLÉ&voice=VOICE_ID` enregistre les clés en u
   clé API dans Réglages (restreinte au site + à l'API). Texte sans balises, morceaux de 1500 caractères, MP3.
 - Compteur local par mois (`gc:AAAA-MM`) et plafond réglable (900 000 par défaut) : au-delà, l'app passe à la voix suivante.
 - Ordre en mode Automatique : ElevenLabs → Google québécois → Gemini → téléphone.
+
+## Sur le serveur + voix québécoise Microsoft (v10)
+- Copie de l'app sur le VPS : **https://95.groupelaberge.ca/histoires/** (`/var/www/histoires`, Caddy, bloc `95.groupelaberge.ca`) —
+  publier avec `bash serveur/deployer-vps.sh` (GitHub Pages reste à jour par le push). Bouton « Histoires » dans l'app Maison.
+- Relais `serveur/tts.py` (edge-tts, port 8120, service `histoires-tts`, venv `/opt/histoires-tts/venv`) : voix fr-CA
+  Sylvie / Antoine / Jean / Thierry, gratuites et sans compte mais NON OFFICIELLES. Origines permises : le VPS et GitHub Pages ;
+  6000 caractères max, 2 à la fois, 80 demandes / 10 min par IP.
+- Ordre automatique : ElevenLabs (s'il reste des crédits) → Microsoft québécois → Google (si clé) → Gemini → téléphone.
+- « 📲 Ouvrir la version du serveur avec mes réglages » (sur GitHub Pages) : envoie tout au Drive, puis copie les réglages
+  dans l'adresse (`#cfg=…`, jamais transmis au serveur) ; l'autre côté récupère les histoires du Drive.

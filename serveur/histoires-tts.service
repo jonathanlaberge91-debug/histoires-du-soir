@@ -1,0 +1,17 @@
+[Unit]
+Description=Histoires du soir - relais des voix quebecoises Microsoft (edge-tts)
+After=network-online.target
+
+[Service]
+ExecStart=/opt/histoires-tts/venv/bin/python /opt/histoires-tts/tts.py
+DynamicUser=yes
+Restart=always
+RestartSec=5
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+MemoryMax=300M
+
+[Install]
+WantedBy=multi-user.target
