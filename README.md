@@ -72,3 +72,8 @@ Astuce : `…/#gemini=CLÉ&eleven=CLÉ&voice=VOICE_ID` enregistre les clés en u
   (couverture, lecteur, texte) ; partages gardés dans `/var/lib/histoires-tts/partages`, plafond 3 Go (les plus vieux partent).
 - **Haut-parleur** : Remote Playback (`audio.remote.prompt()`) sur l'adresse publique de l'audio partagé ; plan B Google Home.
 - **Livre (PDF)** : mise en page d'impression (`@media print`, couverture + texte + « Fin ») puis `window.print()`.
+
+## v12 — trois thèmes (2026-10-07)
+- `html[data-look]` = veilleuse | livre | doudou (jetons CSS), choisi dans Réglages → Apparence, gardé dans `set:theme` et posé avant l'affichage.
+- Les groupes de pastilles deviennent des choix qui s'ouvrent (`.picker`) : menu sous la ligne (Veilleuse), tuiles + grille (Livre), volet du bas (Doudou).
+- Réglages en sections repliables, cartes « Qui raconte ? » (le `<select id=engine>` caché reste la source), seuls les réglages de la voix choisie s'affichent, enregistrement automatique.

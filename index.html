@@ -1,89 +1,307 @@
 <!doctype html>
-<html lang="fr">
+<html lang="fr" data-look="veilleuse">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#1e1b4b">
+<meta name="theme-color" content="#0d1030">
 <title>Histoires du soir</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
+<script>
+  /* Thème choisi, posé avant l'affichage (pas de flash d'un autre thème) */
+  try {
+    var t = localStorage.getItem('set:theme');
+    if (t === 'livre' || t === 'doudou' || t === 'veilleuse') document.documentElement.dataset.look = t;
+  } catch (e) {}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Nunito:wght@400;600;700;800&family=Grandstander:wght@600;700;800&family=Baloo+2:wght@500;600;700;800&display=swap">
 <style>
-  :root {
-    --bg: #0f0d2e; --card: #1e1b4b; --card2: #2a2668; --text: #f5f3ff; --muted: #a5a1d6;
-    --accent: #fbbf24; --accent2: #f472b6; --ok: #34d399; --err: #f87171; --r: 18px;
+  /* ═══════════════ Trois thèmes, un seul jeu de jetons ═══════════════
+     Veilleuse : nuit profonde et or doux · Livre d'images : ciel pâle, marine, corail · Doudou : lavande, très rond. */
+  :root, html[data-look="veilleuse"] {
+    --fond: #0d1030; --fond-img: radial-gradient(120% 60% at 50% -10%, #2a2f78 0%, #0d1030 62%);
+    --surface: rgba(255,255,255,.05); --surface-pleine: #171b4a; --surface2: rgba(255,255,255,.08);
+    --ligne: rgba(255,255,255,.09); --texte: #eef0ff; --titre: #fff4d6; --doux: #9aa1d0;
+    --accent: #f2c46d; --accent-txt: #1d1a3a; --accent-grad: linear-gradient(180deg, #ffd98a, #f2c46d);
+    --accent2: #f6a6c1; --ok: #6ee7b7; --err: #fca5a5; --lu: rgba(242,196,109,.14);
+    --f-titre: "Fraunces", Georgia, serif; --f-texte: "Nunito", system-ui, sans-serif; --f-histoire: "Fraunces", Georgia, serif;
+    --r: 18px; --r-petit: 12px; --ombre: none; --nav: rgba(8,10,34,.92); --champ: rgba(255,255,255,.06);
+    color-scheme: dark;
   }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; background: var(--bg); color: var(--text);
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-  body { padding: env(safe-area-inset-top) 16px calc(90px + env(safe-area-inset-bottom)); min-height: 100vh;
-    background: radial-gradient(ellipse at top, #2e2a7a 0%, var(--bg) 60%) fixed; }
-  header { text-align: center; padding: 22px 0 8px; }
-  header h1 { margin: 0; font-size: 1.6rem; }
-  header p { margin: 4px 0 0; color: var(--muted); font-size: .9rem; }
-  .card { background: var(--card); border-radius: var(--r); padding: 16px; margin: 14px 0;
-    box-shadow: 0 6px 24px rgba(0,0,0,.25); }
-  .sub { background: var(--card2); border-radius: 14px; padding: 12px; margin-top: 12px; }
-  label { display: block; font-size: .85rem; color: var(--muted); margin: 12px 0 6px; }
-  input, select, textarea { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid #3b3786;
-    background: var(--card2); color: var(--text); font-size: 1rem; font-family: inherit; }
-  .sub input, .sub select { background: var(--card); }
-  input[type=checkbox] { width: auto; margin: 0 8px 0 0; transform: scale(1.3); }
-  input[type=range] { padding: 0; }
-  .check { display: flex; align-items: center; margin: 12px 0 0; color: var(--text); font-size: .95rem; }
-  textarea { min-height: 80px; resize: vertical; }
+  html[data-look="livre"] {
+    --fond: #e8f1fb; --fond-img: linear-gradient(180deg, #dcebfa 0%, #e8f1fb 30%);
+    --surface: #ffffff; --surface-pleine: #ffffff; --surface2: #f1f7fd;
+    --ligne: #d7e6f6; --texte: #18305b; --titre: #18305b; --doux: #6a7fa3;
+    --accent: #ff7a59; --accent-txt: #ffffff; --accent-grad: linear-gradient(180deg, #ff8d6f, #ff7a59);
+    --accent2: #2bb39a; --ok: #1f9d84; --err: #d9483b; --lu: #ffffff;
+    --f-titre: "Grandstander", "Nunito", system-ui, sans-serif; --f-texte: "Nunito", system-ui, sans-serif; --f-histoire: "Nunito", system-ui, sans-serif;
+    --r: 20px; --r-petit: 14px; --ombre: 0 2px 0 #cfe0f3; --nav: #ffffff; --champ: #ffffff;
+    color-scheme: light;
+  }
+  html[data-look="doudou"] {
+    --fond: #fbf7ff; --fond-img: linear-gradient(180deg, #ece2ff 0%, #fbf7ff 38%);
+    --surface: #ffffff; --surface-pleine: #ffffff; --surface2: #f6f2ff;
+    --ligne: #e9e1fb; --texte: #2e2350; --titre: #2e2350; --doux: #8a7fae;
+    --accent: #6c55c9; --accent-txt: #ffffff; --accent-grad: linear-gradient(90deg, #6c55c9, #9a7cf0);
+    --accent2: #ff9fb8; --ok: #2f9e7a; --err: #d9486e; --lu: #f1ebff;
+    --f-titre: "Baloo 2", system-ui, sans-serif; --f-texte: "Baloo 2", system-ui, sans-serif; --f-histoire: "Baloo 2", system-ui, sans-serif;
+    --r: 26px; --r-petit: 18px; --ombre: 0 6px 16px rgba(108,85,201,.11); --nav: #ffffff; --champ: #ffffff;
+    color-scheme: light;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; }
+  body { background: var(--fond-img), var(--fond); background-attachment: fixed; color: var(--texte); font: 16px/1.5 var(--f-texte);
+    padding: env(safe-area-inset-top) 16px calc(96px + env(safe-area-inset-bottom)); min-height: 100vh; }
+  h1, h2, h3 { font-family: var(--f-titre); color: var(--titre); text-wrap: balance; }
+
+  /* ───── en-tête ───── */
+  header { padding: 22px 2px 6px; }
+  header h1 { margin: 0; font-size: 1.85rem; line-height: 1.05; font-weight: 700; }
+  html[data-look="livre"] header h1 { font-weight: 800; }
+  html[data-look="doudou"] header h1 { font-weight: 800; }
+  header h1 em { font-style: normal; color: var(--accent); }
+  header p { margin: 4px 0 0; color: var(--doux); font-size: .88rem; }
+  .vers { opacity: .55; }
+
+  /* ───── blocs ───── */
+  .card { background: var(--surface); border: 1px solid var(--ligne); border-radius: var(--r); padding: 16px; margin: 14px 0; box-shadow: var(--ombre); }
+  html[data-look="livre"] .card, html[data-look="doudou"] .card { border-color: transparent; }
+  .bloc-titre { font: 700 .74rem/1 var(--f-texte); letter-spacing: .09em; text-transform: uppercase; color: var(--doux); margin: 0 0 10px; }
+  html[data-look="doudou"] .bloc-titre { letter-spacing: .04em; font-size: .8rem; }
+  .sub { background: var(--surface2); border-radius: var(--r-petit); padding: 12px; margin-top: 12px; }
+  label { display: block; font-size: .84rem; color: var(--doux); margin: 12px 0 6px; font-weight: 600; }
+  input, select, textarea { width: 100%; padding: 12px 14px; border-radius: var(--r-petit); border: 1px solid var(--ligne);
+    background: var(--champ); color: var(--texte); font: 1rem var(--f-texte); }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  input::placeholder, textarea::placeholder { color: var(--doux); opacity: .8; }
+  textarea { min-height: 76px; resize: vertical; }
   .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-  .chip { padding: 9px 14px; border-radius: 999px; background: var(--card2); border: 1px solid #3b3786;
-    color: var(--text); font-size: .9rem; cursor: pointer; user-select: none; }
-  .chip.on { background: var(--accent); color: #1e1b4b; border-color: var(--accent); font-weight: 600; }
-  button.big { width: 100%; padding: 16px; border: 0; border-radius: 14px; font-size: 1.1rem; font-weight: 700;
-    background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #1e1b4b; margin-top: 16px; cursor: pointer; }
+  .row.age { grid-template-columns: 1fr 96px; }
+  .row label { margin-top: 0; }
+  button { font-family: var(--f-texte); }
+  button.big { width: 100%; padding: 16px; border: 0; border-radius: var(--r); font: 800 1.08rem var(--f-titre); cursor: pointer;
+    background: var(--accent-grad); color: var(--accent-txt); margin-top: 16px; }
+  html[data-look="veilleuse"] button.big { box-shadow: 0 8px 24px rgba(242,196,109,.22); }
+  html[data-look="livre"] button.big { box-shadow: 0 4px 0 #d9583a; }
+  html[data-look="doudou"] button.big { border-radius: 999px; box-shadow: 0 10px 24px rgba(108,85,201,.3); }
   button.big:disabled, button.sec:disabled { opacity: .5; }
-  button.sec { padding: 10px 14px; border-radius: 12px; border: 1px solid #3b3786; background: var(--card2);
-    color: var(--text); font-size: .95rem; cursor: pointer; }
-  button.choix { flex: 1 1 45%; padding: 16px 12px; border-radius: 14px; border: 2px solid var(--accent);
-    background: var(--card2); color: var(--text); font-size: 1.05rem; font-weight: 700; cursor: pointer; }
+  button.sec, label.sec { display: inline-flex; align-items: center; gap: 6px; padding: 9px 14px; border-radius: 999px; border: 1px solid var(--ligne);
+    background: var(--surface2); color: var(--texte); font-size: .9rem; font-weight: 700; cursor: pointer; margin: 0; }
+  html[data-look="livre"] button.sec, html[data-look="livre"] label.sec { background: #fff; box-shadow: var(--ombre); border-color: transparent; }
+  button.choix { flex: 1 1 45%; padding: 16px 12px; border-radius: var(--r); border: 2px solid var(--accent);
+    background: var(--surface-pleine); color: var(--texte); font: 700 1.02rem var(--f-titre); cursor: pointer; }
   .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-  h2 { margin: 0 0 6px; font-size: 1.25rem; }
-  .chap { color: var(--accent); font-size: .85rem; font-weight: 600; }
-  .story { line-height: 1.7; font-size: 1.05rem; }
-  .story p { margin: 0 0 .9em; white-space: pre-wrap; padding: 2px 6px; border-radius: 8px; transition: background .4s; }
-  .story p.lit { background: rgba(251,191,36,.16); }
-  .tag { display: inline-block; font-size: .7rem; padding: 1px 7px; border-radius: 8px; background: #4c1d95;
-    color: #ddd6fe; vertical-align: middle; margin: 0 2px; }
-  .hide-tags .tag { display: none; }
-  .cover { width: 100%; border-radius: 14px; margin: 6px 0 10px; display: block; }
-  audio { width: 100%; margin-top: 12px; }
-  .status { font-size: .9rem; color: var(--muted); margin-top: 10px; min-height: 1.2em; }
+  .hint { font-size: .8rem; color: var(--doux); margin: 6px 0 0; line-height: 1.45; }
+  .hint a { color: var(--accent); font-weight: 700; }
+  .status { font-size: .88rem; color: var(--doux); margin-top: 10px; min-height: 1.2em; }
   .status.err { color: var(--err); } .status.ok { color: var(--ok); }
-  .progress { height: 6px; background: var(--card2); border-radius: 6px; overflow: hidden; margin-top: 8px; display: none; }
-  .progress > div { height: 100%; width: 0; background: var(--accent); transition: width .3s; }
-  .quota { height: 8px; background: var(--card2); border-radius: 6px; overflow: hidden; margin-top: 6px; }
-  .quota > div { height: 100%; background: var(--ok); }
-  nav { position: fixed; left: 0; right: 0; bottom: 0; display: flex; background: #15123d;
-    border-top: 1px solid #2e2a7a; padding-bottom: env(safe-area-inset-bottom); z-index: 10; }
-  nav button { flex: 1; background: none; border: 0; color: var(--muted); padding: 12px 0 10px; font-size: .8rem; cursor: pointer; }
-  nav button span { display: block; font-size: 1.4rem; }
-  nav button.on { color: var(--accent); }
-  .view { display: none; } .view.on { display: block; }
-  .lib-item { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 14px;
-    background: var(--card2); margin-bottom: 8px; cursor: pointer; }
-  .lib-item .t { flex: 1; min-width: 0; } .lib-item small { color: var(--muted); display: block; }
-  .lib-item .vign { width: 52px; height: 52px; border-radius: 10px; object-fit: cover; flex: none; background: var(--card);
-    display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
-  .lib-item .star { background: none; border: 0; font-size: 1.4rem; cursor: pointer; padding: 4px; filter: grayscale(1); opacity: .5; }
-  .lib-item .star.on { filter: none; opacity: 1; }
-  .hint { font-size: .8rem; color: var(--muted); margin-top: 6px; line-height: 1.4; }
-  .hint a { color: var(--accent); }
-  .spin { display: inline-block; width: 16px; height: 16px; border: 2px solid currentColor; border-right-color: transparent;
+  .status a { color: var(--accent); }
+  .spin { display: inline-block; width: 15px; height: 15px; border: 2px solid currentColor; border-right-color: transparent;
     border-radius: 50%; animation: s .8s linear infinite; vertical-align: -3px; margin-right: 6px; }
   @keyframes s { to { transform: rotate(360deg); } }
-
+  .progress { height: 6px; background: var(--surface2); border-radius: 6px; overflow: hidden; margin-top: 10px; display: none; }
+  .progress > div { height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+  .quota { height: 8px; background: var(--surface2); border-radius: 6px; overflow: hidden; margin-top: 6px; }
+  .quota > div { height: 100%; background: var(--ok); }
   .avec-micro { display: flex; gap: 8px; align-items: flex-start; }
   .avec-micro > input, .avec-micro > textarea { flex: 1; min-width: 0; }
-  button.micro { padding: 11px 12px; flex: none; }
-  button.micro.rec { background: var(--err); border-color: var(--err); }
-  label.sec { display: inline-block; margin: 0; color: var(--text); }
+  button.micro { padding: 0; width: 46px; height: 46px; justify-content: center; flex: none; border-radius: var(--r-petit); }
+  button.micro.rec { background: var(--err); border-color: var(--err); color: #fff; }
+
+  /* ───── choix qui s'ouvrent (ambiance, souci, format, durée) ─────
+     Veilleuse : liste façon réglages, menu sous la ligne · Livre : tuiles, grille d'images · Doudou : volet par le bas */
+  .liste-choix { border: 1px solid var(--ligne); border-radius: var(--r); overflow: hidden; background: var(--surface); }
+  .picker + .picker { border-top: 1px solid var(--ligne); }
+  .picker-tete { width: 100%; display: flex; align-items: center; gap: 10px; padding: 13px 14px; background: none; border: 0; color: var(--texte);
+    font: 600 .95rem var(--f-texte); cursor: pointer; text-align: left; }
+  .pk-k { color: var(--doux); font-size: .82rem; width: 92px; flex: none; }
+  .pk-v { flex: 1; font-weight: 800; }
+  .pk-fl { color: var(--accent); font-size: .9rem; transition: transform .2s; }
+  .picker.ouvert .pk-fl { transform: rotate(90deg); }
+  .picker .chips { display: none; }
+  .picker.ouvert .chips { display: flex; }
+  .chips { flex-wrap: wrap; gap: 6px; }
+  .chip { padding: 9px 13px; border-radius: 999px; background: var(--surface2); border: 1px solid var(--ligne); color: var(--texte);
+    font-size: .9rem; font-weight: 700; cursor: pointer; user-select: none; }
+  .chip.on { background: var(--accent); color: var(--accent-txt); border-color: var(--accent); }
+  /* Veilleuse : menu vertical sous la ligne */
+  html[data-look="veilleuse"] .picker.ouvert { background: rgba(242,196,109,.06); }
+  html[data-look="veilleuse"] .picker .chips { flex-direction: column; gap: 2px; margin: 0 10px 10px; padding: 4px; background: var(--surface-pleine);
+    border: 1px solid rgba(242,196,109,.25); border-radius: 14px; }
+  html[data-look="veilleuse"] .picker .chip { border: 0; background: none; border-radius: 10px; padding: 9px 11px; }
+  html[data-look="veilleuse"] .picker .chip.on { background: var(--accent); color: var(--accent-txt); }
+  /* Livre : tuiles 2 par rangée, la tuile ouverte prend la largeur et montre une grille */
+  html[data-look="livre"] .liste-choix { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; border: 0; background: none; overflow: visible; }
+  html[data-look="livre"] .picker { background: #fff; border-radius: 18px; box-shadow: var(--ombre); border-top: 0 !important; }
+  html[data-look="livre"] .picker-tete { flex-direction: column; align-items: flex-start; gap: 0; padding: 10px 13px; position: relative; }
+  html[data-look="livre"] .pk-k { width: auto; font-size: .68rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+  html[data-look="livre"] .pk-v { font: 700 .98rem/1.2 var(--f-titre); padding-right: 16px; }
+  html[data-look="livre"] .pk-fl { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); }
+  html[data-look="livre"] .picker.ouvert { grid-column: 1 / -1; outline: 2.5px solid var(--accent); }
+  html[data-look="livre"] .picker.ouvert .pk-fl { transform: translateY(-50%) rotate(90deg); }
+  html[data-look="livre"] .picker .chips { display: none; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 0 8px 8px; }
+  html[data-look="livre"] .picker.ouvert .chips { display: grid; }
+  html[data-look="livre"] .picker .chip { border-radius: 12px; text-align: center; padding: 10px 4px; font-size: .78rem; background: var(--surface2); border: 0;
+    display: flex; flex-direction: column; align-items: center; gap: 2px; line-height: 1.15; }
+  html[data-look="livre"] .picker .chip .ico { font-size: 1.35rem; }
+  html[data-look="livre"] .picker .chip.on { background: var(--texte); color: #fff; }
+  /* Doudou : volet qui monte du bas, grosses cases */
+  html[data-look="doudou"] .liste-choix { border: 0; box-shadow: var(--ombre); padding: 2px 4px; }
+  html[data-look="doudou"] .picker + .picker { border-top: 1.5px dashed var(--ligne); }
+  html[data-look="doudou"] .pk-v { font-weight: 700; }
+  html[data-look="doudou"] .pk-fl { width: 26px; height: 26px; border-radius: 50%; background: var(--surface2); display: grid; place-items: center; font-size: .75rem; }
+  html[data-look="doudou"] .picker.ouvert .pk-fl { transform: none; }
+  html[data-look="doudou"] .picker .chips { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; background: #fff; border-radius: 30px 30px 0 0;
+    padding: 46px 16px calc(22px + env(safe-area-inset-bottom)); box-shadow: 0 -12px 36px rgba(46,35,80,.22);
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px; transform: translateY(105%); transition: transform .25s ease; max-height: 80vh; overflow: auto; }
+  html[data-look="doudou"] .picker.ouvert .chips { transform: none; }
+  html[data-look="doudou"] .picker .chips::before { content: attr(data-titre); position: absolute; left: 18px; top: 16px; font: 800 1.1rem var(--f-titre); color: var(--titre); }
+  html[data-look="doudou"] .picker .chips::after { content: ""; position: absolute; left: 50%; top: 8px; width: 42px; height: 5px; margin-left: -21px; border-radius: 5px; background: #e2dbf7; }
+  html[data-look="doudou"] .picker .chip { border-radius: 18px; padding: 13px 12px; background: var(--surface2); border: 0; font-size: .95rem; }
+  html[data-look="doudou"] .picker .chip.on { background: var(--titre); color: #fff; }
+  #voile { position: fixed; inset: 0; background: rgba(46,35,80,.36); z-index: 39; display: none; }
+  html[data-look="doudou"] body.volet #voile { display: block; }
+  #souci-autre { margin-top: 10px; }
+  .chip .ico { margin-right: 6px; }
+  html[data-look="livre"] .picker .chip .ico { margin-right: 0; }
+
+  /* plus d'idées (facultatif) */
+  details.plus { margin-top: 12px; border-radius: var(--r); background: var(--surface); border: 1px solid var(--ligne); box-shadow: var(--ombre); }
+  html[data-look="livre"] details.plus, html[data-look="doudou"] details.plus { border-color: transparent; }
+  details.plus > summary { list-style: none; cursor: pointer; padding: 13px 14px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+  details.plus > summary::-webkit-details-marker { display: none; }
+  details.plus > summary::after { content: "›"; margin-left: auto; color: var(--accent); transition: transform .2s; }
+  details.plus[open] > summary::after { transform: rotate(90deg); }
+  details.plus > summary small { color: var(--doux); font-weight: 600; }
+  details.plus .dedans { padding: 0 14px 14px; }
+  details.plus .dedans > label:first-child { margin-top: 0; }
+  .dessin-zone { display: flex; gap: 8px; flex-wrap: wrap; }
+  .cover { width: 100%; border-radius: var(--r); margin: 2px 0 12px; display: block; }
+
+  /* ───── l'histoire ───── */
+  #story-card { padding: 14px; }
+  .chap { color: var(--accent); font-size: .74rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+  #s-title { margin: 2px 0 2px; font-size: 1.5rem; line-height: 1.15; }
+  .barre-lecture { display: flex; gap: 8px; align-items: center; margin-top: 12px; }
+  #btn-read { flex: 1; justify-content: center; padding: 13px 16px; border: 0; background: var(--accent-grad); color: var(--accent-txt); font-size: 1rem; font-weight: 800; }
+  html[data-look="doudou"] #btn-read { padding: 16px; font-size: 1.08rem; box-shadow: 0 10px 22px rgba(108,85,201,.28); }
+  html[data-look="livre"] #btn-read { box-shadow: 0 3px 0 #d9583a; }
+  .petites { display: flex; gap: 6px; overflow-x: auto; padding: 2px 1px 6px; margin-top: 10px; scrollbar-width: none; }
+  .petites::-webkit-scrollbar { display: none; }
+  .petites button.sec { flex: none; font-size: .84rem; padding: 8px 12px; }
+  audio { width: 100%; margin-top: 12px; }
+  .story { line-height: 1.72; font: 500 1.06rem/1.72 var(--f-histoire); }
+  html[data-look="veilleuse"] .story { color: #cfd3f4; }
+  .story p { margin: 0 0 .85em; white-space: pre-wrap; padding: 3px 7px; margin-left: -7px; margin-right: -7px; border-radius: 10px; transition: background .4s, color .4s; }
+  .story p.lit { background: var(--lu); color: var(--titre); }
+  html[data-look="livre"] .story p.lit { box-shadow: var(--ombre); }
+  .tag { display: inline-block; font: 700 .66rem var(--f-texte); padding: 1px 7px; border-radius: 8px; background: var(--surface2); color: var(--doux); vertical-align: middle; margin: 0 2px; }
+  .hide-tags .tag { display: none; }
+  details.apres { margin-top: 12px; background: var(--surface2); border-radius: var(--r-petit); }
+  details.apres > summary { list-style: none; cursor: pointer; padding: 11px 13px; font-weight: 800; font-size: .92rem; display: flex; gap: 8px; }
+  details.apres > summary::-webkit-details-marker { display: none; }
+  details.apres > summary::after { content: "›"; margin-left: auto; color: var(--accent); }
+  details.apres[open] > summary::after { transform: rotate(90deg); }
+  details.apres .dedans { padding: 0 13px 13px; }
+  .apres select { padding: 10px 12px; }
+
+  /* ───── navigation ───── */
+  nav { position: fixed; left: 0; right: 0; bottom: 0; display: flex; background: var(--nav); backdrop-filter: blur(10px);
+    border-top: 1px solid var(--ligne); padding-bottom: env(safe-area-inset-bottom); z-index: 10; }
+  html[data-look="doudou"] nav { border-radius: 24px 24px 0 0; border-top: 0; box-shadow: 0 -6px 18px rgba(108,85,201,.1); }
+  nav button { flex: 1; background: none; border: 0; color: var(--doux); padding: 10px 0 9px; font: 700 .74rem var(--f-texte); cursor: pointer; }
+  nav button span { display: block; font-size: 1.32rem; margin-bottom: 1px; filter: grayscale(.4); }
+  nav button.on { color: var(--accent); }
+  nav button.on span { filter: none; }
+  .view { display: none; } .view.on { display: block; }
+
+  /* ───── bibliothèque ───── */
+  .recherche { display: flex; gap: 8px; }
+  .recherche input { flex: 1; }
+  #lib-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+  .lib-item { display: flex; align-items: center; gap: 11px; padding: 8px; border-radius: var(--r); background: var(--surface); border: 1px solid var(--ligne); cursor: pointer; box-shadow: var(--ombre); }
+  html[data-look="livre"] .lib-item, html[data-look="doudou"] .lib-item { border-color: transparent; }
+  .lib-item .t { flex: 1; min-width: 0; font: 700 .98rem/1.25 var(--f-titre); color: var(--titre); }
+  .lib-item small { color: var(--doux); display: block; font: 600 .76rem/1.4 var(--f-texte); margin-top: 2px; }
+  .lib-item .vign { width: 56px; height: 56px; border-radius: 14px; object-fit: cover; flex: none; background: var(--surface2);
+    display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+  .lib-item .star { background: none; border: 0; font-size: 1.25rem; cursor: pointer; padding: 4px; filter: grayscale(1); opacity: .4; }
+  .lib-item .star.on { filter: none; opacity: 1; }
+  .lib-item [data-del] { padding: 6px 9px; font-size: .8rem; }
+  html[data-look="livre"] #lib-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  html[data-look="livre"] .lib-item { flex-direction: column; align-items: stretch; gap: 6px; padding: 7px; position: relative; }
+  html[data-look="livre"] .lib-item .vign { width: 100%; height: 110px; border-radius: 14px; font-size: 2.2rem; }
+  html[data-look="livre"] .lib-item .t { padding: 0 3px 2px; font-size: .9rem; }
+  html[data-look="livre"] .lib-item .star { position: absolute; top: 10px; right: 10px; background: #fff; border-radius: 50%; width: 32px; height: 32px; padding: 0; }
+  html[data-look="livre"] .lib-item [data-del] { position: absolute; top: 10px; left: 10px; background: rgba(255,255,255,.9); }
+  html[data-look="doudou"] .lib-item { padding: 11px; border-radius: 24px; }
+  html[data-look="doudou"] .lib-item .vign { width: 64px; height: 64px; border-radius: 20px; }
+
+  /* ───── réglages ───── */
+  .reglages { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+  details.reglage { background: var(--surface); border: 1px solid var(--ligne); border-radius: var(--r); box-shadow: var(--ombre); }
+  html[data-look="livre"] details.reglage, html[data-look="doudou"] details.reglage { border-color: transparent; }
+  details.reglage > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 13px 14px; }
+  details.reglage > summary::-webkit-details-marker { display: none; }
+  details.reglage > summary::after { content: "›"; color: var(--accent); font-size: 1.2rem; transition: transform .2s; }
+  details.reglage[open] > summary::after { transform: rotate(90deg); }
+  .r-ic { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-size: 1.2rem; flex: none; background: var(--surface2); }
+  html[data-look="doudou"] .r-ic { border-radius: 50%; }
+  .r-txt { flex: 1; min-width: 0; }
+  .r-txt b { display: block; font: 700 1rem/1.2 var(--f-titre); color: var(--titre); }
+  .r-txt small { display: block; color: var(--doux); font-size: .8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  details.reglage .dedans { padding: 0 14px 16px; border-top: 1px solid var(--ligne); }
+  details.reglage .dedans > *:first-child { margin-top: 12px; }
+  .sous-titre { font: 800 .72rem var(--f-texte); letter-spacing: .08em; text-transform: uppercase; color: var(--doux); margin: 18px 0 2px; }
+  /* cartes de thème */
+  .themes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .theme-carte { border: 2px solid var(--ligne); border-radius: 16px; padding: 6px 6px 8px; background: var(--surface2); cursor: pointer; text-align: center;
+    font: 800 .8rem var(--f-texte); color: var(--texte); }
+  .theme-carte.on { border-color: var(--accent); }
+  .theme-carte .ap { height: 74px; border-radius: 11px; margin-bottom: 6px; position: relative; overflow: hidden; }
+  .ap.veilleuse { background: radial-gradient(circle at 74% 30%, #fff4d6 0 9px, transparent 10px), radial-gradient(1.5px 1.5px at 25% 30%, #fff 50%, transparent), radial-gradient(1.5px 1.5px at 45% 55%, #fff 50%, transparent), linear-gradient(180deg, #2b3290, #0d1030); }
+  .ap.veilleuse::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: 9px; height: 10px; border-radius: 6px; background: #f2c46d; }
+  .ap.livre { background: radial-gradient(circle at 75% 28%, #ffd45c 0 9px, transparent 10px), linear-gradient(180deg, transparent 62%, #8fd18a 62%), linear-gradient(180deg, #8ec5f5, #e8f1fb); }
+  .ap.livre::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: 9px; height: 10px; border-radius: 6px; background: #ff7a59; }
+  .ap.doudou { background: radial-gradient(circle at 50% 45%, #fff7d9 0 13px, transparent 14px), linear-gradient(180deg, #a58df0, #f2b8c6); }
+  .ap.doudou::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: 9px; height: 10px; border-radius: 999px; background: #fff; }
+  /* cartes « qui raconte » */
+  .moteurs { display: flex; flex-direction: column; gap: 6px; }
+  .moteur { display: flex; gap: 11px; align-items: center; padding: 11px 12px; border-radius: var(--r-petit); border: 2px solid transparent; background: var(--surface2); cursor: pointer; }
+  .moteur.on { border-color: var(--accent); }
+  .moteur .m-ic { font-size: 1.3rem; width: 28px; text-align: center; flex: none; }
+  .moteur b { display: block; font-size: .95rem; }
+  .moteur small { display: block; color: var(--doux); font-size: .78rem; line-height: 1.3; }
+  .moteur .rond { margin-left: auto; width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--ligne); flex: none; }
+  .moteur.on .rond { border: 6px solid var(--accent); }
+  .panneau { margin-top: 14px; padding: 12px; border-radius: var(--r-petit); background: var(--surface2); }
+  .panneau[hidden] { display: none !important; }
+  .panneau-tete { font-weight: 800; display: flex; align-items: center; gap: 6px; }
+  .panneau select, .panneau input:not([type=range]):not([type=checkbox]) { background: var(--surface-pleine); }
+  html[data-look="veilleuse"] .panneau select, html[data-look="veilleuse"] .panneau input:not([type=range]):not([type=checkbox]) { background: rgba(255,255,255,.07); }
+  /* interrupteurs */
+  .check { display: flex; align-items: center; gap: 12px; margin: 12px 0 0; color: var(--texte); font-size: .95rem; font-weight: 600; cursor: pointer; }
+  .check input[type=checkbox] { appearance: none; -webkit-appearance: none; width: 46px; height: 28px; border-radius: 999px; background: var(--ligne);
+    position: relative; flex: none; margin: 0; padding: 0; border: 0; cursor: pointer; transition: background .2s; }
+  html[data-look="livre"] .check input[type=checkbox], html[data-look="doudou"] .check input[type=checkbox] { background: #d9d4e8; }
+  .check input[type=checkbox]::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .2s; }
+  .check input[type=checkbox]:checked { background: var(--accent); }
+  .check input[type=checkbox]:checked::after { transform: translateX(18px); }
+  input[type=range] { -webkit-appearance: none; appearance: none; padding: 0; height: 30px; background: none; border: 0; }
+  input[type=range]::-webkit-slider-runnable-track { height: 6px; border-radius: 6px; background: var(--ligne); }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); margin-top: -8px; border: 3px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.25); }
+  input[type=range]::-moz-range-track { height: 6px; border-radius: 6px; background: var(--ligne); }
+  input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--accent); border: 3px solid #fff; }
+  .regle { display: flex; justify-content: space-between; align-items: baseline; }
+  .regle output { font-size: .8rem; color: var(--doux); font-variant-numeric: tabular-nums; }
+  .cle { position: relative; }
+  .cle .etat { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: .75rem; font-weight: 800; color: var(--ok); pointer-events: none; }
+  #set-status { position: sticky; bottom: calc(80px + env(safe-area-inset-bottom)); text-align: center; }
+
+  /* ───── livre (impression) ───── */
   #livre { display: none; }
   @media print {
     @page { size: letter; margin: 18mm; }
@@ -92,7 +310,7 @@
     #livre { display: block !important; font-family: Georgia, "Times New Roman", serif; color: #222; }
     .l-couv { text-align: center; page-break-after: always; padding-top: 12mm; }
     .l-couv img { max-width: 100%; max-height: 150mm; border-radius: 6mm; }
-    .l-couv h1 { font-size: 28pt; line-height: 1.2; margin: 12mm 0 4mm; }
+    .l-couv h1 { font-size: 28pt; line-height: 1.2; margin: 12mm 0 4mm; color: #222; }
     .l-pour { font-size: 16pt; font-style: italic; margin: 0; }
     .l-date { color: #777; font-size: 11pt; }
     .l-texte p { font-size: 15pt; line-height: 1.6; margin: 0 0 5mm; text-align: justify; }
@@ -100,98 +318,114 @@
     .l-fin { text-align: center !important; font-style: italic; margin-top: 12mm !important; }
   }
 
-  /* ===== Mode nuit : écran très sombre, texte en gros, lumière chaude ===== */
+  /* ───── mode nuit : écran noir, texte en gros, lumière chaude (même pour les thèmes clairs) ───── */
   #nuit-sortie { display: none; }
   body.nuit { background: #000; padding-top: 12px; }
-  body.nuit header, body.nuit nav, body.nuit #form-card, body.nuit #story-card .actions:not(#phone-ctrl):not(#choix-btns), body.nuit #story-card .sub,
-  body.nuit #tts-status, body.nuit #story-card h2, body.nuit .chap, body.nuit #cover, body.nuit #audio-actions { display: none !important; }
-  body.nuit #story-card { background: #000; box-shadow: none; padding: 8px 4px 120px; }
-  body.nuit .story { font-size: 1.55rem; line-height: 1.75; color: #6b5435; }
-  body.nuit .story p.lit { background: none; color: #e0b878; }
+  body.nuit header, body.nuit nav, body.nuit #form-card, body.nuit #story-card .petites, body.nuit #story-card .barre-lecture,
+  body.nuit #story-card details, body.nuit #tts-status, body.nuit #story-card h2, body.nuit .chap, body.nuit #cover,
+  body.nuit #audio-actions, body.nuit #drive-info { display: none !important; }
+  body.nuit #story-card { background: #000; box-shadow: none; border: 0; padding: 8px 4px 120px; }
+  body.nuit .story { font-size: 1.55rem; line-height: 1.75; color: #6b5435; font-family: var(--f-histoire); }
+  body.nuit .story p.lit { background: none; color: #e0b878; box-shadow: none; }
   body.nuit .tag { display: none; }
   body.nuit audio { opacity: .35; }
   body.nuit #nuit-sortie { display: block; position: fixed; top: calc(10px + env(safe-area-inset-top)); right: 12px; z-index: 20;
     background: #111; color: #6b5435; border: 1px solid #222; border-radius: 12px; padding: 8px 12px; font-size: 1rem; }
   body.nuit #choix-zone .choix { background: #111; border-color: #6b5435; color: #e0b878; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 </head>
 <body>
+<div id="voile"></div>
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
-  <h1>🌙 Histoires du soir</h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span style="opacity:.6">v11</span></p>
+  <h1>Histoires <em>du soir</em></h1>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v12</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
 <section id="v-create" class="view on">
-  <div class="card" id="form-card">
-    <div class="row">
-      <div><label>Prénom de l'enfant</label><input id="name" placeholder="ex. Léa"></div>
-      <div><label>Âge</label><input id="age" type="number" min="2" max="12" value="5"></div>
-    </div>
-    <label>Avec qui ? Autres héros (optionnel)</label>
-    <input id="friends" placeholder="ex. son frère Max (3 ans) et son chien Biscuit">
-
-    <label>De quoi parle l'histoire ? (optionnel)</label>
-    <textarea id="idea" placeholder="ex. un dragon qui a peur du noir, un voyage sur la lune avec son toutou Max…"></textarea>
-
-    <label>📷 Partir d'un dessin (optionnel)</label>
-    <div class="actions" style="margin-top:0">
-      <label class="sec" for="dessin">📷 Prendre en photo ou choisir un dessin</label>
-      <button class="sec" id="dessin-retirer" style="display:none">✖ Retirer le dessin</button>
-    </div>
-    <input id="dessin" type="file" accept="image/*" style="display:none">
-    <img id="dessin-apercu" class="cover" alt="" style="display:none; max-height:240px; object-fit:contain; background:#fff">
-
-    <label>☀️ Sa journée (optionnel) — ce qui s'est vraiment passé aujourd'hui</label>
-    <textarea id="journee" placeholder="ex. Abby est allée au parc, elle a perdu sa mitaine rouge, grand-maman est venue souper…"></textarea>
-
-    <label>Ambiance</label>
-    <div class="chips" data-group="mood">
-      <div class="chip on" data-v="dodo">😴 Douce pour dodo</div>
-      <div class="chip" data-v="aventure">🗺️ Aventure</div>
-      <div class="chip" data-v="drole">🤪 Drôle</div>
-      <div class="chip" data-v="magique">✨ Magique</div>
-      <div class="chip" data-v="animaux">🦊 Animaux</div>
-      <div class="chip" data-v="pirates">🏴‍☠️ Pirates</div>
-      <div class="chip" data-v="chevaliers">🏰 Princesses et chevaliers</div>
-      <div class="chip" data-v="espace">🚀 Espace</div>
-      <div class="chip" data-v="dinos">🦕 Dinosaures</div>
-      <div class="chip" data-v="heros">🦸 Superhéros</div>
-      <div class="chip" data-v="hiver">⛄ Hiver et Noël</div>
-      <div class="chip" data-v="halloween">🎃 Halloween tout doux</div>
+  <div id="form-card">
+    <div class="card">
+      <p class="bloc-titre">Pour qui ?</p>
+      <div class="row age">
+        <div><label for="name">Prénom de l'enfant</label><input id="name" placeholder="ex. Abby" autocomplete="off"></div>
+        <div><label for="age">Âge</label><input id="age" type="number" min="2" max="12" value="5" inputmode="numeric"></div>
+      </div>
+      <label for="friends">Avec qui ? (optionnel)</label>
+      <input id="friends" placeholder="ex. son frère Max (3 ans) et son chien Biscuit" autocomplete="off">
     </div>
 
-    <label>Un petit souci à apprivoiser ? (optionnel)</label>
-    <div class="chips" data-group="souci">
-      <div class="chip on" data-v="">Aucun</div>
-      <div class="chip" data-v="noir">🌑 Peur du noir</div>
-      <div class="chip" data-v="ecole">🎒 École / garderie</div>
-      <div class="chip" data-v="bebe">👶 Nouveau bébé</div>
-      <div class="chip" data-v="docteur">🦷 Dentiste / médecin</div>
-      <div class="chip" data-v="lit">🛏️ Dormir dans son lit</div>
-      <div class="chip" data-v="proprete">🚽 Le pot</div>
-      <div class="chip" data-v="demenagement">📦 Déménagement</div>
-      <div class="chip" data-v="colere">😤 La colère</div>
-      <div class="chip" data-v="autre">✏️ Autre…</div>
+    <p class="bloc-titre" style="margin:18px 2px 8px">L'histoire</p>
+    <div class="liste-choix">
+      <div class="picker" data-titre="Quelle ambiance ?">
+        <span class="pk-k-src">Ambiance</span>
+        <div class="chips" data-group="mood">
+          <div class="chip on" data-v="dodo">😴 Douce pour dodo</div>
+          <div class="chip" data-v="aventure">🗺️ Aventure</div>
+          <div class="chip" data-v="drole">🤪 Drôle</div>
+          <div class="chip" data-v="magique">✨ Magique</div>
+          <div class="chip" data-v="animaux">🦊 Animaux</div>
+          <div class="chip" data-v="pirates">🏴‍☠️ Pirates</div>
+          <div class="chip" data-v="chevaliers">🏰 Princesses et chevaliers</div>
+          <div class="chip" data-v="espace">🚀 Espace</div>
+          <div class="chip" data-v="dinos">🦕 Dinosaures</div>
+          <div class="chip" data-v="heros">🦸 Superhéros</div>
+          <div class="chip" data-v="hiver">⛄ Hiver et Noël</div>
+          <div class="chip" data-v="halloween">🎃 Halloween tout doux</div>
+        </div>
+      </div>
+      <div class="picker" data-titre="Un petit souci ?">
+        <span class="pk-k-src">Petit souci</span>
+        <div class="chips" data-group="souci">
+          <div class="chip on" data-v="">🙂 Aucun</div>
+          <div class="chip" data-v="noir">🌑 Peur du noir</div>
+          <div class="chip" data-v="ecole">🎒 École / garderie</div>
+          <div class="chip" data-v="bebe">👶 Nouveau bébé</div>
+          <div class="chip" data-v="docteur">🦷 Dentiste / médecin</div>
+          <div class="chip" data-v="lit">🛏️ Dormir dans son lit</div>
+          <div class="chip" data-v="proprete">🚽 Le pot</div>
+          <div class="chip" data-v="demenagement">📦 Déménagement</div>
+          <div class="chip" data-v="colere">😤 La colère</div>
+          <div class="chip" data-v="autre">✏️ Autre…</div>
+        </div>
+      </div>
+      <div class="picker" data-titre="Quel format ?">
+        <span class="pk-k-src">Format</span>
+        <div class="chips" data-group="format">
+          <div class="chip on" data-v="complete">📖 Histoire complète</div>
+          <div class="chip" data-v="choix">🔀 L'enfant choisit</div>
+        </div>
+      </div>
+      <div class="picker" data-titre="Combien de temps ?">
+        <span class="pk-k-src">Durée</span>
+        <div class="chips" data-group="length">
+          <div class="chip" data-v="court">⏱️ Courte · 3 min</div>
+          <div class="chip on" data-v="moyen">🕰️ Moyenne · 5 min</div>
+          <div class="chip" data-v="long">🌙 Longue · 9 min</div>
+        </div>
+      </div>
     </div>
-    <input id="souci-autre" placeholder="Décris le souci (ex. il ne veut pas se brosser les dents)" style="display:none; margin-top:8px">
+    <input id="souci-autre" placeholder="Décris le souci (ex. il ne veut pas se brosser les dents)" style="display:none">
 
-    <label>Format</label>
-    <div class="chips" data-group="format">
-      <div class="chip on" data-v="complete">📖 Histoire complète</div>
-      <div class="chip" data-v="choix">🔀 L'enfant choisit la suite</div>
-    </div>
-
-    <label>Durée</label>
-    <div class="chips" data-group="length">
-      <div class="chip" data-v="court">Courte (~3 min)</div>
-      <div class="chip on" data-v="moyen">Moyenne (~5 min)</div>
-      <div class="chip" data-v="long">Longue (~9 min)</div>
-    </div>
-
-    <label>Leçon / valeur (optionnel)</label>
-    <input id="moral" placeholder="ex. le partage, le courage, être gentil avec sa sœur">
+    <details class="plus">
+      <summary>💡 Idées, dessin, journée <small>· facultatif</small></summary>
+      <div class="dedans">
+        <label for="idea">De quoi parle l'histoire ?</label>
+        <textarea id="idea" placeholder="ex. un dragon qui a peur du noir, un voyage sur la lune avec son toutou Max…"></textarea>
+        <label>D'après un dessin</label>
+        <div class="dessin-zone">
+          <label class="sec" for="dessin">📷 Photo du dessin</label>
+          <button class="sec" id="dessin-retirer" style="display:none">✖ Retirer</button>
+        </div>
+        <input id="dessin" type="file" accept="image/*" style="display:none">
+        <img id="dessin-apercu" class="cover" alt="" style="display:none; max-height:240px; object-fit:contain; background:#fff; margin-top:10px">
+        <label for="journee">Sa journée (ce qui s'est vraiment passé)</label>
+        <textarea id="journee" placeholder="ex. Abby est allée au parc, elle a perdu sa mitaine rouge, grand-maman est venue souper…"></textarea>
+        <label for="moral">Une leçon, tout en douceur</label>
+        <input id="moral" placeholder="ex. le partage, le courage, être gentil avec sa sœur">
+      </div>
+    </details>
 
     <button class="big" id="btn-gen">✨ Créer l'histoire</button>
     <div class="status" id="gen-status"></div>
@@ -202,15 +436,17 @@
     <div class="chap" id="s-chap"></div>
     <h2 id="s-title"></h2>
     <div class="hint" id="drive-info" style="margin-top:0"></div>
-    <div class="actions">
+    <div class="barre-lecture">
       <button class="sec" id="btn-read">🔊 Raconter</button>
-      <button class="sec" id="btn-nuit">🌙 Mode nuit</button>
+      <button class="sec" id="btn-nuit" title="Mode nuit">🌙</button>
+    </div>
+    <div class="petites">
       <button class="sec" id="btn-suite">📖 La suite</button>
       <button class="sec" id="btn-regen">🔁 Une autre</button>
-      <button class="sec" id="btn-tags">🏷️ Balises</button>
       <button class="sec" id="btn-partager">🔗 Partager</button>
       <button class="sec" id="btn-cast">📡 Haut-parleur</button>
-      <button class="sec" id="btn-livre">📕 Livre (PDF)</button>
+      <button class="sec" id="btn-livre">📕 Livre PDF</button>
+      <button class="sec" id="btn-tags">🏷️ Balises</button>
     </div>
     <audio id="cast-audio" preload="none" style="display:none"></audio>
     <div class="actions" id="phone-ctrl" style="display:none">
@@ -224,32 +460,34 @@
       <button class="sec" id="btn-dl">⬇️ Télécharger l'audio</button>
     </div>
 
-    <div class="sub" id="sleep-box">
-      <div style="font-weight:600">🌙 Après l'histoire</div>
-      <div class="row" style="margin-top:8px">
-        <select id="sl-son">
-          <option value="">Rien (silence)</option>
-          <option value="rose">Bruit doux</option>
-          <option value="pluie">Pluie</option>
-          <option value="vagues">Vagues</option>
-          <option value="brun">Bruit grave (ronron)</option>
-        </select>
-        <select id="sl-min">
-          <option value="10">10 minutes</option>
-          <option value="20">20 minutes</option>
-          <option value="30" selected>30 minutes</option>
-          <option value="45">45 minutes</option>
-          <option value="60">1 heure</option>
-        </select>
+    <details class="apres" id="sleep-box">
+      <summary>🌙 Après l'histoire : un son pour s'endormir</summary>
+      <div class="dedans">
+        <div class="row">
+          <select id="sl-son" aria-label="Son">
+            <option value="">Rien (silence)</option>
+            <option value="rose">Bruit doux</option>
+            <option value="pluie">Pluie</option>
+            <option value="vagues">Vagues</option>
+            <option value="brun">Bruit grave (ronron)</option>
+          </select>
+          <select id="sl-min" aria-label="Durée">
+            <option value="10">10 minutes</option>
+            <option value="20">20 minutes</option>
+            <option value="30" selected>30 minutes</option>
+            <option value="45">45 minutes</option>
+            <option value="60">1 heure</option>
+          </select>
+        </div>
+        <div class="actions">
+          <button class="sec" id="sl-now">▶️ Maintenant</button>
+          <button class="sec" id="sl-stop">⏹️ Arrêter</button>
+        </div>
+        <div class="status" id="sl-status"></div>
       </div>
-      <div class="actions">
-        <button class="sec" id="sl-now">▶️ Démarrer maintenant</button>
-        <button class="sec" id="sl-stop">⏹️ Arrêter le son</button>
-      </div>
-      <div class="status" id="sl-status"></div>
-    </div>
+    </details>
 
-    <div class="story hide-tags" id="s-text" style="margin-top:14px"></div>
+    <div class="story hide-tags" id="s-text" style="margin-top:16px"></div>
     <div id="choix-zone" style="display:none">
       <div class="actions" id="choix-btns"></div>
       <div class="status" id="choix-status"></div>
@@ -260,182 +498,202 @@
 <!-- ============ BIBLIOTHÈQUE ============ -->
 <section id="v-lib" class="view">
   <div class="card">
-    <h2>📚 Mes histoires</h2>
-    <p class="hint">Les histoires et leur audio sont gardés sur ton téléphone — les réécouter ne coûte aucun crédit.</p>
-    <input id="lib-q" placeholder="🔎 Rechercher (titre, prénom, mot de l'histoire…)" style="margin-top:10px">
-    <div class="chips" data-group="libf" style="margin-top:10px">
+    <div class="recherche">
+      <input id="lib-q" placeholder="🔎 Titre, prénom, un mot…" autocomplete="off">
+      <button class="sec" id="btn-drive-recup" title="Récupérer mes histoires du Drive">☁️</button>
+    </div>
+    <div class="chips" data-group="libf" style="display:flex; margin-top:10px">
       <div class="chip on" data-v="tout">Toutes</div>
       <div class="chip" data-v="fav">⭐ Favoris</div>
-      <div class="chip" data-v="audio">🎧 Avec audio</div>
+      <div class="chip" data-v="audio">🎧 Avec voix</div>
     </div>
-    <div class="actions"><button class="sec" id="btn-drive-recup">☁️ Récupérer mes histoires du Drive</button></div>
     <div class="status" id="recup-status"></div>
-    <div id="lib-list" style="margin-top:12px"></div>
   </div>
+  <div id="lib-list"></div>
+  <p class="hint" style="text-align:center; margin-top:14px">Réécouter une histoire déjà enregistrée ne coûte aucun crédit.</p>
 </section>
 
 <!-- ============ RÉGLAGES ============ -->
 <section id="v-set" class="view">
-  <div class="card">
-    <h2>⚙️ Réglages</h2>
+  <div class="reglages">
 
-    <label>Clé API Gemini</label>
-    <input id="k-gemini" type="password" placeholder="AIza…">
-    <p class="hint">Gratuite sur <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a> — sert aussi pour la voix Gemini et les images.</p>
-
-    <label>Modèle Gemini</label>
-    <input id="m-gemini" value="gemini-flash-latest">
-    <p class="hint">gemini-flash-latest = toujours le Flash le plus récent. Si le modèle est surchargé, l'app en essaie un autre automatiquement.</p>
-
-    <label>Qui raconte ?</label>
-    <select id="engine">
-      <option value="auto">Automatique — ElevenLabs, puis la voix québécoise Microsoft (gratuite)</option>
-      <option value="edge">🍁 Voix québécoise Microsoft (gratuite, illimitée)</option>
-      <option value="eleven">ElevenLabs seulement (la plus expressive)</option>
-      <option value="gcloud">Voix québécoise Google (gratuite jusqu'au plafond du mois)</option>
-      <option value="gemini">Voix Gemini (gratuite, expressive)</option>
-      <option value="phone">Voix du téléphone (gratuite, illimitée, hors ligne)</option>
-    </select>
-
-    <div class="sub">
-      <div style="font-weight:600">ElevenLabs</div>
-      <label>Clé API ElevenLabs</label>
-      <input id="k-eleven" type="password" placeholder="sk_…">
-      <p class="hint">Sur <a href="https://elevenlabs.io/app/settings/api-keys" target="_blank">elevenlabs.io → API Keys</a>. Active les permissions « Text to Speech », « Voices (read) » et « User (read) » (pour voir les crédits restants).</p>
-
-      <label>Crédits du mois</label>
-      <div id="quota-txt" class="hint" style="margin-top:0">—</div>
-      <div class="quota"><div id="quota-bar" style="width:0"></div></div>
-      <button class="sec" id="btn-quota" style="margin-top:8px">↻ Vérifier les crédits</button>
-
-      <label>Voix</label>
-      <div style="display:flex; gap:8px">
-        <select id="voice" style="flex:1"><option value="">— charge les voix —</option></select>
-        <button class="sec" id="btn-voices">↻</button>
+    <details class="reglage" open>
+      <summary><span class="r-ic">🎨</span><span class="r-txt"><b>Apparence</b><small id="res-theme">Veilleuse</small></span></summary>
+      <div class="dedans">
+        <div class="themes">
+          <button class="theme-carte" data-theme-choix="veilleuse"><div class="ap veilleuse"></div>Veilleuse</button>
+          <button class="theme-carte" data-theme-choix="livre"><div class="ap livre"></div>Livre d'images</button>
+          <button class="theme-carte" data-theme-choix="doudou"><div class="ap doudou"></div>Doudou</button>
+        </div>
       </div>
-      <input id="voice-id" placeholder="…ou colle un Voice ID" style="margin-top:8px">
-      <button class="sec" id="btn-preview" style="margin-top:8px">▶️ Écouter un extrait</button>
+    </details>
 
-      <label>Modèle de voix</label>
-      <select id="m-eleven">
-        <option value="eleven_v3">Eleven v3 — le plus expressif (recommandé)</option>
-        <option value="eleven_multilingual_v2">Multilingual v2 — plus stable, moins d'émotions</option>
-      </select>
+    <details class="reglage">
+      <summary><span class="r-ic">🎙️</span><span class="r-txt"><b>Qui raconte ?</b><small id="res-voix">—</small></span></summary>
+      <div class="dedans">
+        <select id="engine" hidden>
+          <option value="auto">Automatique</option>
+          <option value="edge">Voix québécoise Microsoft</option>
+          <option value="eleven">ElevenLabs</option>
+          <option value="gcloud">Voix québécoise Google</option>
+          <option value="gemini">Voix Gemini</option>
+          <option value="phone">Voix du téléphone</option>
+        </select>
+        <div class="moteurs">
+          <div class="moteur" data-moteur-choix="auto"><span class="m-ic">✨</span><span><b>Automatique</b><small>ElevenLabs tant qu'il reste des crédits, puis la voix québécoise Microsoft</small></span><span class="rond"></span></div>
+          <div class="moteur" data-moteur-choix="edge"><span class="m-ic">🍁</span><span><b>Voix québécoise Microsoft</b><small>Gratuite, sans limite · Sylvie, Antoine, Jean, Thierry</small></span><span class="rond"></span></div>
+          <div class="moteur" data-moteur-choix="eleven"><span class="m-ic">🎭</span><span><b>ElevenLabs</b><small>La plus expressive (chuchote, rit) · 10 000 caractères gratuits par mois</small></span><span class="rond"></span></div>
+          <div class="moteur" data-moteur-choix="gemini"><span class="m-ic">♊</span><span><b>Voix Gemini</b><small>Gratuite, expressive, un peu lente à enregistrer</small></span><span class="rond"></span></div>
+          <div class="moteur" data-moteur-choix="phone"><span class="m-ic">📱</span><span><b>Voix du téléphone</b><small>Gratuite, hors ligne, plus robotique</small></span><span class="rond"></span></div>
+          <div class="moteur" data-moteur-choix="gcloud"><span class="m-ic">☁️</span><span><b>Voix québécoise Google</b><small>Demande un compte Google Cloud avec facturation</small></span><span class="rond"></span></div>
+        </div>
 
-      <label>Style de lecture (v3)</label>
-      <select id="stability">
-        <option value="0">Créatif — très expressif</option>
-        <option value="0.5" selected>Naturel — équilibré</option>
-        <option value="1">Stable — régulier, peu de variation</option>
-      </select>
-    </div>
+        <div class="panneau" data-pour="edge auto">
+          <div class="panneau-tete">🍁 Voix Microsoft</div>
+          <label for="ms-voice">Narrateur</label>
+          <select id="ms-voice">
+            <option value="fr-CA-SylvieNeural">Sylvie — femme</option>
+            <option value="fr-CA-AntoineNeural">Antoine — homme</option>
+            <option value="fr-CA-JeanNeural">Jean — homme</option>
+            <option value="fr-CA-ThierryNeural">Thierry — homme</option>
+          </select>
+          <div class="regle"><label for="ms-rate">Vitesse</label><output data-pour="ms-rate"></output></div>
+          <input id="ms-rate" type="range" min="-30" max="10" step="5" value="-10">
+          <label class="check"><input type="checkbox" id="opt-multivoix" checked>Une voix par personnage</label>
+          <p class="hint">Gemini repère qui parle : chaque personnage reçoit sa voix, plus grave ou plus aiguë selon son âge.</p>
+          <div class="actions"><button class="sec" id="btn-preview-ms">▶️ Écouter</button></div>
+        </div>
 
-    <div class="sub">
-      <div style="font-weight:600">🍁 Voix québécoise Microsoft (gratuite)</div>
-      <label>Voix</label>
-      <select id="ms-voice">
-        <option value="fr-CA-SylvieNeural">Sylvie — femme</option>
-        <option value="fr-CA-AntoineNeural">Antoine — homme</option>
-        <option value="fr-CA-JeanNeural">Jean — homme</option>
-        <option value="fr-CA-ThierryNeural">Thierry — homme</option>
-      </select>
-      <label>Vitesse</label>
-      <input id="ms-rate" type="range" min="-30" max="10" step="5" value="-10">
-      <label class="check"><input type="checkbox" id="opt-multivoix" checked>🎭 Une voix par personnage (Sylvie, Jean, Antoine, Thierry)</label>
-      <p class="hint">Gemini repère qui parle, et chaque personnage reçoit sa voix (plus grave pour un ogre, plus aiguë pour un enfant). La voix choisie ci-dessus reste celle du narrateur.</p>
-      <button class="sec" id="btn-preview-ms" style="margin-top:8px">▶️ Écouter un extrait</button>
-      <p class="hint">Les voix d'ici de la lecture à voix haute de Microsoft Edge, par le relais de ton serveur : gratuites, sans compte et sans limite. C'est un service non officiel : s'il cesse de répondre, l'app passe toute seule à la voix suivante. Elle lit sans les chuchotements ni les rires.</p>
-    </div>
+        <div class="panneau" data-pour="eleven auto">
+          <div class="panneau-tete">🎭 ElevenLabs</div>
+          <label>Crédits du mois</label>
+          <div id="quota-txt" class="hint" style="margin-top:0">—</div>
+          <div class="quota"><div id="quota-bar" style="width:0"></div></div>
+          <label for="voice">Voix</label>
+          <div style="display:flex; gap:8px">
+            <select id="voice" style="flex:1"><option value="">— charge les voix —</option></select>
+            <button class="sec" id="btn-voices" title="Recharger les voix">↻</button>
+          </div>
+          <input id="voice-id" placeholder="…ou colle un Voice ID" style="margin-top:8px">
+          <div class="row" style="margin-top:2px">
+            <div><label for="m-eleven">Modèle</label>
+              <select id="m-eleven">
+                <option value="eleven_v3">Eleven v3 (expressif)</option>
+                <option value="eleven_multilingual_v2">Multilingual v2</option>
+              </select></div>
+            <div><label for="stability">Style</label>
+              <select id="stability">
+                <option value="0">Créatif</option>
+                <option value="0.5" selected>Naturel</option>
+                <option value="1">Stable</option>
+              </select></div>
+          </div>
+          <div class="actions"><button class="sec" id="btn-preview">▶️ Écouter</button><button class="sec" id="btn-quota">↻ Crédits</button></div>
+        </div>
 
-    <div class="sub">
-      <div style="font-weight:600">🍁 Voix québécoise Google (Cloud Text-to-Speech)</div>
-      <label>Clé API Google Cloud</label>
-      <input id="k-gcloud" type="password" placeholder="AIza…">
-      <p class="hint">Activer l'API : <a href="https://console.cloud.google.com/apis/library/texttospeech.googleapis.com" target="_blank">Cloud Text-to-Speech</a> · créer la clé : <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Identifiants → Clé API</a> (restreinte au site de l'app et à « Cloud Text-to-Speech API »).</p>
-      <label>Voix</label>
-      <div style="display:flex; gap:8px">
-        <select id="gc-voice" style="flex:1"><option value="">— entre la clé puis ↻ —</option></select>
-        <button class="sec" id="btn-gc-voices">↻</button>
+        <div class="panneau" data-pour="gemini">
+          <div class="panneau-tete">♊ Voix Gemini</div>
+          <label for="g-voice">Voix</label>
+          <select id="g-voice">
+            <option value="Sulafat">Sulafat — femme, chaleureuse</option>
+            <option value="Achernar">Achernar — femme, très douce</option>
+            <option value="Vindemiatrix">Vindemiatrix — femme, tendre</option>
+            <option value="Aoede">Aoede — femme, légère</option>
+            <option value="Leda">Leda — femme, jeune</option>
+            <option value="Despina">Despina — femme, veloutée</option>
+            <option value="Gacrux">Gacrux — femme, grand-maman</option>
+            <option value="Enceladus">Enceladus — homme, calme</option>
+            <option value="Algieba">Algieba — homme, doux</option>
+            <option value="Charon">Charon — homme, posé</option>
+            <option value="Puck">Puck — homme, enjoué</option>
+            <option value="Iapetus">Iapetus — homme, clair</option>
+          </select>
+          <div class="actions"><button class="sec" id="btn-preview-g">▶️ Écouter</button></div>
+        </div>
+
+        <div class="panneau" data-pour="phone">
+          <div class="panneau-tete">📱 Voix du téléphone</div>
+          <label for="p-voice">Voix</label>
+          <select id="p-voice"><option value="">Par défaut</option></select>
+          <div class="regle"><label for="p-rate">Vitesse</label><output data-pour="p-rate"></output></div>
+          <input id="p-rate" type="range" min="0.6" max="1.2" step="0.05" value="0.9">
+          <p class="hint">Prends une voix « Français (Canada) » pour l'accent d'ici.</p>
+          <div class="actions"><button class="sec" id="btn-preview-p">▶️ Écouter</button></div>
+        </div>
+
+        <div class="panneau" data-pour="gcloud">
+          <div class="panneau-tete">☁️ Voix québécoise Google</div>
+          <label for="gc-voice">Voix</label>
+          <div style="display:flex; gap:8px">
+            <select id="gc-voice" style="flex:1"><option value="">— entre la clé (section Clés) —</option></select>
+            <button class="sec" id="btn-gc-voices" title="Recharger les voix">↻</button>
+          </div>
+          <div class="regle"><label for="gc-rate">Vitesse</label><output data-pour="gc-rate"></output></div>
+          <input id="gc-rate" type="range" min="0.7" max="1.15" step="0.05" value="0.9">
+          <label for="gc-plafond">Plafond du mois (caractères)</label>
+          <input id="gc-plafond" type="number" min="10000" step="10000" value="900000">
+          <div id="gc-quota" class="hint">—</div>
+          <div class="actions"><button class="sec" id="btn-preview-gc">▶️ Écouter</button></div>
+        </div>
       </div>
-      <label>Vitesse</label>
-      <input id="gc-rate" type="range" min="0.7" max="1.15" step="0.05" value="0.9">
-      <label>Plafond du mois (caractères)</label>
-      <input id="gc-plafond" type="number" min="10000" step="10000" value="900000">
-      <div id="gc-quota" class="hint" style="margin-top:4px">—</div>
-      <button class="sec" id="btn-preview-gc" style="margin-top:8px">▶️ Écouter un extrait</button>
-      <p class="hint">Gratuit chaque mois jusqu'au quota de Google (environ 1 million de caractères pour les voix haut de gamme). L'app s'arrête d'elle-même au plafond ci-dessus pour ne jamais rien te coûter. Les voix « Chirp3-HD » sont les plus naturelles.</p>
-    </div>
+    </details>
 
-    <div class="sub">
-      <div style="font-weight:600">Voix Gemini (gratuite)</div>
-      <label>Voix</label>
-      <select id="g-voice">
-        <option value="Sulafat">Sulafat — femme, chaleureuse</option>
-        <option value="Achernar">Achernar — femme, très douce</option>
-        <option value="Vindemiatrix">Vindemiatrix — femme, tendre</option>
-        <option value="Aoede">Aoede — femme, légère</option>
-        <option value="Leda">Leda — femme, jeune</option>
-        <option value="Despina">Despina — femme, veloutée</option>
-        <option value="Gacrux">Gacrux — femme, grand-maman</option>
-        <option value="Enceladus">Enceladus — homme, calme et soufflé</option>
-        <option value="Algieba">Algieba — homme, doux</option>
-        <option value="Charon">Charon — homme, posé</option>
-        <option value="Puck">Puck — homme, enjoué</option>
-        <option value="Iapetus">Iapetus — homme, clair</option>
-      </select>
-      <button class="sec" id="btn-preview-g" style="margin-top:8px">▶️ Écouter un extrait</button>
-      <p class="hint">Gratuite avec ta clé Gemini, mais limitée en nombre d'appels par minute : une histoire peut prendre une minute ou deux à enregistrer.</p>
-    </div>
-
-    <div class="sub">
-      <div style="font-weight:600">Voix du téléphone</div>
-      <label>Voix</label>
-      <select id="p-voice"><option value="">Par défaut</option></select>
-      <label>Vitesse</label>
-      <input id="p-rate" type="range" min="0.6" max="1.2" step="0.05" value="0.9">
-      <button class="sec" id="btn-preview-p" style="margin-top:8px">▶️ Écouter un extrait</button>
-      <p class="hint">Les voix « Français (Canada) » donnent l'accent d'ici. Pour en ajouter : Paramètres du téléphone → Synthèse vocale → Google → Installer les données vocales.</p>
-    </div>
-
-    <div class="sub">
-      <div style="font-weight:600">Pendant l'histoire</div>
-      <label class="check"><input type="checkbox" id="opt-musique">🎵 Musique douce en fond (boîte à musique)</label>
-      <label>Volume de la musique</label>
-      <input id="musique-vol" type="range" min="0.05" max="0.6" step="0.05" value="0.2">
-      <label class="check"><input type="checkbox" id="opt-suivre" checked>📜 Le texte suit la lecture</label>
-      <label class="check"><input type="checkbox" id="opt-image" checked>🖼️ Image de couverture (Gemini)</label>
-      <p class="hint">L'image demande un modèle d'images Gemini : avec certaines clés gratuites, elle n'est pas disponible (l'histoire se crée quand même).</p>
-    </div>
-
-    <div class="sub">
-      <div style="font-weight:600">☁️ Sauvegarde Google Drive</div>
-      <label class="check"><input type="checkbox" id="opt-drive" checked>Sauvegarder chaque histoire dans mon Drive (texte, audio, image)</label>
-      <label>Adresse du service</label>
-      <input id="drive-url" placeholder="https://script.google.com/macros/s/…/exec">
-      <label>Clé de sauvegarde</label>
-      <input id="drive-key" type="password" placeholder="se remplit toute seule avec le lien du Drive">
-      <p class="hint">Rangées dans Drive → « Histoires du soir » → un dossier par enfant → un dossier par histoire (Google Doc + audio + image). Les favoris ont aussi un raccourci dans « ⭐ Favoris ». Le plus simple : touche le lien du document « ⚙️ Configurer l'app » dans ce dossier, il remplit tout.</p>
-      <div class="actions">
-        <button class="sec" id="btn-drive-tout">☁️ Tout envoyer maintenant</button>
+    <details class="reglage">
+      <summary><span class="r-ic">🌙</span><span class="r-txt"><b>Pendant l'histoire</b><small id="res-pendant">—</small></span></summary>
+      <div class="dedans">
+        <label class="check"><input type="checkbox" id="opt-suivre" checked>Le texte suit la lecture</label>
+        <label class="check"><input type="checkbox" id="opt-image" checked>Image de couverture</label>
+        <label class="check"><input type="checkbox" id="opt-musique">Musique douce en fond</label>
+        <div class="regle"><label for="musique-vol">Volume de la musique</label><output data-pour="musique-vol"></output></div>
+        <input id="musique-vol" type="range" min="0.05" max="0.6" step="0.05" value="0.2">
+        <label for="lang">Langue de l'histoire</label>
+        <select id="lang">
+          <option value="fr-qc">Français (Québec)</option>
+          <option value="fr-fr">Français (France)</option>
+          <option value="en">English</option>
+        </select>
       </div>
-      <div class="status" id="drive-status"></div>
-    </div>
+    </details>
 
-    <label>Langue de l'histoire</label>
-    <select id="lang">
-      <option value="fr-qc">Français (Québec)</option>
-      <option value="fr-fr">Français (France)</option>
-      <option value="en">English</option>
-    </select>
+    <details class="reglage">
+      <summary><span class="r-ic">☁️</span><span class="r-txt"><b>Sauvegarde Google Drive</b><small id="res-drive">—</small></span></summary>
+      <div class="dedans">
+        <label class="check"><input type="checkbox" id="opt-drive" checked>Sauvegarder chaque histoire</label>
+        <p class="hint">Drive → « Histoires du soir » → un dossier par enfant → un dossier par histoire (texte, voix, image).</p>
+        <label for="drive-url">Adresse du service</label>
+        <input id="drive-url" placeholder="https://script.google.com/macros/s/…/exec">
+        <label for="drive-key">Clé de sauvegarde</label>
+        <input id="drive-key" type="password" placeholder="se remplit avec le lien du Drive">
+        <div class="actions"><button class="sec" id="btn-drive-tout">☁️ Tout envoyer maintenant</button></div>
+        <div class="status" id="drive-status"></div>
+      </div>
+    </details>
 
-    <div class="sub" id="transfert-box" style="display:none">
-      <div style="font-weight:600">📲 Version de ton serveur</div>
-      <p class="hint">L'app est aussi sur ton serveur : <b>95.groupelaberge.ca/histoires</b> (bouton « Histoires » de l'app Maison). Ce bouton y copie tes clés et tes réglages, puis récupère tes histoires depuis le Drive.</p>
-      <button class="sec" id="btn-transfert">📲 Ouvrir la version du serveur avec mes réglages</button>
+    <details class="reglage">
+      <summary><span class="r-ic">🔑</span><span class="r-txt"><b>Clés</b><small id="res-cles">—</small></span></summary>
+      <div class="dedans">
+        <label for="k-gemini">Gemini (écrit les histoires, images)</label>
+        <div class="cle"><input id="k-gemini" type="password" placeholder="AIza…"><span class="etat" data-cle="k-gemini"></span></div>
+        <p class="hint">Gratuite sur <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a></p>
+        <label for="k-eleven">ElevenLabs</label>
+        <div class="cle"><input id="k-eleven" type="password" placeholder="sk_…"><span class="etat" data-cle="k-eleven"></span></div>
+        <p class="hint"><a href="https://elevenlabs.io/app/settings/api-keys" target="_blank">elevenlabs.io → API Keys</a> · permissions « Text to Speech », « Voices (read) » et « User (read) ».</p>
+        <label for="k-gcloud">Google Cloud (voix Google)</label>
+        <div class="cle"><input id="k-gcloud" type="password" placeholder="AIza…"><span class="etat" data-cle="k-gcloud"></span></div>
+        <p class="sous-titre">Avancé</p>
+        <label for="m-gemini">Modèle Gemini</label>
+        <input id="m-gemini" value="gemini-flash-latest">
+      </div>
+    </details>
+
+    <div class="card" id="transfert-box" style="display:none">
+      <p class="bloc-titre">📲 Version de ton serveur</p>
+      <p class="hint" style="margin-top:0">L'app est aussi sur 95.groupelaberge.ca/histoires (bouton « Histoires » de l'app Maison). Ce bouton y copie tes réglages, puis récupère tes histoires du Drive.</p>
+      <div class="actions"><button class="sec" id="btn-transfert">📲 Ouvrir la version du serveur</button></div>
       <div class="status" id="transfert-status"></div>
     </div>
 
-    <button class="big" id="btn-save">💾 Enregistrer</button>
+    <button class="big" id="btn-save" style="display:none">💾 Enregistrer</button>
     <div class="status" id="set-status"></div>
   </div>
 </section>
@@ -1478,7 +1736,7 @@ function showStory(s) {
   $('s-chap').textContent = s.chap > 1 ? `Chapitre ${s.chap}` : s.interactive ? '🔀 L\'enfant choisit la suite' : '';
   $('s-title').textContent = s.titre;
   $('s-text').innerHTML = paras(s.histoire).map((p, i) =>
-    `<p data-i="${i}">${esc(p).replace(/\[([^\]\n]{1,40})\]/g, '<span class="tag">$1</span>')}</p>`).join('');
+    `<p data-i="${i}">${esc(p).replace(/\[([^\]\n]{1,40})\]\s*/g, '<span class="tag">$1 </span>')}</p>`).join('');
   const enCours = s.interactive && s.parts.length < NB_PARTIES;
   $('btn-suite').style.display = enCours ? 'none' : '';
   majChoix();
@@ -1957,6 +2215,95 @@ if ($('k-gcloud').value.trim()) gcChargerVoix().then(() => { if (!$('set-status'
 $('k-gcloud').addEventListener('change', () => { saveSettings(); if ($('k-gcloud').value.trim()) gcChargerVoix(); });
 /* Histoires pas encore sauvegardées dans le Drive (hors ligne, erreur) : on réessaie à l'ouverture */
 if (driveActif()) setTimeout(async () => { for (const s of await DB.all()) if (s.driveAttente || !s.drive) await driveSauver(s); }, 3000);
+
+/* ==================== INTERFACE : thèmes, choix qui s'ouvrent, réglages ==================== */
+const THEMES = { veilleuse: ['#0d1030', 'Veilleuse'], livre: ['#e8f1fb', 'Livre d\'images'], doudou: ['#efe7ff', 'Doudou'] };
+function appliquerTheme(t) {
+  if (!THEMES[t]) t = 'veilleuse';
+  document.documentElement.dataset.look = t;
+  document.querySelector('meta[name="theme-color"]').content = THEMES[t][0];
+  document.querySelectorAll('[data-theme-choix]').forEach(b => b.classList.toggle('on', b.dataset.themeChoix === t));
+  $('res-theme').textContent = THEMES[t][1];
+  store.set('set:theme', t);
+}
+document.querySelectorAll('[data-theme-choix]').forEach(b => b.onclick = () => appliquerTheme(b.dataset.themeChoix));
+appliquerTheme(store.get('set:theme', 'veilleuse'));
+
+/* Choix qui s'ouvrent : une ligne (ou tuile) par groupe de pastilles */
+const EMOJI = /^(\p{Extended_Pictographic}(?:️|‍\p{Extended_Pictographic}|‍.|️⃣)*)\s*/u;
+function fermerChoix() {
+  document.querySelectorAll('.picker.ouvert').forEach(p => p.classList.remove('ouvert'));
+  document.body.classList.remove('volet');
+}
+document.querySelectorAll('.picker').forEach(pk => {
+  const src = pk.querySelector('.pk-k-src'), chips = pk.querySelector('.chips');
+  chips.dataset.titre = pk.dataset.titre || '';
+  chips.querySelectorAll('.chip').forEach(c => {
+    const m = EMOJI.exec(c.textContent.trim());
+    if (m) c.innerHTML = `<span class="ico">${m[1]}</span><span>${esc(c.textContent.trim().slice(m[0].length))}</span>`;
+  });
+  const tete = document.createElement('button');
+  tete.type = 'button'; tete.className = 'picker-tete';
+  tete.innerHTML = `<span class="pk-k">${esc(src.textContent)}</span><span class="pk-v"></span><span class="pk-fl">›</span>`;
+  src.replaceWith(tete);
+  const maj = () => { tete.querySelector('.pk-v').textContent = (chips.querySelector('.chip.on')?.textContent || '').replace(/\s+/g, ' ').trim(); };
+  maj();
+  tete.onclick = () => {
+    const etait = pk.classList.contains('ouvert');
+    fermerChoix();
+    if (!etait) { pk.classList.add('ouvert'); document.body.classList.add('volet'); }
+  };
+  chips.addEventListener('click', e => { if (e.target.closest('.chip')) { maj(); setTimeout(fermerChoix, 120); } });
+});
+$('voile').onclick = fermerChoix;
+document.addEventListener('keydown', e => { if (e.key === 'Escape') fermerChoix(); });
+
+/* Qui raconte ? : des cartes à la place d'un menu ; on ne montre que les réglages de la voix choisie */
+const NOMS_MOTEUR = { auto: 'Automatique', edge: 'Voix québécoise Microsoft', eleven: 'ElevenLabs', gcloud: 'Voix québécoise Google', gemini: 'Voix Gemini', phone: 'Voix du téléphone' };
+function majMoteur() {
+  const m = $('engine').value || 'auto';
+  document.querySelectorAll('[data-moteur-choix]').forEach(c => c.classList.toggle('on', c.dataset.moteurChoix === m));
+  document.querySelectorAll('.panneau[data-pour]').forEach(p => { p.hidden = !p.dataset.pour.split(' ').includes(m); });
+  const voix = m === 'edge' || m === 'auto' ? ' · ' + $('ms-voice').selectedOptions[0]?.text.split(' —')[0] : '';
+  $('res-voix').textContent = NOMS_MOTEUR[m] + voix;
+}
+document.querySelectorAll('[data-moteur-choix]').forEach(c => c.onclick = () => {
+  $('engine').value = c.dataset.moteurChoix;
+  majMoteur(); enregistrerReglages(); if (current) infoCredits();
+});
+
+/* Valeurs lisibles à côté des curseurs */
+const FORMATS = {
+  'ms-rate': v => (v > 0 ? '+' : '') + v + ' %', 'p-rate': v => (+v).toFixed(2).replace('.', ',') + '×',
+  'gc-rate': v => (+v).toFixed(2).replace('.', ',') + '×', 'musique-vol': v => Math.round(v * 100) + ' %'
+};
+function majCurseurs() { document.querySelectorAll('output[data-pour]').forEach(o => { o.textContent = FORMATS[o.dataset.pour]($(o.dataset.pour).value); }); }
+
+/* Résumés sous chaque section, et ✓ sur les clés remplies */
+function majResumes() {
+  majMoteur(); majCurseurs();
+  const p = [$('opt-suivre').checked && 'texte qui suit', $('opt-image').checked && 'couverture', $('opt-musique').checked && 'musique'].filter(Boolean);
+  $('res-pendant').textContent = (p.join(' · ') || 'rien de plus') + ' · ' + $('lang').selectedOptions[0].text;
+  $('res-drive').textContent = driveActif() ? 'Activée' : $('opt-drive').checked ? 'À configurer (lien du document du Drive)' : 'Désactivée';
+  const cles = ['k-gemini', 'k-eleven', 'k-gcloud'];
+  cles.forEach(k => { const e = document.querySelector(`.etat[data-cle="${k}"]`); if (e) e.textContent = $(k).value.trim() ? '✓' : ''; });
+  const n = { 'k-gemini': 'Gemini', 'k-eleven': 'ElevenLabs', 'k-gcloud': 'Google' };
+  const ok = cles.filter(k => $(k).value.trim()).map(k => n[k]);
+  $('res-cles').textContent = ok.length ? ok.join(' · ') + ' ✓' : 'Aucune clé : ajoute au moins Gemini';
+}
+/* Les réglages s'enregistrent tout seuls */
+let minuterieReglages = null;
+function enregistrerReglages() {
+  saveSettings(); majResumes();
+  clearTimeout(minuterieReglages);
+  status($('set-status'), '✔ Enregistré', 'ok');
+  minuterieReglages = setTimeout(() => { if ($('set-status').textContent === '✔ Enregistré') status($('set-status'), ''); }, 1500);
+}
+$('v-set').addEventListener('change', e => { if (e.target.matches('input, select')) enregistrerReglages(); });
+$('v-set').addEventListener('input', e => { if (e.target.type === 'range') majCurseurs(); });
+majResumes();
+/* Première ouverture sans clé Gemini : la section Clés s'ouvre */
+if (!$('k-gemini').value.trim()) document.querySelector('#res-cles').closest('details').open = true;
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(r => r.update()).catch(() => {});
 /* Une nouvelle version vient de s'installer : on recharge une fois pour l'afficher */
