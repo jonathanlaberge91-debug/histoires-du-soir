@@ -98,7 +98,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>🌙 Histoires du soir</h1>
-  <p>Écrites par Gemini · racontées par ElevenLabs</p>
+  <p>Écrites par Gemini · racontées par ElevenLabs · <span style="opacity:.6">v7</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -1360,7 +1360,9 @@ if (!$('k-gemini').value || (!$('k-eleven').value && $('engine').value === 'elev
 }
 if ($('k-eleven').value) afficherQuota();
 
-if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(r => r.update()).catch(() => {});
+/* Une nouvelle version vient de s'installer : on recharge une fois pour l'afficher */
+if ('serviceWorker' in navigator) { let vu = !!navigator.serviceWorker.controller; navigator.serviceWorker.addEventListener('controllerchange', () => { if (vu) location.reload(); vu = true; }); }
 </script>
 </body>
 </html>
