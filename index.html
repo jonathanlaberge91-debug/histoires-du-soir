@@ -178,6 +178,17 @@
   details.plus .dedans { padding: 0 14px 14px; }
   details.plus .dedans > label:first-child { margin-top: 0; }
   .dessin-zone { display: flex; gap: 8px; flex-wrap: wrap; }
+  /* Plusieurs enfants, chacun avec ses choix */
+  details.choix-enfant { margin-top: 12px; box-shadow: none; background: var(--surface2); }
+  details.choix-enfant .dedans > label { margin-top: 12px; }
+  .idees { display: flex; gap: 6px; overflow-x: auto; padding: 6px 0 2px; scrollbar-width: none; }
+  .idees::-webkit-scrollbar { display: none; }
+  .idees button { flex: none; padding: 6px 11px; border-radius: 999px; background: var(--surface); border: 1px solid var(--ligne); color: var(--texte); font: inherit; font-size: .85rem; cursor: pointer; }
+  .enfant-carte { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--ligne); }
+  .enfant-tete { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .enfant-tete b { flex: 1; }
+  .enfant-tete button { padding: 6px 12px; }
+  #btn-ajout-enfant { margin-top: 14px; width: 100%; justify-content: center; }
   .cover { width: 100%; border-radius: var(--r); margin: 2px 0 12px; display: block; }
   .story figure.illus { margin: 6px 0 16px; }
   .story figure.illus img { width: 100%; aspect-ratio: 768 / 526; object-fit: cover; border-radius: var(--r); display: block; background: var(--surface2); }
@@ -346,7 +357,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v23</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v24</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -358,7 +369,10 @@
         <div><label for="name">Prénom de l'enfant</label><input id="name" placeholder="ex. Abby" autocomplete="off"></div>
         <div><label for="age">Âge</label><input id="age" type="number" min="2" max="12" value="5" inputmode="numeric"></div>
       </div>
-      <label for="friends">Avec qui ? (optionnel)</label>
+      <div id="choix-enfant-0"></div>
+          <div id="autres-enfants"></div>
+          <button type="button" class="sec" id="btn-ajout-enfant">➕ Ajouter un enfant</button>
+          <label for="friends">Avec qui d'autre ? (optionnel : le chien, papa, grand-maman…)</label>
       <input id="friends" placeholder="ex. son frère Max (3 ans) et son chien Biscuit" autocomplete="off">
     </div>
 
@@ -1289,14 +1303,13 @@ const CONSIGNE_VOIX_SIMPLE = `TRÈS IMPORTANT — VOIX DE SYNTHÈSE SIMPLE. Cett
 
 /* Les consignes communes, d'après le formulaire */
 function consignes(opts = {}) {
-  const name = $('name').value.trim(), age = $('age').value || '5';
   const friends = $('friends').value.trim();
+  const enf = consignesEnfants();      // ligne 0 = pour qui et quel âge (les suites l'enlèvent)
   const idea = $('idea').value.trim(), moral = $('moral').value.trim();
   const mood = chipVal('mood'), lang = $('lang').value;
   const souci = chipVal('souci'), souciTxt = souci === 'autre' ? $('souci-autre').value.trim() : SOUCIS[souci];
   return [
-    `Écris une histoire originale pour un enfant de ${age} ans.`,
-    name ? `Le héros s'appelle ${name}.` : `Invente un héros attachant.`,
+    ...enf.lignes,
     friends ? `Autres héros de l'histoire, aussi importants que le héros principal (chacun a son rôle, ses répliques et un moment où il aide) : ${friends}.` : '',
     opts.sansIdee ? '' : (idea ? `Idée de départ : ${idea}` : `Surprends-moi avec une idée originale et inattendue.`),
     souciTxt ? `Petit défi de la vraie vie à apprivoiser : ${souciTxt}. Le héros vit une situation semblable, ressent la même émotion (nommée simplement, sans en faire un drame), découvre un ou deux trucs concrets qu'un enfant peut vraiment utiliser, et réussit. Ton rassurant, jamais moralisateur ; l'enfant doit se reconnaître et se sentir capable.` : '',
@@ -1843,6 +1856,110 @@ function dicter(id, btn) {
   w.className = 'avec-micro';
   el.parentNode.insertBefore(w, el); w.appendChild(el); w.appendChild(b);
 });
+
+/* ==================== PLUSIEURS ENFANTS, CHACUN SES CHOIX ====================
+   L'enfant 1 garde les champs Prénom / Âge du haut ; les autres s'ajoutent avec « Ajouter un enfant ».
+   Chaque enfant choisit (tout est facultatif) : un objet, un animal, un personnage, une couleur, un méchant,
+   un lieu et un pouvoir. Tout est gardé sur le téléphone jusqu'au prochain changement. */
+const CHOIX = [
+  { k: 'objet', l: '🎁 Un objet', ph: 'ex. une lampe de poche', idees: ['🔦 lampe de poche', '🎈 ballon', '🪄 baguette magique', '🧸 toutou', '🗝️ clé dorée', '🚲 vélo', '👑 couronne', '🎒 sac à dos'] },
+  { k: 'animal', l: '🐾 Un animal', ph: 'ex. un hibou', idees: ['🦉 hibou', '🐶 chien', '🐱 chat', '🦄 licorne', '🐉 dragon', '🦊 renard', '🐢 tortue', '🦖 dinosaure'] },
+  { k: 'personnage', l: '🦸 Un personnage', ph: 'ex. une sirène, Spider-Man, Elsa…', idees: ['🧜 sirène', '🧚 fée', '🦸 superhéros', '🤖 robot', '🧙 magicien', '👸 princesse', '🏴‍☠️ pirate', '👻 petit fantôme'] },
+  { k: 'couleur', l: '🎨 Une couleur', ph: 'ex. mauve', idees: ['🔴 rouge', '🟠 orange', '🟡 jaune', '🟢 vert', '🔵 bleu', '🟣 mauve', '🩷 rose', '🌈 arc-en-ciel'] },
+  { k: 'mechant', l: '😈 Un méchant', ph: 'ex. un loup grognon', idees: ['🐺 loup grognon', '🧌 troll', '🧹 sorcière', '🍬 voleur de bonbons', '🐊 crocodile', '🌪️ tempête', '👾 extraterrestre', '🕷️ grosse araignée'] },
+  { k: 'lieu', l: '🗺️ Un lieu', ph: 'ex. un château', idees: ['🏰 château', '🌲 forêt', '🌊 fond de la mer', '🚀 espace', '🏝️ île', '🌋 volcan', '❄️ pôle Nord', '🍭 pays des bonbons'] },
+  { k: 'pouvoir', l: '✨ Un pouvoir magique', ph: 'ex. voler', idees: ['🕊️ voler', '🫥 devenir invisible', '💪 super force', '🗣️ parler aux animaux', '⚡ super vitesse', '🧊 tout geler', '🌱 faire pousser les plantes', '🦒 devenir géant'] }
+];
+let enfants = (() => { try { const l = JSON.parse(store.get('set:enfants', '[]')); return Array.isArray(l) && l.length ? l : [{ choix: {} }]; } catch { return [{ choix: {} }]; } })();
+const sansEmoji = s => s.replace(/^[^\p{L}\p{N}]+/u, '').trim();
+function blocChoix(i, ouvert) {
+  const ch = enfants[i].choix || {};
+  const n = CHOIX.filter(c => ch[c.k]).length;
+  return `<details class="plus choix-enfant" data-i="${i}" ${ouvert ? 'open' : ''}>
+    <summary>🎨 Ses choix <small>· ${n ? n + ' choisi' + (n > 1 ? 's' : '') : 'objet, animal, méchant…'}</small></summary>
+    <div class="dedans">${CHOIX.map(c => `
+      <label for="ch-${i}-${c.k}">${c.l}</label>
+      <div class="avec-micro"><input id="ch-${i}-${c.k}" data-i="${i}" data-k="${c.k}" placeholder="${esc(c.ph)}" value="${esc(ch[c.k] || '')}" autocomplete="off"><button type="button" class="sec micro" data-dicter="ch-${i}-${c.k}" title="Dicter au micro">🎤</button></div>
+      <div class="idees">${c.idees.map(x => `<button type="button" data-idee="${esc(sansEmoji(x))}" data-cible="ch-${i}-${c.k}">${esc(x)}</button>`).join('')}</div>`).join('')}
+    </div></details>`;
+}
+function rendreEnfants(ouvrir = -1) {
+  $('choix-enfant-0').innerHTML = blocChoix(0, ouvrir === 0);
+  $('autres-enfants').innerHTML = enfants.slice(1).map((e, j) => {
+    const i = j + 1;
+    return `<div class="enfant-carte" data-i="${i}">
+      <div class="enfant-tete"><b>Enfant ${i + 1}</b><button type="button" class="sec" data-retirer="${i}">✖ Retirer</button></div>
+      <div class="row age">
+        <div><label for="en-${i}-nom">Prénom</label><input id="en-${i}-nom" data-i="${i}" data-k="nom" value="${esc(e.nom || '')}" placeholder="ex. Max" autocomplete="off"></div>
+        <div><label for="en-${i}-age">Âge</label><input id="en-${i}-age" data-i="${i}" data-k="age" type="number" min="2" max="12" value="${esc(e.age || '5')}" inputmode="numeric"></div>
+      </div>${blocChoix(i, i === ouvrir)}</div>`;
+  }).join('');
+}
+/* Relit tout dans la page (la dictée remplit les cases sans prévenir) et garde sur le téléphone */
+function lireEnfants() {
+  enfants.forEach((e, i) => {
+    e.choix = e.choix || {};
+    for (const c of CHOIX) { const el = $(`ch-${i}-${c.k}`); if (el) e.choix[c.k] = el.value.trim(); }
+    if (i) { e.nom = ($(`en-${i}-nom`)?.value || '').trim(); e.age = $(`en-${i}-age`)?.value || '5'; }
+  });
+  enfants[0].nom = $('name').value.trim(); enfants[0].age = $('age').value || '5';
+  store.set('set:enfants', JSON.stringify(enfants));
+  document.querySelectorAll('details.choix-enfant').forEach(d => {      // compteur « 3 choisis » à jour
+    const n = CHOIX.filter(c => (enfants[+d.dataset.i]?.choix || {})[c.k]).length;
+    d.querySelector('summary small').textContent = '· ' + (n ? n + ' choisi' + (n > 1 ? 's' : '') : 'objet, animal, méchant…');
+  });
+  return enfants.map(e => ({ nom: e.nom || '', age: e.age || '5', choix: Object.fromEntries(Object.entries(e.choix || {}).filter(([, v]) => v)) }));
+}
+$('btn-ajout-enfant').onclick = () => {
+  lireEnfants();
+  enfants.push({ nom: '', age: $('age').value || '5', choix: {} });
+  rendreEnfants(enfants.length - 1);
+  store.set('set:enfants', JSON.stringify(enfants));
+  $(`en-${enfants.length - 1}-nom`).focus();
+};
+$('form-card').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.idee) { const el = $(b.dataset.cible); el.value = b.dataset.idee; lireEnfants(); }
+  else if (b.dataset.dicter) dicter(b.dataset.dicter, b);
+  else if (b.dataset.retirer) { lireEnfants(); enfants.splice(+b.dataset.retirer, 1); rendreEnfants(); store.set('set:enfants', JSON.stringify(enfants)); }
+});
+$('form-card').addEventListener('change', e => { if (e.target.dataset?.k) lireEnfants(); });
+if (!$('name').value && enfants[0].nom) { $('name').value = enfants[0].nom; $('age').value = enfants[0].age || '5'; }
+['name', 'age'].forEach(id => $(id).addEventListener('change', lireEnfants));
+rendreEnfants();
+
+/* Les enfants et leurs choix → consignes pour Gemini */
+const NOMS_CHOIX = { objet: 'son objet', animal: 'son animal', personnage: 'son personnage', couleur: 'sa couleur', mechant: 'son méchant', lieu: 'son lieu', pouvoir: 'son pouvoir magique' };
+function consignesEnfants() {
+  const l = lireEnfants();
+  const autres = l.slice(1).filter(e => e.nom || Object.keys(e.choix).length);
+  const tous = [l[0], ...autres];
+  const plusieurs = tous.length > 1;
+  const nomDe = (e, i) => e.nom || (i ? `l'enfant ${i + 1} (invente-lui un prénom)` : 'le héros');
+  const lignes = [];
+  if (plusieurs) {
+    const ages = tous.map(e => parseInt(e.age, 10) || 5);
+    lignes.push(`Écris une histoire originale pour ${tous.length} enfants : ${tous.map((e, i) => `${nomDe(e, i)} (${e.age} ans)`).join(', ')}. Vocabulaire adapté au plus jeune (${Math.min(...ages)} ans).`);
+    lignes.push(`Les héros sont CES ${tous.length} ENFANTS, tous aussi importants : chacun a son prénom, sa personnalité, ses répliques et SON moment de gloire où c'est lui ou elle qui sauve la situation. Aucun n'est un simple figurant. Si l'histoire finit au dodo, la dernière phrase souhaite bonne nuit à chaque enfant par son prénom.`);
+  } else {
+    lignes.push(`Écris une histoire originale pour un enfant de ${l[0].age} ans.`);
+    lignes.push(l[0].nom ? `Le héros s'appelle ${l[0].nom}.` : `Invente un héros attachant.`);
+  }
+  const avecChoix = tous.map((e, i) => ({ e, i })).filter(x => Object.keys(x.e.choix).length);
+  if (avecChoix.length) {
+    lignes.push(`${plusieurs ? 'Chaque enfant a fait SES propres choix' : 'L\'enfant a fait ses propres choix'}. Utilise-les TOUS, avec les mêmes mots, pour qu'${plusieurs ? 'il reconnaisse les siens' : 'il les reconnaisse'} en écoutant :`);
+    for (const { e, i } of avecChoix) {
+      const ch = Object.entries(e.choix).filter(([k]) => k !== 'mechant').map(([k, v]) => `${NOMS_CHOIX[k]} : ${v}`);
+      if (ch.length) lignes.push(`- ${nomDe(e, i)} : ${ch.join(' ; ')}.`);
+    }
+    lignes.push(`Règles : l'objet, l'animal, le personnage et le pouvoir d'un enfant sont À LUI dans l'histoire (c'est lui qui les trouve, les utilise ou s'en fait un ami) et servent à son moment de gloire ; sa couleur colore ses choses à lui (ex. « son hibou mauve ») ; chaque lieu choisi est visité pendant l'aventure.`);
+  }
+  const mechants = avecChoix.map(({ e, i }) => e.choix.mechant ? `${e.choix.mechant} (choisi par ${nomDe(e, i)})` : '').filter(Boolean);
+  if (mechants.length) lignes.push(mechants.length > 1
+    ? `Les méchants choisis forment UNE SEULE BANDE qui cause le problème de l'histoire : ${mechants.join(', ')}. Ils restent rigolos et jamais vraiment effrayants ; les enfants les battent ENSEMBLE, chacun grâce à ses choix ; à la fin, la bande devient gentille ou ridicule.`
+    : `Le méchant de l'histoire : ${mechants[0]}. Rigolo et jamais vraiment effrayant ; ${plusieurs ? 'les enfants le battent ensemble, chacun grâce à ses choix' : 'le héros le bat grâce à ses choix'} ; à la fin, il devient gentil ou ridicule.`);
+  return { lignes, noms: tous.map(e => e.nom).filter(Boolean) };
+}
 
 /* ==================== PARTAGER, HAUT-PARLEUR, LIVRE ==================== */
 const URL_RELAIS = location.hostname === '95.groupelaberge.ca' ? '' : 'https://95.groupelaberge.ca';
@@ -2467,7 +2584,7 @@ async function creer(fn, extra = {}) {
     const j = await fn(st);
     const s = {
       id: Date.now().toString(36), createdAt: Date.now(), titre: j.titre, histoire: j.histoire,
-      meta: { name: $('name').value.trim(), friends: $('friends').value.trim(), mood: chipVal('mood') }, ...extra
+      meta: { name: consignesEnfants().noms.join(' et ') || $('name').value.trim(), friends: $('friends').value.trim(), mood: chipVal('mood') }, ...extra
     };
     if (extra.interactive) { s.parts = [{ texte: j.histoire, choixA: j.choixA, choixB: j.choixB }]; s.partAudio = []; }
     if (j.arbre) { s.arbre = j.arbre; s.chemin = ''; s.audioNoeuds = {}; }
