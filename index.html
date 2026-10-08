@@ -357,7 +357,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v25</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v26</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -2089,7 +2089,7 @@ async function gcChargerVoix() {
     const r = await fetch(`https://texttospeech.googleapis.com/v1/voices?languageCode=fr&key=${encodeURIComponent(key)}`);
     if (!r.ok) {
       const m = await errText(r);
-      throw new Error(/API keys are not supported|OAuth2/i.test(m) ? 'la clé des voix Google manque sur cet appareil : dans ton Google Drive, ouvre le document « ⚙️ Configurer l'app » et touche son lien'
+      throw new Error(/API keys are not supported|OAuth2/i.test(m) ? 'la clé des voix Google manque sur cet appareil : dans ton Google Drive, ouvre le document « ⚙️ Configurer l’app » et touche son lien'
         : /SERVICE_DISABLED|has not been used|disabled/i.test(m) ? 'active l\'API « Cloud Text-to-Speech » sur ton projet (lien plus bas), puis réessaie dans 2 minutes'
         : /API_KEY_SERVICE_BLOCKED|blocked/i.test(m) ? 'ta clé est limitée à Gemini : dans console.cloud.google.com → Identifiants → ta clé, ajoute « Cloud Text-to-Speech API »' : m);
     }
@@ -2195,7 +2195,7 @@ async function gcMorceau(texte, pl, voix, vitesse, base) {
     const m = await errText(r);
     if (r.status === 400 && rate && /rate|speaking/i.test(m)) { rate = 0; continue; }          // voix qui refuse la vitesse
     if (r.status === 400 && !entree.text) { entree = { text: stripTags(texte) }; continue; }   // direction de jeu refusée : texte simple
-    const e = new Error('Google : ' + (/API keys are not supported|OAuth2/i.test(m) ? 'la clé des voix Google manque sur cet appareil : dans ton Google Drive, ouvre le document « ⚙️ Configurer l'app » et touche son lien' : /SERVICE_DISABLED|has not been used/i.test(m) ? 'active l\'API « Cloud Text-to-Speech » sur ton projet (Réglages → Qui raconte → lien)' : m));
+    const e = new Error('Google : ' + (/API keys are not supported|OAuth2/i.test(m) ? 'la clé des voix Google manque sur cet appareil : dans ton Google Drive, ouvre le document « ⚙️ Configurer l’app » et touche son lien' : /SERVICE_DISABLED|has not been used/i.test(m) ? 'active l\'API « Cloud Text-to-Speech » sur ton projet (Réglages → Qui raconte → lien)' : m));
     e.quota = r.status === 429 || /quota/i.test(m);
     throw e;
   }
