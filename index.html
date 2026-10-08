@@ -357,7 +357,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v26</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v28</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -423,8 +423,21 @@
           <div class="chip" data-v="court">⏱️ Courte · 3 min</div>
           <div class="chip on" data-v="moyen">🕰️ Moyenne · 5 min</div>
           <div class="chip" data-v="long">🌙 Longue · 9 min</div>
-        </div>
-      </div>
+            </div>
+          </div>
+          <div class="picker" data-titre="Des images ? (environ 4 ¢ chacune)">
+            <span class="pk-k-src">Images</span>
+            <div class="chips" data-group="images">
+              <div class="chip on" data-v="reco">⭐ Recommandé</div>
+              <div class="chip" data-v="0">🚫 Aucune image</div>
+              <div class="chip" data-v="1">🖼️ Couverture seulement</div>
+              <div class="chip" data-v="3">🎨 3 images</div>
+              <div class="chip" data-v="4">🎨 4 images</div>
+              <div class="chip" data-v="5">🎨 5 images</div>
+              <div class="chip" data-v="6">🎨 6 images</div>
+              <div class="chip" data-v="8">🎨 8 images</div>
+            </div>
+          </div>
     </div>
     <input id="souci-autre" placeholder="Décris le souci (ex. il ne veut pas se brosser les dents)" style="display:none">
 
@@ -671,14 +684,8 @@
       <summary><span class="r-ic">🌙</span><span class="r-txt"><b>Pendant l'histoire</b><small id="res-pendant">—</small></span></summary>
       <div class="dedans">
         <label class="check"><input type="checkbox" id="opt-suivre" checked>Le texte suit la lecture</label>
-        <label class="check"><input type="checkbox" id="opt-image" checked>Illustrations dans l'histoire</label>
         <div class="row" style="margin-top:6px">
-          <div><label for="img-nb">Combien ?</label>
-            <select id="img-nb">
-              <option value="1">Couverture seulement</option>
-              <option value="4" selected>3 à 5 images</option>
-            </select></div>
-          <div><label for="img-style">Style</label>
+          <div style="grid-column: 1 / -1"><label for="img-style">Style des images</label>
             <select id="img-style">
               <option value="aquarelle">Aquarelle douce</option>
               <option value="crayons">Crayons de couleur</option>
@@ -686,7 +693,7 @@
               <option value="papier">Papier découpé</option>
             </select></div>
         </div>
-        <p class="hint">Dessinées par Gemini (quelques secondes chacune, environ 4 ¢ l'image, la couverture sert de modèle aux autres). Si Gemini refuse, le dessinateur gratuit Pollinations prend le relais (1 à 3 min par image).</p>
+        <p class="hint">Le nombre d'images se choisit à la création de chaque histoire. Dessinées par Gemini (quelques secondes chacune, environ 4 ¢ l'image, la couverture sert de modèle aux autres). Si Gemini refuse, le dessinateur gratuit Pollinations prend le relais (1 à 3 min par image).</p>
         <label class="check"><input type="checkbox" id="opt-musique">Musique douce en fond</label>
         <div class="regle"><label for="musique-vol">Volume de la musique</label><output data-pour="musique-vol"></output></div>
         <input id="musique-vol" type="range" min="0.05" max="0.6" step="0.05" value="0.2">
@@ -1071,8 +1078,8 @@ const chipVal = g => document.querySelector(`.chips[data-group="${g}"] .chip.on`
 
 /* ==================== RÉGLAGES ==================== */
 const SETTINGS = ['k-gemini', 'm-gemini', 'k-eleven', 'voice-id', 'm-eleven', 'stability', 'lang', 'name', 'age', 'friends',
-  'engine', 'g-voice', 'p-voice', 'p-rate', 'musique-vol', 'drive-url', 'drive-key', 'img-nb', 'img-style', 'k-gcloud', 'gc-voice', 'gc-voice-studio', 'gc-voice-neural', 'gc-rate', 'gc-plafond', 'ms-voice', 'ms-rate'];
-const CHECKS = ['opt-musique', 'opt-suivre', 'opt-image', 'opt-drive', 'opt-multivoix'];
+  'engine', 'g-voice', 'p-voice', 'p-rate', 'musique-vol', 'drive-url', 'drive-key', 'img-style', 'k-gcloud', 'gc-voice', 'gc-voice-studio', 'gc-voice-neural', 'gc-rate', 'gc-plafond', 'ms-voice', 'ms-rate'];
+const CHECKS = ['opt-musique', 'opt-suivre', 'opt-drive', 'opt-multivoix'];
 SETTINGS.forEach(id => { const v = store.get('set:' + id); if (v) $(id).value = v; });
 CHECKS.forEach(id => { const v = store.get('set:' + id); if (v) $(id).checked = v === '1'; });
 /* Import de clés par lien : …/#gemini=CLÉ&eleven=CLÉ (enregistrées puis retirées de l'adresse) */
@@ -1456,8 +1463,20 @@ async function reduireImage(blob) {           // ≤ 900 px de large, en JPEG : 
   } catch { return blob; }
 }
 function imageEnFond(s) {
-  if (!$('opt-image').checked || !$('k-gemini').value.trim()) return;
+  if (!s.illusNb || !$('k-gemini').value.trim()) return;
   illustrer(s);
+}
+/* Combien d'images : le choix de l'écran de création, avec une recommandation selon la durée et le format.
+   Histoire à choix = 7 morceaux : une image par morceau. */
+const imgReco = () => chipVal('format') === 'choix' ? 7 : ({ court: 3, moyen: 4, long: 6 }[chipVal('length')] || 4);
+function imagesVoulues() { const v = chipVal('images'); return v === 'reco' ? imgReco() : parseInt(v, 10) || 0; }
+function majRecoImages() {
+  const n = imgReco();
+  const c = document.querySelector('.chips[data-group="images"] .chip[data-v="reco"]');
+  const txt = `Recommandé : ${n} images${chipVal('format') === 'choix' ? ' (une par morceau)' : ''}`;
+  const sp = c.querySelector('span:last-child'); if (sp) sp.textContent = txt; else c.textContent = '⭐ ' + txt;
+  const pv = c.closest('.picker')?.querySelector('.pk-v');
+  if (pv) pv.textContent = (c.closest('.chips').querySelector('.chip.on')?.textContent || '').replace(/\s+/g, ' ').trim();
 }
 
 /* ==================== ILLUSTRATIONS (Pollinations, gratuit) ====================
@@ -1480,23 +1499,29 @@ const SCHEMA_ILLUS = { type: 'OBJECT', properties: {
   scenes: { type: 'ARRAY', items: { type: 'OBJECT', properties: { ou: { type: 'STRING' }, description: { type: 'STRING' } }, required: ['ou', 'description'] } }
 }, required: ['fiche', 'scenes'] };
 async function planifierImages(s) {
-  const nb = parseInt($('img-nb').value, 10) || 4;
+  const nb = s.illusNb || imagesVoulues() || imgReco();
   const ficheAvant = s.serie ? (await DB.liste()).filter(x => (x.serie || x.id) === s.serie && x.illus?.fiche && x.id !== s.id).map(x => x.illus.fiche)[0] : '';
   let morceaux;
   if (s.arbre) morceaux = Object.entries(s.arbre).map(([c, n]) => `[${c || 'debut'}] ${stripTags(n.texte)}`).join('\n\n');
   else morceaux = paras(stripTags(s.histoire)).map((t, i) => `[${i}] ${t}`).join('\n\n');
   const combien = s.arbre ? (nb === 1 ? 'UNE seule scène, pour [debut]' : 'UNE scène pour CHAQUE morceau ([debut], [A], [B], [AA], [AB], [BA], [BB]) ; « ou » = l\'étiquette du morceau sans crochets')
-    : (nb === 1 ? 'UNE seule scène, pour la couverture, avec « ou » = "0"' : `entre 3 et 5 scènes réparties du début à la fin (la première à « ou » = "0", c'est la couverture) ; « ou » = le numéro du paragraphe où la scène commence`);
+    : (nb === 1 ? 'UNE seule scène, pour la couverture, avec « ou » = "0"' : `EXACTEMENT ${nb} scènes réparties du début à la fin (la première à « ou » = "0", c'est la couverture) ; « ou » = le numéro du paragraphe où la scène commence ; jamais deux scènes au même paragraphe`);
   const user = [
     'Tu prépares les illustrations d\'un livre d\'histoire pour enfants. Écris EN ANGLAIS (pour le dessinateur).',
-    `- « fiche » : la description visuelle FIXE de chaque personnage qui revient (2 à 3 personnages au plus) : nom, espèce, âge, cheveux ou pelage, vêtements avec leurs COULEURS exactes. Une courte phrase par personnage (20 mots au plus), très concrète. Exemple : "Abby is a 5-year-old girl with curly red hair, yellow raincoat, red boots. Biscuit is a small light brown puppy with a blue collar."`,
+    `- « fiche » : la description visuelle FIXE de chaque personnage qui revient (2 à 3 personnages au plus), comme des personnages de DESSIN ANIMÉ : nom, espèce, cheveux ou pelage, vêtements avec leurs COULEURS exactes. JAMAIS d'âge, de corps ni de peau : seulement coiffure, vêtements, accessoires et couleurs. Une courte phrase par personnage (20 mots au plus), très concrète. Exemple : "Abby: cartoon kid with curly red hair, yellow raincoat, red boots. Biscuit: small light brown cartoon puppy with a blue collar."`,
     ficheAvant ? `- Ces personnages ont déjà été dessinés dans les chapitres précédents : reprends EXACTEMENT cette fiche, en ajoutant seulement les nouveaux : ${ficheAvant}` : '',
     s.dessin ? '- L\'enfant a fait un dessin pour cette histoire : décris les personnages comme dans son dessin.' : '',
     `- « scenes » : ${combien}. Chaque « description » est une seule phrase visuelle et courte : qui (par leur nom, et ce qu'ils sont : « Abby and her puppy Biscuit »), fait quoi, où, l'heure. Les objets importants sont nommés avec leur couleur. Rien d'effrayant.`,
     '---', morceaux
   ].filter(Boolean).join('\n');
-  const j = await appelGemini(user, SCHEMA_ILLUS, () => {}, { system: 'Tu es directeur artistique de livres pour enfants. Tu réponds en JSON.', temperature: 0.4 });
-  const scenes = (j.scenes || []).slice(0, s.arbre ? 7 : 5).map(sc => {
+  const sys = 'Tu es directeur artistique de livres pour enfants. Tu réponds en JSON.';
+  let j;
+  try { j = await appelGemini(user, SCHEMA_ILLUS, () => {}, { system: sys, temperature: 0.4 }); }
+  catch (e) {                                   // filtre de Gemini parfois trop prudent : un second essai, autrement formulé
+    if (!/PROHIBITED|SAFETY|rien renvoy/i.test(e.message)) throw e;
+    j = await appelGemini(user + ' (Rappel : des personnages de dessin animé pour un livre jeunesse ; seulement coiffure, vêtements et couleurs.)', SCHEMA_ILLUS, () => {}, { system: sys, temperature: 0.8 });
+  }
+  const scenes = (j.scenes || []).slice(0, s.arbre ? 7 : nb).map(sc => {
     const ou = String(sc.ou || '').replace(/[\[\]\s]/g, '');
     const cle = s.arbre ? 'n' + (ou === 'debut' || ou === '' ? '' : ou.toUpperCase()) : 'p' + Math.max(0, parseInt(ou, 10) || 0);
     return { cle, description: String(sc.description || '') };
@@ -2585,7 +2610,7 @@ async function creer(fn, extra = {}) {
     const j = await fn(st);
     const s = {
       id: Date.now().toString(36), createdAt: Date.now(), titre: j.titre, histoire: j.histoire,
-      meta: { name: consignesEnfants().noms.join(' et ') || $('name').value.trim(), friends: $('friends').value.trim(), mood: chipVal('mood') }, ...extra
+      meta: { name: consignesEnfants().noms.join(' et ') || $('name').value.trim(), friends: $('friends').value.trim(), mood: chipVal('mood') }, illusNb: imagesVoulues(), ...extra
     };
     if (extra.interactive) { s.parts = [{ texte: j.histoire, choixA: j.choixA, choixB: j.choixB }]; s.partAudio = []; }
     if (j.arbre) { s.arbre = j.arbre; s.chemin = ''; s.audioNoeuds = {}; }
@@ -3032,6 +3057,14 @@ document.querySelectorAll('.picker').forEach(pk => {
   };
   chips.addEventListener('click', e => { if (e.target.closest('.chip')) { maj(); setTimeout(fermerChoix, 120); } });
 });
+(() => {
+  const g = document.querySelector('.chips[data-group="images"]');
+  const garde = store.get('set:images');
+  if (garde && g.querySelector(`.chip[data-v="${garde}"]`)) { g.querySelectorAll('.chip').forEach(c => c.classList.toggle('on', c.dataset.v === garde)); }
+  g.addEventListener('click', () => setTimeout(() => store.set('set:images', chipVal('images')), 0));
+  document.querySelectorAll('.chips[data-group="length"], .chips[data-group="format"]').forEach(x => x.addEventListener('click', () => setTimeout(majRecoImages, 0)));
+  majRecoImages();
+})();
 $('voile').onclick = fermerChoix;
 document.addEventListener('keydown', e => { if (e.key === 'Escape') fermerChoix(); });
 
@@ -3059,7 +3092,7 @@ function majCurseurs() { document.querySelectorAll('output[data-pour]').forEach(
 /* Résumés sous chaque section, et ✓ sur les clés remplies */
 function majResumes() {
   majMoteur(); majCurseurs();
-  const p = [$('opt-suivre').checked && 'texte qui suit', $('opt-image').checked && ($('img-nb').value === '1' ? 'couverture' : 'illustrations'), $('opt-musique').checked && 'musique'].filter(Boolean);
+  const p = [$('opt-suivre').checked && 'texte qui suit', 'images ' + $('img-style').selectedOptions[0].text.toLowerCase(), $('opt-musique').checked && 'musique'].filter(Boolean);
   $('res-pendant').textContent = (p.join(' · ') || 'rien de plus') + ' · ' + $('lang').selectedOptions[0].text;
   $('res-drive').textContent = driveActif() ? 'Activée' : $('opt-drive').checked ? 'À configurer (lien du document du Drive)' : 'Désactivée';
   const cles = ['k-gemini', 'k-eleven', 'k-gcloud'];
