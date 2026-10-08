@@ -81,3 +81,9 @@ Astuce : `…/#gemini=CLÉ&eleven=CLÉ&voice=VOICE_ID` enregistre les clés en u
 ## v13 — écrire pour la voix qui raconte (2026-10-07)
 - `preparerEcriture()` estime la voix AVANT d'écrire (`choisirMoteur` + longueur estimée) : tout sauf ElevenLabs v3 → `CONSIGNE_VOIX_SIMPLE` (pas de balises, sons étirés, majuscules ; onomatopées simples ; émotions par les mots). `s.ecriture` = simple | eleven (les parties d'une histoire à choix gardent la même).
 - `pourVoixSimple()` : filet de sécurité à la lecture pour toutes les voix sauf v3 (« Ouuuuh » → « Ouh », majuscules → minuscules).
+
+## v14 (2026-10-08)
+- **Une seule version** : l'adresse GitHub envoie ses histoires au Drive puis déménage vers https://95.groupelaberge.ca/histoires/ avec ses réglages (`demenager()`).
+- **Clé du relais** (`X-Relais`) obligatoire pour les voix Microsoft et le partage ; donnée par le lien du document « ⚙️ Configurer l'app » (`&relais=`). Sur le VPS : `/etc/systemd/system/histoires-tts.service.d/cle.conf` (root 600). Pages d'écoute toujours publiques.
+- **Changement de clé Drive** : `POST {a:"rotation", k, relais}` → nouvelle clé (l'ancienne valable 14 jours), nouveau document de configuration.
+- **Retirer un partage** (jeton gardé par l'app). **Bibliothèque** gardée en mémoire. **Voix Gemini en MP3** (lamejs 1.2.0, cdnjs). **Polices** gardées hors ligne. **Modèles Gemini** lus chez Google (24 h). `navigator.storage.persist()`.

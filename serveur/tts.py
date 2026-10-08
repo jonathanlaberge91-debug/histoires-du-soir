@@ -33,7 +33,11 @@ VOIX = {
     "fr-CA-JeanNeural": "Jean — homme",
     "fr-CA-ThierryNeural": "Thierry — homme",
 }
-ORIGINES = {"https://95.groupelaberge.ca", "https://jonathanlaberge91-debug.github.io"}
+ORIGINES = {"https://95.groupelaberge.ca"}
+# Clé du relais : sans elle, ni voix ni partage (les pages d'écoute restent publiques, c'est leur but).
+# Donnée par l'environnement du service (/etc/systemd/system/histoires-tts.service.d/cle.conf, root seulement),
+# et à l'app par le lien du document « ⚙️ Configurer l'app » du Drive. Jamais dans le dépôt.
+CLE = os.environ.get("RELAIS_CLE", "")
 PUBLIC = "https://95.groupelaberge.ca"
 TEXTE_MAX = 6000
 PAR_IP = 400                 # voix : requêtes par 10 minutes (une voix par personnage = beaucoup de petits morceaux)
@@ -58,10 +62,15 @@ def cors(req, rep):
     if o in ORIGINES:
         rep.headers["Access-Control-Allow-Origin"] = o
         rep.headers["Access-Control-Allow-Methods"] = "POST, GET, OPTIONS"
-        rep.headers["Access-Control-Allow-Headers"] = "Content-Type"
+        rep.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Relais"
         rep.headers["Access-Control-Max-Age"] = "86400"
         rep.headers["Vary"] = "Origin"
     return rep
+
+
+def cle_ok(req):
+    k = req.headers.get("X-Relais", "")
+    return bool(CLE) and len(k) == len(CLE) and secrets.compare_digest(k, CLE)
 
 
 def refuse(req, code, msg):
@@ -94,6 +103,8 @@ async def tts(req):
     o = req.headers.get("Origin")
     if o and o not in ORIGINES:
         return refuse(req, 403, "origine refusée")
+    if not cle_ok(req):
+        return refuse(req, 401, "clé du relais absente ou invalide (touche le lien du document « Configurer l'app » du Drive)")
     if trop(file_ip, ip_de(req), PAR_IP, FENETRE):
         return refuse(req, 429, "trop de demandes, réessaie dans quelques minutes")
     try:
@@ -171,6 +182,8 @@ async def partager(req):
     o = req.headers.get("Origin")
     if o not in ORIGINES:
         return refuse(req, 403, "origine refusée")
+    if not cle_ok(req):
+        return refuse(req, 401, "clé du relais absente ou invalide (touche le lien du document « Configurer l'app » du Drive)")
     if trop(file_partage, ip_de(req), PARTAGES_PAR_JOUR, 86400):
         return refuse(req, 429, "trop de partages aujourd'hui")
     try:
@@ -183,7 +196,9 @@ async def partager(req):
         return refuse(req, 400, "requête illisible")
     titre = str(b.get("titre", "")).strip()[:200] or "Une histoire du soir"
     texte = str(b.get("texte", "")).strip()[:30000]
+    jeton = secrets.token_urlsafe(18)       # pour retirer le partage plus tard (gardé par l'app)
     infos = {"titre": titre, "texte": texte, "prenom": str(b.get("prenom", "")).strip()[:60], "cree": int(time.time()),
+             "retrait": jeton,
              "audio": ext_a, "image": ext_i}
     faire_place((len(audio) if audio else 0) + (len(image) if image else 0) + len(texte) * 2)
     pid = secrets.token_urlsafe(9)
@@ -198,7 +213,7 @@ async def partager(req):
     with open(os.path.join(d, "infos.json"), "w", encoding="utf-8") as f:
         json.dump(infos, f, ensure_ascii=False)
     return cors(req, web.json_response({
-        "ok": True, "id": pid,
+        "ok": True, "id": pid, "jeton": jeton,
         "url": f"{PUBLIC}/histoires/ecouter/{pid}",
         "audio": f"{PUBLIC}/histoires/partage/{pid}/audio" if audio else None,
     }))
@@ -267,6 +282,23 @@ async def ecouter(req):
     return web.Response(text=corps, content_type="text/html", headers={"Cache-Control": "no-cache"})
 
 
+async def retirer(req):
+    if req.headers.get("Origin") not in ORIGINES or not cle_ok(req):
+        return refuse(req, 403, "refusé")
+    d, infos = lire_partage(req.match_info["id"])
+    if not infos:
+        return cors(req, web.json_response({"ok": True, "deja": True}))
+    try:
+        b = await req.json()
+    except Exception:
+        b = {}
+    j = str(b.get("jeton", ""))
+    if not infos.get("retrait") or not secrets.compare_digest(j, infos["retrait"]):
+        return refuse(req, 403, "jeton de retrait invalide")
+    shutil.rmtree(d, ignore_errors=True)
+    return cors(req, web.json_response({"ok": True}))
+
+
 app = web.Application(client_max_size=64 * 1024 * 1024)
 app.router.add_route("OPTIONS", "/histoires/tts", options)
 app.router.add_route("OPTIONS", "/histoires/tts/voix", options)
@@ -274,6 +306,8 @@ app.router.add_route("OPTIONS", "/histoires/partage", options)
 app.router.add_post("/histoires/tts", tts)
 app.router.add_get("/histoires/tts/voix", voix)
 app.router.add_post("/histoires/partage", partager)
+app.router.add_route("OPTIONS", "/histoires/partage/{id}/retirer", options)
+app.router.add_post("/histoires/partage/{id}/retirer", retirer)
 app.router.add_get("/histoires/partage/{id}/{quoi:audio|image}", fichier_partage)
 app.router.add_get("/histoires/ecouter/{id}", ecouter)
 

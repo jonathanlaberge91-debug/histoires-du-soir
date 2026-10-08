@@ -340,7 +340,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v13</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v14</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -446,6 +446,7 @@
       <button class="sec" id="btn-partager">🔗 Partager</button>
       <button class="sec" id="btn-cast">📡 Haut-parleur</button>
       <button class="sec" id="btn-livre">📕 Livre PDF</button>
+      <button class="sec" id="btn-departager" style="display:none">🚫 Retirer le partage</button>
       <button class="sec" id="btn-tags">🏷️ Balises</button>
     </div>
     <audio id="cast-audio" preload="none" style="display:none"></audio>
@@ -777,6 +778,29 @@ const SOUCIS = {
 const FALLBACK_MODELS = ['gemini-flash-latest', 'gemini-3.5-flash', 'gemini-3.7-flash', 'gemini-3.6-flash'];
 const TTS_MODELS = ['gemini-2.5-flash-preview-tts', 'gemini-2.5-flash-tts', 'gemini-2.5-pro-preview-tts'];
 const IMAGE_MODELS = ['gemini-2.5-flash-image', 'gemini-2.5-flash-image-preview', 'gemini-2.0-flash-preview-image-generation'];
+/* Les noms ci-dessus servent si la liste de Google n'est pas encore lue ; elle les remplace (gardée 24 h). */
+async function majModeles() {
+  const key = store.get('set:k-gemini');
+  if (!key) return;
+  let noms = null;
+  try {
+    const c = JSON.parse(store.get('modeles-gemini', 'null'));
+    if (c && Date.now() - c.at < 86400000) noms = c.noms;
+  } catch {}
+  if (!noms) {
+    try {
+      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', { headers: { 'x-goog-api-key': key } });
+      if (!r.ok) return;
+      noms = ((await r.json()).models || []).filter(m => (m.supportedGenerationMethods || []).includes('generateContent')).map(m => m.name.replace('models/', ''));
+      store.set('modeles-gemini', JSON.stringify({ at: Date.now(), noms }));
+    } catch { return; }
+  }
+  const remplacer = (liste, nouveaux) => { if (nouveaux.length) liste.splice(0, liste.length, ...new Set(nouveaux)); };
+  const recents = l => l.sort((a, b) => b.localeCompare(a, 'en', { numeric: true }));
+  remplacer(FALLBACK_MODELS, ['gemini-flash-latest', ...recents(noms.filter(n => /flash/.test(n) && !/tts|image|live|audio|embed|thinking|lite|exp/.test(n))).slice(0, 4), 'gemini-flash-lite-latest'].filter(n => n === 'gemini-flash-latest' || noms.includes(n)));
+  remplacer(TTS_MODELS, recents(noms.filter(n => /tts/.test(n))).sort((a, b) => /flash/.test(b) - /flash/.test(a)));
+  remplacer(IMAGE_MODELS, recents(noms.filter(n => /image/.test(n) && !/imagen/.test(n))));
+}
 /* Voix de base ElevenLabs (utilisées si la clé n'a pas la permission « Voices read ») */
 const PREMADE_VOICES = [
   ['XrExE9yKIg1WjnnlVkGX', 'Matilda — femme, chaleureuse, conteuse'],
@@ -853,8 +877,11 @@ const DB = {
       t.onerror = () => rej(t.error);
     });
   },
-  put: s => DB.tx('readwrite', st => st.put(s)),
-  del: id => DB.tx('readwrite', st => st.delete(id)),
+  put: s => { DB.cache = null; return DB.tx('readwrite', st => st.put(s)); },
+  del: id => { DB.cache = null; return DB.tx('readwrite', st => st.delete(id)); },
+  cache: null,
+  /* La bibliothèque relit la base seulement si elle a changé (l'audio n'est lu qu'à l'écoute) */
+  async liste() { return DB.cache || (DB.cache = await DB.all()); },
   all: () => DB.tx('readonly', st => st.getAll()),
   get: id => DB.tx('readonly', st => st.get(id))
 };
@@ -1012,6 +1039,7 @@ if (location.hash.length > 1) {
       for (const [k, v] of Object.entries(c)) {
         if (SETTINGS.includes(k)) { store.set('set:' + k, v); $(k).value = v; }
         if (CHECKS.includes(k)) { store.set('set:' + k, v ? '1' : '0'); $(k).checked = !!v; }
+        if (k === 'relais-key' || k === 'theme') store.set('set:' + k, v);
       }
       setTimeout(async () => {
         alert('📲 Réglages copiés ! Tes histoires vont être récupérées depuis le Drive.');
@@ -1023,13 +1051,16 @@ if (location.hash.length > 1) {
   if (h.get('gemini')) store.set('set:k-gemini', $('k-gemini').value = h.get('gemini'));
   if (h.get('eleven')) store.set('set:k-eleven', $('k-eleven').value = h.get('eleven'));
   if (h.get('voice')) store.set('set:voice-id', $('voice-id').value = h.get('voice'));
+  if (h.get('relais')) store.set('set:relais-key', h.get('relais'));
   if (h.get('drive') && h.get('driveKey')) {          // lien du document « ⚙️ Configurer l'app » du Drive
     store.set('set:drive-url', $('drive-url').value = h.get('drive'));
     store.set('set:drive-key', $('drive-key').value = h.get('driveKey'));
     $('opt-drive').checked = true; store.set('set:opt-drive', '1');
-    setTimeout(() => {
-      alert('☁️ Sauvegarde Google Drive activée ! Tes histoires vont être rangées dans Drive → « Histoires du soir ».');
-      driveToutEnvoyer();
+    setTimeout(async () => {
+      alert('☁️ App configurée : sauvegarde Google Drive et voix québécoises activées. Tes histoires du Drive arrivent.');
+      await driveToutEnvoyer();
+      document.querySelector('nav button[data-v="v-lib"]').click();
+      $('btn-drive-recup').click();
     }, 500);
   }
   history.replaceState(null, '', location.pathname);
@@ -1350,11 +1381,13 @@ async function tts(text) {
 const URL_TTS_EDGE = location.hostname === '95.groupelaberge.ca' ? '/histoires/tts' : 'https://95.groupelaberge.ca/histoires/tts';
 let edgeEnPanne = false;
 /* Un morceau de texte → MP3 (voix, vitesse en %, hauteur en Hz) */
+const cleRelais = () => store.get('set:relais-key');
+const entetesRelais = () => ({ 'Content-Type': 'application/json', 'X-Relais': cleRelais() });
 async function edgeMorceau(texte, voix, vitesse, hauteur = 0) {
   let r;
   try {
     r = await withRetry(() => fetch(URL_TTS_EDGE, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: entetesRelais(),
       body: JSON.stringify({ texte, voix, vitesse, hauteur })
     }));
   } catch { throw new Error('Voix Microsoft : serveur injoignable'); }
@@ -1511,13 +1544,31 @@ async function publier(s, st) {
   const corps = { titre: s.titre, texte: paras(stripTags(s.histoire)).join('\n\n'), prenom: s.meta?.name || '' };
   if (audio) corps.audio = { b64: await b64(audio), type: audio.type || 'audio/mpeg' };
   if (s.image) corps.image = { b64: await b64(s.image), type: s.image.type || 'image/jpeg' };
-  const r = await fetch(URL_RELAIS + '/histoires/partage', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corps) });
+  const r = await fetch(URL_RELAIS + '/histoires/partage', { method: 'POST', headers: entetesRelais(), body: JSON.stringify(corps) });
   const j = await r.json().catch(() => ({}));
   if (!r.ok || !j.ok) throw new Error(j.erreur || 'HTTP ' + r.status);
-  s.partage = { id: j.id, url: j.url, audio: j.audio, sig };
+  s.partage = { id: j.id, url: j.url, audio: j.audio, sig, jeton: j.jeton };
   await DB.put(s);
+  majPartage();
   return s.partage;
 }
+/* Retirer le partage : le lien envoyé à la famille ne marche plus */
+function majPartage() { $('btn-departager').style.display = current?.partage ? '' : 'none'; }
+$('btn-departager').onclick = async () => {
+  const s = current; if (!s?.partage) return;
+  if (!confirm('Retirer le partage ? Le lien envoyé à la famille ne marchera plus.')) return;
+  const st = (m, c) => status($('tts-status'), m, c);
+  try {
+    if (s.partage.jeton) {
+      const r = await fetch(`${URL_RELAIS}/histoires/partage/${encodeURIComponent(s.partage.id)}/retirer`,
+        { method: 'POST', headers: entetesRelais(), body: JSON.stringify({ jeton: s.partage.jeton }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.ok) throw new Error(j.erreur || 'HTTP ' + r.status);
+    }
+    delete s.partage; await DB.put(s); majPartage();
+    st(s.partage === undefined ? '🚫 Partage retiré : le lien ne marche plus.' : '', 'ok');
+  } catch (e) { st('Retrait du partage : ' + esc(e.message), 'err'); }
+};
 $('btn-partager').onclick = async () => {
   const s = current; if (!s) return;
   const st = (m, c) => status($('tts-status'), m, c);
@@ -1683,7 +1734,27 @@ async function ttsGemini(text, onStatus) {
   }
   const tout = new Uint8Array(pcm.reduce((n, p) => n + p.length, 0));
   let o = 0; for (const p of pcm) { tout.set(p, o); o += p.length; }
-  return wavFromPcm16(tout, 24000);
+  return (await enMp3(tout, 24000)) || wavFromPcm16(tout, 24000);
+}
+/* PCM 16 bits → MP3 avec lamejs (chargé seulement quand il sert). En cas d'échec : WAV, comme avant. */
+let lameCharge = null;
+async function enMp3(pcm, rate) {
+  try {
+    lameCharge = lameCharge || new Promise((ok, ko) => {
+      const sc = document.createElement('script');
+      sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.0/lame.min.js';
+      sc.onload = ok; sc.onerror = ko; document.head.appendChild(sc);
+    });
+    await lameCharge;
+    const ech = new Int16Array(pcm.buffer, pcm.byteOffset, Math.floor(pcm.length / 2));
+    const enc = new lamejs.Mp3Encoder(1, rate, 64), morceaux = [];
+    for (let i = 0; i < ech.length; i += 1152) {
+      const b = enc.encodeBuffer(ech.subarray(i, i + 1152)); if (b.length) morceaux.push(new Uint8Array(b));
+      if (i % (1152 * 400) === 0) await sleep(0);              // laisse respirer l'écran
+    }
+    const fin = enc.flush(); if (fin.length) morceaux.push(new Uint8Array(fin));
+    return new Blob(morceaux, { type: 'audio/mpeg' });
+  } catch (e) { console.warn('MP3 impossible, on garde le WAV', e); return null; }
 }
 
 /* ==================== VOIX DU TÉLÉPHONE ==================== */
@@ -1774,6 +1845,7 @@ function showStory(s) {
   setAudio(s);
   infoCredits();
   majDriveInfo();
+  majPartage();
 }
 async function infoCredits() {
   if (!current) return;
@@ -2162,7 +2234,7 @@ let vignettes = [];
 async function renderLib() {
   vignettes.forEach(u => URL.revokeObjectURL(u)); vignettes = [];
   const q = $('lib-q').value.trim().toLowerCase(), f = chipVal('libf');
-  let list = (await DB.all()).sort((a, b) => b.createdAt - a.createdAt);
+  let list = [...(await DB.liste())].sort((a, b) => b.createdAt - a.createdAt);
   if (f === 'fav') list = list.filter(s => s.fav);
   if (f === 'audio') list = list.filter(s => s.audio);
   if (q) list = list.filter(s => [s.titre, s.histoire, s.meta?.name, s.meta?.friends].join(' ').toLowerCase().includes(q));
@@ -2184,7 +2256,8 @@ async function renderLib() {
     </div>`;
   }).join('');
 }
-$('lib-q').addEventListener('input', () => renderLib());
+let minuterieRecherche = null;
+$('lib-q').addEventListener('input', () => { clearTimeout(minuterieRecherche); minuterieRecherche = setTimeout(renderLib, 200); });
 $('lib-list').addEventListener('click', async e => {
   const del = e.target.closest('[data-del]');
   if (del) {
@@ -2228,20 +2301,34 @@ $('btn-preview-ms').onclick = async () => {
 };
 
 /* Version du serveur : on y copie tous les réglages (dans l'adresse, après le #, jamais envoyés au serveur) */
+/* L'app vit sur ton serveur (95.groupelaberge.ca/histoires). Ouverte à l'ancienne adresse (GitHub), elle
+   envoie d'abord ses histoires au Drive, puis déménage avec tous ses réglages ; la nouvelle adresse
+   récupère les histoires du Drive. L'adresse (#cfg=…) est effacée de l'historique dès l'arrivée. */
 const SUR_SERVEUR = location.hostname === '95.groupelaberge.ca';
-if (!SUR_SERVEUR) $('transfert-box').style.display = 'block';
-$('btn-transfert').onclick = async () => {
-  saveSettings();
-  if (driveActif()) {                                   // d'abord, tout ce qui est ici part dans le Drive
-    status($('transfert-status'), '<span class="spin"></span>Envoi de tes histoires vers le Drive avant le transfert…');
-    await driveToutEnvoyer();
+async function demenager(forcer) {
+  const voile = document.createElement('div');
+  voile.style.cssText = 'position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:24px;background:var(--fond);color:var(--texte);text-align:center;font:600 1.05rem var(--f-texte)';
+  voile.innerHTML = '<div><div style="font-size:3rem">🌙</div><p id="dem-txt">L\'app déménage sur ton serveur…</p><div id="dem-btn"></div></div>';
+  document.body.appendChild(voile);
+  const txt = m => { document.getElementById('dem-txt').innerHTML = m; };
+  const n = (await DB.all()).length;
+  if (n && !driveActif() && !forcer) {
+    txt(`Tes ${n} histoire(s) sont seulement ici, et la sauvegarde Drive n'est pas activée.<br><br>Active-la d'abord (Drive → « Histoires du soir » → « ⚙️ Configurer l'app » → le lien), sinon elles resteront à l'ancienne adresse.`);
+    document.getElementById('dem-btn').innerHTML = '<button class="sec" id="dem-ok" style="margin-top:14px">Déménager quand même</button>';
+    document.getElementById('dem-ok').onclick = () => { voile.remove(); demenager(true); };
+    return;
   }
+  if (n && driveActif()) { txt(`Envoi de tes ${n} histoire(s) vers le Drive avant le déménagement…`); await driveToutEnvoyer(); }
+  saveSettings();
   const c = {};
   SETTINGS.forEach(k => { if ($(k).value.trim()) c[k] = $(k).value.trim(); });
   CHECKS.forEach(k => c[k] = $(k).checked);
+  if (cleRelais()) c['relais-key'] = cleRelais();
+  c.theme = store.get('set:theme', 'veilleuse');
   const cfg = btoa(unescape(encodeURIComponent(JSON.stringify(c)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  location.href = 'https://95.groupelaberge.ca/histoires/#cfg=' + cfg;
-};
+  location.replace('https://95.groupelaberge.ca/histoires/' + (Object.keys(c).length > 2 ? '#cfg=' + cfg : ''));
+}
+if (!SUR_SERVEUR && location.protocol === 'https:') demenager();
 
 /* Voix québécoise Google : voix et compteur du mois ; coller la clé suffit (les voix se chargent seules) */
 gcAfficher();
@@ -2339,6 +2426,9 @@ majResumes();
 /* Première ouverture sans clé Gemini : la section Clés s'ouvre */
 if (!$('k-gemini').value.trim()) document.querySelector('#res-cles').closest('details').open = true;
 
+/* Sans ça, Chrome peut vider la mémoire de l'app quand le téléphone manque d'espace */
+if (navigator.storage?.persist) navigator.storage.persisted().then(oui => oui || navigator.storage.persist()).catch(() => {});
+majModeles();
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(r => r.update()).catch(() => {});
 /* Une nouvelle version vient de s'installer : on recharge une fois pour l'afficher */
 if ('serviceWorker' in navigator) { let vu = !!navigator.serviceWorker.controller; navigator.serviceWorker.addEventListener('controllerchange', () => { if (vu) location.reload(); vu = true; }); }

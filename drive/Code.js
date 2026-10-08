@@ -20,10 +20,20 @@
 const RACINE = 'Histoires du soir';
 const FAVORIS = '⭐ Favoris';
 const NOM_CONFIG = '⚙️ Configurer l\'app';
-const APP = 'https://jonathanlaberge91-debug.github.io/histoires-du-soir/';
+const APP = 'https://95.groupelaberge.ca/histoires/';
 const URL_SERVICE = 'https://script.google.com/macros/s/AKfycbz-LK0_7QoHanU7WHdIQZCeG2VBEX8gNqlU72WnMJmSAfzHhM9zwuQUo3MWdttbxM-I/exec';
 
 const P = () => PropertiesService.getScriptProperties();
+
+/* Clé de sauvegarde : la clé actuelle, ou l'ancienne pendant 14 jours après un changement de clé
+   (le temps que chaque appareil reçoive la nouvelle par le lien du document). */
+function cleOk(k) {
+  if (!k) return false;
+  const pr = P();
+  if (k === pr.getProperty('SECRET')) return true;
+  return k === pr.getProperty('SECRET_ANCIEN') && Date.now() < Number(pr.getProperty('SECRET_ANCIEN_FIN') || 0);
+}
+const nouveauSecret = () => Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
 
 function racine() {
   const id = P().getProperty('RACINE_ID');
@@ -61,12 +71,12 @@ function doGet(e) {
   let secret = P().getProperty('SECRET');
   if (!secret) {
     // Première ouverture, par Jonathan, juste après son autorisation.
-    secret = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
+    secret = nouveauSecret();
     P().setProperty('SECRET', secret);
     creerDocConfig(secret);
     return page('✅ <b>Sauvegarde prête !</b><br><br>Ouvre ton <b>Google Drive</b> → dossier <b>« ' + RACINE + ' »</b> → document <b>« ' + NOM_CONFIG + ' »</b>, puis touche le lien dedans.');
   }
-  if (p.k !== secret) return page('Service de sauvegarde des Histoires du soir.');
+  if (!cleOk(p.k)) return page('Service de sauvegarde des Histoires du soir.');
   if (p.a === 'liste') return sortie({ ok: true, histoires: liste() });
   if (p.a === 'charger') return sortie(charger(p.id));
   return sortie({ ok: true });
@@ -76,11 +86,22 @@ function doGet(e) {
 function doPost(e) {
   let b;
   try { b = JSON.parse(e.postData.contents); } catch (x) { return sortie({ ok: false, erreur: 'requête illisible' }); }
-  if (!b.k || b.k !== P().getProperty('SECRET')) return sortie({ ok: false, erreur: 'clé de sauvegarde invalide' });
+  if (!cleOk(b.k)) return sortie({ ok: false, erreur: 'clé de sauvegarde invalide (touche le lien du document « Configurer l’app » du Drive)' });
   const verrou = LockService.getScriptLock();
   verrou.waitLock(30000);
   try {
     if (b.a === 'sauver') return sortie(sauver(b));
+    if (b.a === 'rotation') {
+      // Nouvelle clé (l'ancienne reste valable 14 jours) + clé du relais des voix, puis nouveau document de configuration.
+      // La nouvelle clé n'est renvoyée à personne : elle n'existe que dans le document du Drive.
+      const pr = P(), ancien = pr.getProperty('SECRET');
+      if (b.k !== ancien) return sortie({ ok: false, erreur: 'seule la clé actuelle peut changer la clé' });
+      const nouveau = nouveauSecret();
+      pr.setProperties({ SECRET: nouveau, SECRET_ANCIEN: ancien, SECRET_ANCIEN_FIN: String(Date.now() + 14 * 86400000) });
+      if (typeof b.relais === 'string' && /^[\w-]{20,100}$/.test(b.relais)) pr.setProperty('RELAIS', b.relais);
+      creerDocConfig(nouveau);
+      return sortie({ ok: true });
+    }
     return sortie({ ok: false, erreur: 'action inconnue' });
   } catch (x) {
     return sortie({ ok: false, erreur: String((x && x.message) || x) });
@@ -181,7 +202,8 @@ function creerDocConfig(secret) {
   const r = racine();
   const it = r.getFilesByName(NOM_CONFIG);
   while (it.hasNext()) it.next().setTrashed(true);
-  const lien = APP + '#drive=' + encodeURIComponent(URL_SERVICE) + '&driveKey=' + secret;
+  const relais = P().getProperty('RELAIS');
+  const lien = APP + '#drive=' + encodeURIComponent(URL_SERVICE) + '&driveKey=' + secret + (relais ? '&relais=' + relais : '');
   const doc = DocumentApp.create(NOM_CONFIG);
   const b = doc.getBody();
   b.appendParagraph('Activer la sauvegarde Drive de l\'app Histoires du soir').setHeading(DocumentApp.ParagraphHeading.HEADING1);
