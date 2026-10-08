@@ -340,7 +340,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v14</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v15</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -1296,6 +1296,67 @@ async function genererSuite(prec, onStatus) {
 
 /* Histoire dont l'enfant choisit la suite : 3 parties, 2 choix */
 const NB_PARTIES = 3;
+/* Histoire à choix écrite EN ENTIER d'un coup : début → 2 suites → 4 fins (7 morceaux).
+   Chemins : '' = début, 'A' / 'B' = suites, 'AA', 'AB', 'BA', 'BB' = fins. */
+const SCHEMA_ARBRE = (() => {
+  const fin = { type: 'OBJECT', properties: { texte: { type: 'STRING' } }, required: ['texte'] };
+  const suite = { type: 'OBJECT', properties: { texte: { type: 'STRING' }, choixA: { type: 'STRING' }, choixB: { type: 'STRING' }, finA: fin, finB: fin },
+    required: ['texte', 'choixA', 'choixB', 'finA', 'finB'] };
+  return { type: 'OBJECT', properties: {
+    titre: { type: 'STRING' },
+    debut: { type: 'OBJECT', properties: { texte: { type: 'STRING' }, choixA: { type: 'STRING' }, choixB: { type: 'STRING' } }, required: ['texte', 'choixA', 'choixB'] },
+    suiteA: suite, suiteB: suite }, required: ['titre', 'debut', 'suiteA', 'suiteB'] };
+})();
+async function genererArbre(onStatus) {
+  const lg = LENGTHS_PART[chipVal('length')];
+  const user = [
+    ...consignes(),
+    'C\'est une histoire INTERACTIVE où l\'enfant choisit la suite. Écris-la EN ENTIER, avec toutes ses branches :',
+    `- « debut » (${lg}) : l'ouverture, qui se termine par une question à l'enfant proposant DEUX possibilités claires et amusantes, dites dans le texte (par exemple : « Que devrait faire Léa ? Entrer dans la grotte qui brille… ou suivre le petit hibou ? »). « choixA » et « choixB » résument chaque possibilité en deux à cinq mots, dans le même ordre que dans la question.`,
+    `- « suiteA » et « suiteB » (${lg} chacune) : ce qui arrive si l'enfant choisit A ou B. Chacune commence en racontant ce choix comme une évidence joyeuse, emmène l'aventure ailleurs, et se termine par une NOUVELLE question à deux possibilités, avec ses propres « choixA » et « choixB ».`,
+    `- Dans chaque suite, « finA » et « finB » (${lg} chacune) : la fin de l'histoire selon ce second choix, en commençant par raconter le choix. Les quatre fins sont vraiment différentes, et toutes finissent bien (selon l'ambiance).`,
+    '- Chaque morceau se lit juste après le précédent : ne répète pas et ne résume pas ce qui a déjà été raconté. Garde les mêmes personnages, les mêmes noms et les mêmes voix partout.',
+    '- Le « titre » est celui de toute l\'histoire.'
+  ].join('\n');
+  const j = await appelGemini(user, SCHEMA_ARBRE, onStatus, { images: dessin ? [dessin] : [] });
+  const t = x => String(x || '').replace(/\\n/g, '\n').trim();
+  const arbre = { '': { texte: t(j.debut.texte), choixA: j.debut.choixA, choixB: j.debut.choixB } };
+  for (const c of ['A', 'B']) {
+    const su = j['suite' + c];
+    arbre[c] = { texte: t(su.texte), choixA: su.choixA, choixB: su.choixB };
+    arbre[c + 'A'] = { texte: t(su.finA.texte) };
+    arbre[c + 'B'] = { texte: t(su.finB.texte) };
+  }
+  if (Object.values(arbre).some(n => !n.texte)) throw new Error('Gemini a oublié une branche de l\'histoire : touche « Une autre ».');
+  return { titre: String(j.titre || '').trim(), histoire: arbre[''].texte, choixA: arbre[''].choixA, choixB: arbre[''].choixB, arbre };
+}
+
+/* Enregistre toutes les branches avec LA MÊME voix, une après l'autre, en arrière-plan.
+   Renvoie { chemin: promesse du son } pour attendre une branche précise si l'enfant choisit trop vite. */
+const enregistrementsArbre = {};
+function enregistrerArbre(s, moteur) {
+  const p = enregistrementsArbre[s.id] = enregistrementsArbre[s.id] || {};
+  const chemin = s.chemin || '';
+  const ordre = Object.keys(s.arbre).sort((a, b) => (chemin.startsWith(a) ? 0 : 1) - (chemin.startsWith(b) ? 0 : 1) || a.length - b.length || a.localeCompare(b));
+  const total = ordre.length;
+  let chaine = Promise.resolve();
+  for (const c of ordre) {
+    if (s.audioNoeuds?.[c] || p[c]) continue;
+    p[c] = chaine = chaine.catch(() => {}).then(async () => {
+      const r = await enregistrer(s.arbre[c].texte, () => {}, () => {}, moteur);
+      if (!r.blob) throw new Error('voix sans enregistrement');
+      s.audioNoeuds = s.audioNoeuds || {};
+      s.audioNoeuds[c] = r.blob;
+      await DB.put(s);
+      const fait = Object.keys(s.audioNoeuds).length;
+      if (current?.id === s.id) status($('choix-status'), fait < total ? `🎙️ Les autres choix s'enregistrent pendant l'écoute… ${fait}/${total}` : '✔ Tous les choix sont prêts : plus aucune attente', fait < total ? '' : 'ok');
+      return r.blob;
+    });
+    p[c].catch(e => { delete p[c]; if (current?.id === s.id) status($('choix-status'), 'Enregistrement des choix : ' + esc(e.message), 'err'); });
+  }
+  return p;
+}
+const audioChemin = s => s.parts.map((x, k) => s.audioNoeuds?.[(s.chemin || '').slice(0, k)]);
 async function genererPartie(s, choix, onStatus) {
   const n = (s?.parts?.length || 0) + 1;
   const derniere = n === NB_PARTIES;
@@ -1862,6 +1923,7 @@ async function infoCredits() {
 }
 /* Texte à lire maintenant : toute l'histoire, ou la dernière partie d'une histoire interactive pas finie */
 function texteALire(s) {
+  if (s.arbre) return Object.values(s.arbre).filter((n, i, t) => !s.audioNoeuds?.[Object.keys(s.arbre)[i]]).map(n => n.texte).join('\n\n');
   if (s.interactive && s.parts.length < NB_PARTIES) return s.parts[s.parts.length - 1].texte;
   return s.histoire;
 }
@@ -1921,6 +1983,12 @@ function jouerFile(f) {
 /* ==================== CHOIX (histoire interactive) ==================== */
 function majChoix() {
   const s = current, zone = $('choix-zone');
+  if (s?.arbre && s.parts.length >= NB_PARTIES) {
+    zone.style.display = 'block';
+    $('choix-btns').innerHTML = '<button class="choix" data-recommencer>🔀 Recommencer et choisir autrement</button>';
+    status($('choix-status'), 'Fin ! Il y a quatre fins possibles : essaie les autres chemins.');
+    return;
+  }
   if (!s?.interactive || s.parts.length >= NB_PARTIES) { zone.style.display = 'none'; return; }
   const p = s.parts[s.parts.length - 1];
   zone.style.display = 'block';
@@ -1928,12 +1996,40 @@ function majChoix() {
   status($('choix-status'), `Partie ${s.parts.length} sur ${NB_PARTIES} — à toi de choisir !`);
 }
 $('choix-btns').addEventListener('click', async e => {
-  const b = e.target.closest('[data-c]'); if (!b || !current) return;
+  const b = e.target.closest('[data-c], [data-recommencer]'); if (!b || !current) return;
   const s = current, p = s.parts[s.parts.length - 1];
+  if (b.dataset.recommencer !== undefined && s.arbre) {      // rejouer en choisissant autrement
+    arreterParole(); $('player').pause();
+    s.chemin = ''; s.parts = [{ ...s.arbre[''] }]; s.histoire = s.arbre[''].texte; s.audio = null;
+    s.partAudio = audioChemin(s);
+    await DB.put(s); showStory(s);
+    $('story-card').scrollIntoView({ behavior: 'smooth' });
+    $('btn-read').click();
+    return;
+  }
   const choix = b.dataset.c === 'A' ? p.choixA : p.choixB;
   p.choisi = choix;
   document.querySelectorAll('#choix-btns button').forEach(x => x.disabled = true);
   arreterParole(); $('player').pause();
+  if (s.arbre) {                                              // tout est déjà écrit : aucune attente de Gemini
+    const chemin = (s.chemin || '') + b.dataset.c, n = s.arbre[chemin];
+    s.chemin = chemin;
+    s.parts.push({ texte: n.texte, choixA: n.choixA, choixB: n.choixB });
+    s.histoire = s.parts.map(x => x.texte).join('\n\n');
+    if (!s.audioNoeuds?.[chemin] && enregistrementsArbre[s.id]?.[chemin]) {
+      status($('choix-status'), '<span class="spin"></span>Encore un instant, cette suite finit de s\'enregistrer…');
+      try { await enregistrementsArbre[s.id][chemin]; } catch {}
+    }
+    s.partAudio = audioChemin(s);
+    if (s.parts.length === NB_PARTIES && s.partAudio.every(Boolean)) s.audio = await concatAudio(s.partAudio);
+    await DB.put(s);
+    driveSauver(s);
+    showStory(s);
+    const debutP = plagesParties(s)[s.parts.length - 1][0];
+    document.querySelector(`#s-text p[data-i="${debutP}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    $('btn-read').click();
+    return;
+  }
   status($('choix-status'), `<span class="spin"></span>Tu as choisi « ${esc(choix)} » ! Gemini écrit la suite…`);
   try {
     voixSimple = s.ecriture === 'simple';                     // même écriture que le début de l'histoire
@@ -1959,13 +2055,14 @@ async function creer(fn, extra = {}) {
   const st = m => status($('gen-status'), m);
   st('<span class="spin"></span>Gemini écrit ton histoire…');
   try {
-    await preparerEcriture(extra.interactive ? LONGUEUR_ESTIMEE[chipVal('length')] / 2 : 0);
+    await preparerEcriture(extra.interactive ? LONGUEUR_ESTIMEE[chipVal('length')] * 7 / 3 : 0);
     const j = await fn(st);
     const s = {
       id: Date.now().toString(36), createdAt: Date.now(), titre: j.titre, histoire: j.histoire,
       meta: { name: $('name').value.trim(), friends: $('friends').value.trim(), mood: chipVal('mood') }, ...extra
     };
     if (extra.interactive) { s.parts = [{ texte: j.histoire, choixA: j.choixA, choixB: j.choixB }]; s.partAudio = []; }
+    if (j.arbre) { s.arbre = j.arbre; s.chemin = ''; s.audioNoeuds = {}; }
     s.ecriture = voixSimple ? 'simple' : 'eleven';
     if (s.avecDessin && dessin) { s.image = dessin.blob; s.dessin = true; }
     delete s.avecDessin;
@@ -1980,7 +2077,7 @@ async function creer(fn, extra = {}) {
   btn.disabled = $('btn-regen').disabled = $('btn-suite').disabled = false;
 }
 function onGenerate() {
-  if (chipVal('format') === 'choix') return creer(st => genererPartie(null, null, st), { interactive: true, avecDessin: true });
+  if (chipVal('format') === 'choix') return creer(genererArbre, { interactive: true, avecDessin: true });
   return creer(genererHistoire, { avecDessin: true });
 }
 $('btn-gen').onclick = onGenerate;
@@ -2006,8 +2103,8 @@ $('nuit-sortie').onclick = () => {
 };
 
 /* Fabrique l'audio d'un texte avec le bon moteur (repli automatique si ElevenLabs est à sec) */
-async function enregistrer(texte, onStatus, prog) {
-  let { moteur, raison } = await choisirMoteur(texte.length);
+async function enregistrer(texte, onStatus, prog, moteurImpose) {
+  let { moteur, raison } = moteurImpose ? { moteur: moteurImpose } : await choisirMoteur(texte.length);
   if (raison) onStatus(`<span class="spin"></span>${raison} → ${NOMS_VOIX[moteur]}`);
   if (moteur === 'eleven') {
     try {
@@ -2061,6 +2158,26 @@ $('btn-read').onclick = async () => {
   const plages = plagesParties(s);
   const interactifEnCours = s.interactive && s.parts.length < NB_PARTIES;
   const segPart = k => ({ url: URL.createObjectURL(s.partAudio[k]), debut: plages[k][0], fin: plages[k][1], texte: s.parts[k].texte });
+  if (s.arbre) {
+    const cur = s.chemin || '';
+    const manque = Object.keys(s.arbre).some(c => !s.audioNoeuds?.[c]);
+    if (manque) {
+      // Une seule voix pour tout l'arbre (choisie d'après la longueur totale), puis enregistrement en file
+      const total = Object.values(s.arbre).reduce((n, x) => n + x.texte.length, 0);
+      const { moteur, raison } = await choisirMoteur(total);
+      if (moteur !== 'phone') {
+        const p = enregistrerArbre(s, moteur);
+        if (!s.audioNoeuds?.[cur]) {
+          const btn = $('btn-read'); btn.disabled = true;
+          status($('tts-status'), `<span class="spin"></span>${raison ? esc(raison) + ' → ' : ''}${NOMS_VOIX[moteur]} enregistre le début ; les choix suivront pendant l'écoute…`);
+          try { await p[cur]; } catch (e) { btn.disabled = false; return status($('tts-status'), e.message, 'err'); }
+          btn.disabled = false;
+          status($('tts-status'), '✔ Bonne écoute ! Les autres choix s\'enregistrent en même temps.', 'ok');
+        }
+      }
+    }
+    s.partAudio = audioChemin(s);
+  }
   // Partie à enregistrer (histoire à choix) : la dernière arrivée si elle n'a pas de son, sinon la première sans son
   let iPart = 0;
   if (s.interactive) {
@@ -2160,7 +2277,7 @@ function driveSauver(s) {
 async function driveEnvoyer(id) {
   const s = await DB.get(id);
   if (!s || (s.interactive && !s.parts?.length)) return;
-  const { audio, image, partAudio, drive, driveAudio, driveImage, driveAttente, ...story } = s;
+  const { audio, image, partAudio, audioNoeuds, drive, driveAudio, driveImage, driveAttente, ...story } = s;
   const corps = { a: 'sauver', story };
   const sigA = audio ? audio.size + ':' + audio.type : '', sigI = image ? String(image.size) : '';
   if (audio && driveAudio !== sigA) corps.audio = { b64: await b64(audio), type: audio.type || 'audio/mpeg' };

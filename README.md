@@ -87,3 +87,8 @@ Astuce : `…/#gemini=CLÉ&eleven=CLÉ&voice=VOICE_ID` enregistre les clés en u
 - **Clé du relais** (`X-Relais`) obligatoire pour les voix Microsoft et le partage ; donnée par le lien du document « ⚙️ Configurer l'app » (`&relais=`). Sur le VPS : `/etc/systemd/system/histoires-tts.service.d/cle.conf` (root 600). Pages d'écoute toujours publiques.
 - **Changement de clé Drive** : `POST {a:"rotation", k, relais}` → nouvelle clé (l'ancienne valable 14 jours), nouveau document de configuration.
 - **Retirer un partage** (jeton gardé par l'app). **Bibliothèque** gardée en mémoire. **Voix Gemini en MP3** (lamejs 1.2.0, cdnjs). **Polices** gardées hors ligne. **Modèles Gemini** lus chez Google (24 h). `navigator.storage.persist()`.
+
+## v15 — histoire à choix écrite d'un coup (2026-10-08)
+- `genererArbre()` : un seul appel Gemini écrit les 7 morceaux (début, suites A/B, fins AA/AB/BA/BB) → `s.arbre`, chemin courant `s.chemin`.
+- `enregistrerArbre()` : une seule voix pour tout l'arbre (choisie sur la longueur totale) ; le morceau à l'écran d'abord, les autres en file pendant l'écoute (`s.audioNoeuds`). Choisir = aucune attente de Gemini ; si la branche n'est pas finie, on attend seulement elle.
+- « 🔀 Recommencer et choisir autrement » à la fin. Les anciennes histoires à choix (sans arbre) gardent l'ancien fonctionnement.
