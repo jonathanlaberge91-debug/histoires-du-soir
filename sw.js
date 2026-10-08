@@ -2,7 +2,7 @@
 // Toujours le réseau d'abord, SANS le cache HTTP du navigateur : une nouvelle version arrive dès la
 // réouverture. Le cache ne sert que hors ligne. Les polices (Google Fonts) sont gardées pour de bon :
 // sans réseau, l'app garde son look.
-const CACHE = 'histoires-v32';
+const CACHE = 'histoires-v33';
 const POLICES = 'histoires-polices';
 const EXTRAITS = 'histoires-extraits';   // extraits de voix déjà écoutés : gardés entre les versions
 const FILES = ['./', 'index.html', 'manifest.json', 'icon.svg', 'icon-192.png', 'icon-512.png'];
@@ -25,8 +25,7 @@ self.addEventListener('fetch', e => {
   if (u.origin !== location.origin) return;
   if (u.pathname.includes('/histoires/tts') || u.pathname.includes('/histoires/partage') || u.pathname.includes('/histoires/ecouter')) return;
   e.respondWith(fetch(e.request, { cache: 'no-cache' }).then(r => {
-    const copie = r.clone();
-    caches.open(CACHE).then(c => c.put(e.request, copie));
+    if (r.ok) { const copie = r.clone(); caches.open(CACHE).then(c => c.put(e.request, copie)); }   // jamais une page d'erreur
     return r;
   }).catch(() => caches.match(e.request, { ignoreSearch: true })));
 });

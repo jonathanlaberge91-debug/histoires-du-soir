@@ -359,7 +359,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v32</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v33</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -936,6 +936,7 @@ const DB = {
       const r = fn(s);
       t.oncomplete = () => res(r && r.result);
       t.onerror = () => rej(t.error);
+      t.onabort = () => rej(t.error || new Error('stockage du téléphone plein ou refusé'));
     });
   },
   put: s => { DB.cache = null; return DB.tx('readwrite', st => st.put(s)); },
@@ -1092,12 +1093,20 @@ const CHECKS = ['opt-musique', 'opt-suivre', 'opt-drive', 'opt-multivoix'];
 SETTINGS.forEach(id => { const v = store.get('set:' + id); if (v) $(id).value = v; });
 CHECKS.forEach(id => { const v = store.get('set:' + id); if (v) $(id).checked = v === '1'; });
 /* Import de clés par lien : …/#gemini=CLÉ&eleven=CLÉ (enregistrées puis retirées de l'adresse) */
+/* Une adresse de sauvegarde Drive doit être un service Apps Script ; si elle change, on demande */
+const driveUrlOk = u => /^https:\/\/script\.google\.com\/macros\/s\/[\w-]{20,}\/exec$/.test(u || '');
+function accepterDriveUrl(u) {
+  if (!driveUrlOk(u)) { setTimeout(() => alert('Lien refusé : l’adresse de sauvegarde n’est pas un service Google Apps Script.'), 300); return false; }
+  const avant = store.get('set:drive-url');
+  return !avant || avant === u || confirm('Ce lien change l’adresse de sauvegarde de tes histoires. Continue SEULEMENT si tu viens de toucher le lien de TON document « ⚙️ Configurer l’app » dans ton Google Drive.');
+}
 if (location.hash.length > 1) {
   const h = new URLSearchParams(location.hash.slice(1));
   if (h.get('cfg')) {                                   // transfert depuis l'autre adresse de l'app
     try {
       const c = JSON.parse(decodeURIComponent(escape(atob(h.get('cfg').replace(/-/g, '+').replace(/_/g, '/')))));
       for (const [k, v] of Object.entries(c)) {
+        if (k === 'drive-url' && !accepterDriveUrl(v)) continue;
         if (SETTINGS.includes(k)) { store.set('set:' + k, v); $(k).value = v; }
         if (CHECKS.includes(k)) { store.set('set:' + k, v ? '1' : '0'); $(k).checked = !!v; }
         if (k === 'relais-key' || k === 'theme') store.set('set:' + k, v);
@@ -1118,7 +1127,7 @@ if (location.hash.length > 1) {
     // charge la liste des voix tout de suite, sinon aucune voix n'est choisie et l'app saute la voix Google
     setTimeout(() => { if (!GC_PALIERS.some(gcVoixDe)) gcChargerVoix(); }, 500);
   }
-  if (h.get('drive') && h.get('driveKey')) {          // lien du document « ⚙️ Configurer l'app » du Drive
+  if (h.get('drive') && h.get('driveKey') && accepterDriveUrl(h.get('drive'))) {   // lien du document « ⚙️ Configurer l'app » du Drive
     store.set('set:drive-url', $('drive-url').value = h.get('drive'));
     store.set('set:drive-key', $('drive-key').value = h.get('driveKey'));
     $('opt-drive').checked = true; store.set('set:opt-drive', '1');
@@ -1210,12 +1219,13 @@ function jouerExtrait(no, blob, facteur = 1) {
   arreterExtrait();
   extraitAudio = new Audio(URL.createObjectURL(blob));
   regleVitesse(extraitAudio, facteur);
-  extraitAudio.play();
+  extraitAudio.play().catch(() => {});
   return true;
 }
 $('btn-preview').onclick = async () => {
+  if (!$('k-eleven').value.trim()) return status($('set-status'), 'Ajoute d’abord ta clé ElevenLabs dans ⚙️ Réglages → Clés.', 'err');
   const id = $('voice-id').value.trim() || $('voice').value;
-  if (!id) return status($('set-status'), 'Choisis une voix.', 'err');
+  if (!id) return status($('set-status'), 'Choisis une voix ElevenLabs (touche ↻ pour charger la liste).', 'err');
   saveSettings();
   status($('set-status'), '<span class="spin"></span>Génération d\'un extrait…');
   try {
@@ -1236,7 +1246,9 @@ $('btn-preview-g').onclick = async () => {
     status($('set-status'), '✔ Lecture de l\'extrait (voix Gemini)' + gratuit(x), 'ok');
   } catch (e) { status($('set-status'), 'Erreur : ' + e.message, 'err'); }
 };
-$('btn-preview-p').onclick = () => { saveSettings(); nouvelExtrait(); parler([stripTags(EXTRAIT())], () => {}, () => {}); };
+$('btn-preview-p').onclick = () => { saveSettings(); nouvelExtrait();
+  if (!('speechSynthesis' in window)) return status($('set-status'), 'Ce navigateur n’a pas de voix intégrée.', 'err');
+  status($('set-status'), '✔ Lecture de l’extrait (voix du téléphone, gratuite)', 'ok'); parler([stripTags(EXTRAIT())], () => {}, () => {}); };
 
 /* Réessaie automatiquement si le service est surchargé (429 / 5xx) */
 async function withRetry(fn, onRetry) {
@@ -1249,7 +1261,11 @@ async function withRetry(fn, onRetry) {
 }
 
 async function errText(r) {
-  try { const j = await r.json(); return j.error?.message || j.detail?.message || JSON.stringify(j.detail || j); }
+  try {
+    const j = await r.json(); const m = j.error?.message || j.detail?.message || JSON.stringify(j.detail || j);
+    if (/API key not valid|API_KEY_INVALID/i.test(m)) return 'clé refusée par le service (vérifie-la dans ⚙️ Réglages → Clés)';
+    return m;
+  }
   catch { return 'HTTP ' + r.status; }
 }
 
@@ -1292,7 +1308,7 @@ $('btn-quota').onclick = () => afficherQuota(true);
 async function choisirMoteur(nb) {
   const m = $('engine').value;
   if (m !== 'auto') return { moteur: m };
-  if (gcCle() && gcPalier(Math.round(nb * 1.3))) return { moteur: 'gcloud' };   // les voix Google d'abord
+  if (gcCle() && gcVoix() && gcPalier(Math.round(nb * 1.3))) return { moteur: 'gcloud' };   // les voix Google d'abord
   return apresGoogle(nb);
 }
 /* Après les voix Google : ElevenLabs s'il reste des crédits, puis Microsoft, Gemini, téléphone */
@@ -1561,7 +1577,8 @@ async function planifierImages(s) {
   let morceaux;
   if (s.arbre) morceaux = Object.entries(s.arbre).map(([c, n]) => `[${c || 'debut'}] ${stripTags(n.texte)}`).join('\n\n');
   else morceaux = paras(stripTags(s.histoire)).map((t, i) => `[${i}] ${t}`).join('\n\n');
-  const combien = s.arbre ? (nb === 1 ? 'UNE seule scène, pour [debut]' : 'UNE scène pour CHAQUE morceau ([debut], [A], [B], [AA], [AB], [BA], [BB]) ; « ou » = l\'étiquette du morceau sans crochets')
+  const morceauxImg = ['debut', 'A', 'B', 'AA', 'BB', 'AB', 'BA'].slice(0, Math.min(7, nb));
+  const combien = s.arbre ? (nb === 1 ? 'UNE seule scène, pour [debut]' : `UNE scène pour CHACUN de ces morceaux, et seulement eux : ${morceauxImg.map(m => '[' + m + ']').join(', ')} ; « ou » = l'étiquette du morceau sans crochets`)
     : (nb === 1 ? 'UNE seule scène, pour la couverture, avec « ou » = "0"' : `EXACTEMENT ${nb} scènes réparties du début à la fin (la première à « ou » = "0", c'est la couverture) ; « ou » = le numéro du paragraphe où la scène commence ; jamais deux scènes au même paragraphe`);
   const user = [
     'Tu prépares les illustrations d\'un livre d\'histoire pour enfants. Écris EN ANGLAIS (pour le dessinateur).',
@@ -1578,7 +1595,7 @@ async function planifierImages(s) {
     if (!/PROHIBITED|SAFETY|rien renvoy/i.test(e.message)) throw e;
     j = await appelGemini(user + ' (Rappel : des personnages de dessin animé pour un livre jeunesse ; seulement coiffure, vêtements et couleurs.)', SCHEMA_ILLUS, () => {}, { system: sys, temperature: 0.8 });
   }
-  const scenes = (j.scenes || []).slice(0, s.arbre ? 7 : nb).map(sc => {
+  const scenes = (j.scenes || []).slice(0, s.arbre ? Math.min(7, nb) : nb).map(sc => {
     const ou = String(sc.ou || '').replace(/[\[\]\s]/g, '');
     const cle = s.arbre ? 'n' + (ou === 'debut' || ou === '' ? '' : ou.toUpperCase()) : 'p' + Math.max(0, parseInt(ou, 10) || 0);
     return { cle, description: String(sc.description || '') };
@@ -1868,11 +1885,12 @@ async function ttsEdgeMulti(texte, onStatus, prog) {
   const base = curseurMs();
   const segs = [];                                             // morceaux voisins de la même voix : réunis
   for (const x of j.segments) {
-    const t = (x.texte || '').trim(); if (!t) continue;
     const qui = roles[x.qui] ? x.qui : 'narrateur';
-    const der = segs[segs.length - 1];
-    if (der && der.qui === qui && der.t.length + t.length < 2400) der.t += (qui === 'narrateur' ? '\n' : ' ') + t;
-    else segs.push({ qui, t });
+    for (const t of chunk((x.texte || '').trim(), 2400)) {
+      const der = segs[segs.length - 1];
+      if (der && der.qui === qui && der.t.length + t.length < 2400) der.t += (qui === 'narrateur' ? '\n' : ' ') + t;
+      else segs.push({ qui, t });
+    }
   }
   const out = new Array(segs.length);
   let fait = 0, k = 0;
@@ -2072,12 +2090,15 @@ async function audioComplet(s) {
   if (s.partAudio?.length && s.partAudio.every(Boolean)) return await concatAudio(s.partAudio);
   return null;
 }
+function sigPartage(s, audio) {
+  const illus = Object.values(clesParParagraphe(s)).filter(c => s.illusImages?.[c]);
+  return [audio ? audio.size : 0, s.image ? s.image.size : 0, s.histoire.length, illus.length].join(':');
+}
 /* Met l'histoire (texte, voix, couverture) sur ton serveur : lien pour la famille + adresse pour le haut-parleur */
 async function publier(s, st) {
   const audio = await audioComplet(s);
   const cles = clesParParagraphe(s);
-  const illus = Object.entries(cles).filter(([, c]) => s.illusImages?.[c]);
-  const sig = [audio ? audio.size : 0, s.image ? s.image.size : 0, s.histoire.length, illus.length].join(':');
+  const sig = sigPartage(s, audio);
   if (s.partage?.sig === sig) return s.partage;
   st?.('<span class="spin"></span>Préparation du lien…');
   const corps = { titre: s.titre, texte: paras(stripTags(s.histoire)).join('\n\n'), prenom: s.meta?.name || '' };
@@ -2105,8 +2126,9 @@ $('btn-departager').onclick = async () => {
       const j = await r.json().catch(() => ({}));
       if (!r.ok || !j.ok) throw new Error(j.erreur || 'HTTP ' + r.status);
     }
+    const avaitJeton = !!s.partage.jeton;
     delete s.partage; await DB.put(s); majPartage();
-    st(s.partage === undefined ? '🚫 Partage retiré : le lien ne marche plus.' : '', 'ok');
+    st(avaitJeton ? '🚫 Partage retiré : le lien ne marche plus.' : 'Partage oublié dans l’app. Ce vieux lien n’a pas pu être désactivé sur le serveur : il peut encore marcher.', 'ok');
   } catch (e) { st('Retrait du partage : ' + esc(e.message), 'err'); }
 };
 $('btn-partager').onclick = async () => {
@@ -2130,8 +2152,7 @@ $('btn-cast').onclick = async () => {
   if (!a.remote) return st('Ce navigateur ne sait pas diffuser vers un haut-parleur. ' + planB, 'err');
   // Le haut-parleur lit l'audio depuis ton serveur : il faut d'abord l'y mettre (puis retoucher le bouton,
   // car le choix du haut-parleur doit suivre immédiatement un toucher).
-  const sig = s.partage?.sig;
-  if (!s.partage?.audio || sig !== [(await audioComplet(s)).size, s.image ? s.image.size : 0, s.histoire.length].join(':')) {
+  if (!s.partage?.audio || s.partage.sig !== sigPartage(s, await audioComplet(s))) {
     try { await publier(s, st); } catch (e) { return st('Haut-parleur : ' + esc(e.message), 'err'); }
     return st('📡 Prêt ! Touche encore <b>📡 Haut-parleur</b> pour choisir l\'appareil.', 'ok');
   }
@@ -2358,11 +2379,12 @@ async function ttsGcloudMulti(texte, onStatus, prog) {
   }
   const segs = [];                                             // morceaux voisins de la même voix : réunis
   for (const x of j.segments) {
-    const t = (x.texte || '').trim(); if (!t) continue;
     const qui = roles[x.qui] ? x.qui : 'narrateur';
-    const der = segs[segs.length - 1];
-    if (der && der.qui === qui && der.t.length + t.length < 1000) der.t += (qui === 'narrateur' ? '\n\n' : ' ') + t;
-    else segs.push({ qui, t });
+    for (const t of chunk((x.texte || '').trim(), 1000)) {
+      const der = segs[segs.length - 1];
+      if (der && der.qui === qui && der.t.length + t.length < 1000) der.t += (qui === 'narrateur' ? '\n\n' : ' ') + t;
+      else segs.push({ qui, t });
+    }
   }
   const out = new Array(segs.length);
   let fait = 0, k = 0;
@@ -2741,55 +2763,63 @@ $('nuit-sortie').onclick = () => {
 };
 
 /* Fabrique l'audio d'un texte avec le bon moteur (repli automatique si ElevenLabs est à sec) */
-async function enregistrer(texte, onStatus, prog, moteurImpose) {
-  let { moteur, raison } = moteurImpose ? { moteur: moteurImpose } : await choisirMoteur(texte.length);
-  if (raison) onStatus(`<span class="spin"></span>${raison} → ${NOMS_VOIX[moteur]}`);
+/* Le moteur suivant à essayer en mode automatique, sans repasser par ceux déjà essayés */
+async function moteurSuivant(nb, essayes) {
+  if (!essayes.has('gcloud') && gcCle() && gcVoix() && gcPalier(Math.round(nb * 1.3))) return 'gcloud';
+  if (!essayes.has('eleven') && $('k-eleven').value.trim()) { try { const q = await quotaEleven(); if (q.reste >= nb + 50) return 'eleven'; } catch {} }
+  if (!essayes.has('edge') && !edgeEnPanne) return 'edge';
+  if (!essayes.has('gemini') && $('k-gemini').value.trim()) return 'gemini';
+  return 'phone';
+}
+async function fabriquerAvec(moteur, texte, onStatus, prog) {
   if (moteur === 'eleven') {
-    try {
-      const parts = chunk(texte), blobs = [];
-      for (let i = 0; i < parts.length; i++) {
-        onStatus(`<span class="spin"></span>ElevenLabs enregistre la voix… (${i + 1}/${parts.length})`);
-        blobs.push(await tts(parts[i]));
-        prog((i + 1) / parts.length);
-      }
-      return { moteur, neutre: vitesseALaLecture(), blob: new Blob(blobs, { type: 'audio/mpeg' }) };
-    } catch (e) {
-      if (!(e.quota && $('engine').value === 'auto')) throw e;
-      moteur = secours(texte.length, 'eleven');
-      onStatus(`<span class="spin"></span>Crédits ElevenLabs épuisés → ${NOMS_VOIX[moteur]}`);
+    const parts = chunk(texte), blobs = [];
+    for (let i = 0; i < parts.length; i++) {
+      onStatus(`<span class="spin"></span>ElevenLabs enregistre la voix… (${i + 1}/${parts.length})`);
+      blobs.push(await tts(parts[i]));
+      prog((i + 1) / parts.length);
     }
+    return new Blob(blobs, { type: 'audio/mpeg' });
   }
   if (moteur === 'edge') {
-    try {
-      if ($('opt-multivoix').checked && $('k-gemini').value.trim()) {
-        try { return { moteur, neutre: vitesseALaLecture(), blob: await ttsEdgeMulti(texte, onStatus, prog) }; }
-        catch (e) { if (/injoignable|Voix Microsoft/.test(e.message)) throw e; onStatus(`<span class="spin"></span>Une voix par personnage impossible (${esc(e.message)}) → une seule voix`); }
-      }
-      return { moteur, neutre: vitesseALaLecture(), blob: await ttsEdge(texte, onStatus, prog) };
-    } catch (e) {
-      if ($('engine').value !== 'auto') throw e;
-      edgeEnPanne = true;                                     // pour cette session : on n'insiste pas
-      moteur = secours(texte.length, 'edge');
-      onStatus(`<span class="spin"></span>${e.message} → ${NOMS_VOIX[moteur]}`);
+    if ($('opt-multivoix').checked && $('k-gemini').value.trim()) {
+      try { return await ttsEdgeMulti(texte, onStatus, prog); }
+      catch (e) { if (/injoignable/.test(e.message)) throw e; onStatus(`<span class="spin"></span>Une voix par personnage impossible (${esc(e.message)}) → une seule voix`); }
     }
+    return ttsEdge(texte, onStatus, prog);
   }
   if (moteur === 'gcloud') {
-    try {
-      if ($('opt-multivoix').checked && $('k-gemini').value.trim()) {
-        try { return { moteur, neutre: vitesseALaLecture(), blob: await ttsGcloudMulti(texte, onStatus, prog) }; }
-        catch (e) { if (e.quota || /^Google/.test(e.message)) throw e; onStatus(`<span class="spin"></span>Une voix par personnage impossible (${esc(e.message)}) → une seule voix`); }
-      }
-      return { moteur, neutre: vitesseALaLecture(), blob: await ttsGcloud(texte, onStatus, prog) };
-    } catch (e) {
-      if ($('engine').value !== 'auto') throw e;
-      ({ moteur } = await apresGoogle(texte.length));
-      onStatus(`<span class="spin"></span>${esc(e.message)} → ${NOMS_VOIX[moteur]}`);
+    if ($('opt-multivoix').checked && $('k-gemini').value.trim()) {
+      try { return await ttsGcloudMulti(texte, onStatus, prog); }
+      catch (e) { if (e.quota) throw e; onStatus(`<span class="spin"></span>Une voix par personnage impossible (${esc(e.message)}) → une seule voix`); }
     }
+    return ttsGcloud(texte, onStatus, prog);
   }
   if (moteur === 'gemini') {
     prog(.05);
-    const blob = await ttsGemini(texte, m => { onStatus('<span class="spin"></span>' + m); const r = /\((\d+)\/(\d+)\)/.exec(m); if (r) prog(r[1] / r[2]); });
-    return { moteur, neutre: vitesseALaLecture(), blob };
+    return ttsGemini(texte, m => { onStatus('<span class="spin"></span>' + m); const r = /\((\d+)\/(\d+)\)/.exec(m); if (r) prog(r[1] / r[2]); });
+  }
+  throw new Error('voix inconnue : ' + moteur);
+}
+/* Fabrique l'audio d'un texte. En mode automatique, si une voix échoue, on passe vraiment à la suivante. */
+async function enregistrer(texte, onStatus, prog, moteurImpose) {
+  let { moteur, raison } = moteurImpose ? { moteur: moteurImpose } : await choisirMoteur(texte.length);
+  if (raison) onStatus(`<span class="spin"></span>${esc(raison)} → ${NOMS_VOIX[moteur]}`);
+  const neutre = vitesseALaLecture();                       // décidé une fois pour tout l'enregistrement
+  const essayes = new Set();
+  while (moteur !== 'phone' && !essayes.has(moteur)) {
+    essayes.add(moteur);
+    try {
+      const blob = await fabriquerAvec(moteur, texte, onStatus, prog);
+      return { moteur, neutre, blob };
+    } catch (e) {
+      const auto = $('engine').value === 'auto';
+      if (!auto && !(moteur === 'eleven' && e.quota)) throw e;   // voix imposée : on montre l'erreur
+      if (moteur === 'edge' && /injoignable|HTTP 5/.test(e.message)) edgeEnPanne = true;
+      const suivant = await moteurSuivant(texte.length, essayes);
+      onStatus(`<span class="spin"></span>${esc(e.message)} → ${NOMS_VOIX[suivant]}`);
+      moteur = suivant;
+    }
   }
   return { telephone: true };
 }
@@ -2856,22 +2886,25 @@ $('btn-read').onclick = async () => {
       });
       return;
     }
+    const ailleurs = current !== s;                          // on a ouvert une autre histoire entre-temps
     if (s.interactive) {
       s.partAudio[iPart] = r.blob; s.vitMoteur = r.moteur; s.vitNeutre = r.neutre;
       if (s.parts.length === NB_PARTIES && s.partAudio.length === NB_PARTIES && s.partAudio.every(Boolean)) s.audio = await concatAudio(s.partAudio);
       await DB.put(s);
       driveSauver(s);
+      if (ailleurs) return;
       setAudio(s);
       jouerFile([{ url: URL.createObjectURL(r.blob), debut: plages[iPart][0], fin: plages[iPart][1], texte }]);
     } else {
       s.audio = r.blob; s.vitMoteur = r.moteur; s.vitNeutre = r.neutre;
       await DB.put(s);
       driveSauver(s);
+      if (ailleurs) return;
       setAudio(s);
       $('player').play().catch(() => {});
     }
     status($('tts-status'), '✔ Bonne écoute ! L\'audio est sauvegardé dans tes histoires.', 'ok');
-  } catch (e) { status($('tts-status'), e.message, 'err'); }
+  } catch (e) { status($('tts-status'), esc(e.message), 'err'); }
   progEl.style.display = 'none'; btn.disabled = false;
 };
 
@@ -2951,7 +2984,7 @@ function majDriveInfo() {
   const el = $('drive-info'), s = current;
   if (!s || !driveActif()) { el.innerHTML = ''; return; }
   if (s.drive && !s.driveAttente) {
-    el.innerHTML = `☁️ Sauvegardée dans Drive${s.drive.dossier ? ` · <a href="${esc(s.drive.dossier)}" target="_blank">ouvrir le dossier</a>` : ''}`;
+    el.innerHTML = `☁️ Sauvegardée dans Drive${/^https:\/\//.test(s.drive.dossier || '') ? ` · <a href="${esc(s.drive.dossier)}" target="_blank">ouvrir le dossier</a>` : ''}`;
   } else if (s.driveAttente) {
     el.innerHTML = `☁️ Pas encore sauvegardée${driveErreur ? ' (' + esc(driveErreur.slice(0, 100)) + ')' : ''} — nouvel essai à la prochaine ouverture`;
   } else el.innerHTML = '☁️ Envoi vers Drive…';
@@ -2975,13 +3008,14 @@ $('btn-drive-recup').onclick = async () => {
     st('<span class="spin"></span>Lecture de ton Drive…');
     const { histoires } = await driveGet({ a: 'liste' });
     const ici = new Set((await DB.all()).map(s => s.id));
-    const manquent = histoires.filter(h => !ici.has(h.id));
+    const manquent = histoires.filter(h => /^[\w-]{1,40}$/.test(String(h.id || '')) && !ici.has(h.id));
     if (!manquent.length) return st(`✔ Rien à récupérer : les ${histoires.length} histoire(s) du Drive sont déjà ici.`, 'ok');
     let n = 0;
     for (const h of manquent) {
       st(`<span class="spin"></span>Récupération… (${++n}/${manquent.length}) ${esc(h.titre || '')}`);
       const j = await driveGet({ a: 'charger', id: h.id });
       const s = j.story;
+      if (!s || !/^[\w-]{1,40}$/.test(String(s.id || ''))) continue;      // identifiant inattendu : ignoré
       if (j.audio) { s.audio = deB64(j.audio.b64, j.audio.type); s.driveAudio = s.audio.size + ':' + s.audio.type; }
       if (j.image) { s.image = deB64(j.image.b64, j.image.type); s.driveImage = String(s.image.size); }
       if (j.images?.length) {
@@ -3017,10 +3051,10 @@ async function renderLib() {
     const quand = new Date(s.createdAt).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long' });
     const det = [quand, s.chap > 1 ? `chapitre ${s.chap}` : '', s.interactive ? (s.parts?.length < NB_PARTIES ? 'à choix (pas finie)' : 'à choix') : '',
       s.meta?.name ? esc(s.meta.name) : '', s.audio ? '🎧 sans crédit' : '', s.drive && !s.driveAttente ? '☁️' : ''].filter(Boolean).join(' · ');
-    return `<div class="lib-item" data-id="${s.id}">${vign}
+    return `<div class="lib-item" data-id="${esc(s.id)}">${vign}
       <div class="t">${esc(s.titre)}<small>${det}</small></div>
-      <button class="star ${s.fav ? 'on' : ''}" data-fav="${s.id}" title="Favori">⭐</button>
-      <button class="sec" data-del="${s.id}">🗑️</button>
+      <button class="star ${s.fav ? 'on' : ''}" data-fav="${esc(s.id)}" title="Favori">⭐</button>
+      <button class="sec" data-del="${esc(s.id)}">🗑️</button>
     </div>`;
   }).join('');
 }
@@ -3030,7 +3064,14 @@ $('lib-list').addEventListener('click', async e => {
   const del = e.target.closest('[data-del]');
   if (del) {
     e.stopPropagation();
-    if (confirm('Supprimer cette histoire ?')) { await DB.del(del.dataset.del); renderLib(); }
+    if (confirm('Supprimer cette histoire ?')) {
+      const s = await DB.get(del.dataset.del);
+      if (s?.partage?.jeton) fetch(`${URL_RELAIS}/histoires/partage/${encodeURIComponent(s.partage.id)}/retirer`,
+        { method: 'POST', headers: entetesRelais(), body: JSON.stringify({ jeton: s.partage.jeton }) }).catch(() => {});
+      await DB.del(del.dataset.del);
+      if (current?.id === del.dataset.del) { current = null; $('story-card').style.display = 'none'; try { $('player').pause(); } catch {} }
+      renderLib();
+    }
     return;
   }
   const fav = e.target.closest('[data-fav]');
@@ -3208,7 +3249,12 @@ if (navigator.storage?.persist) navigator.storage.persisted().then(oui => oui ||
 majModeles();
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(r => r.update()).catch(() => {});
 /* Une nouvelle version vient de s'installer : on recharge une fois pour l'afficher */
-if ('serviceWorker' in navigator) { let vu = !!navigator.serviceWorker.controller; navigator.serviceWorker.addEventListener('controllerchange', () => { if (vu) location.reload(); vu = true; }); }
+if ('serviceWorker' in navigator) { let vu = !!navigator.serviceWorker.controller; navigator.serviceWorker.addEventListener('controllerchange', () => {
+  if (!vu) { vu = true; return; }
+  const occupe = () => $('btn-gen').disabled || $('btn-read').disabled || /spin/.test($('gen-status').innerHTML + $('tts-status').innerHTML + $('illus-status').innerHTML);
+  const essayer = () => occupe() ? setTimeout(essayer, 5000) : location.reload();
+  essayer();
+}); }
 </script>
 <div id="livre"></div>
 </body>
