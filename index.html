@@ -346,7 +346,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v18</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v19</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -549,12 +549,12 @@
           <option value="phone">Voix du téléphone</option>
         </select>
         <div class="moteurs">
-          <div class="moteur" data-moteur-choix="auto"><span class="m-ic">✨</span><span><b>Automatique</b><small>ElevenLabs tant qu'il reste des crédits, puis la voix québécoise Microsoft</small></span><span class="rond"></span></div>
+          <div class="moteur" data-moteur-choix="auto"><span class="m-ic">✨</span><span><b>Automatique</b><small>ElevenLabs tant qu'il reste des crédits, puis les voix Google (Chirp, Studio, Neural2), puis la voix Microsoft</small></span><span class="rond"></span></div>
           <div class="moteur" data-moteur-choix="edge"><span class="m-ic">🍁</span><span><b>Voix québécoise Microsoft</b><small>Gratuite, sans limite · Sylvie, Antoine, Jean, Thierry</small></span><span class="rond"></span></div>
           <div class="moteur" data-moteur-choix="eleven"><span class="m-ic">🎭</span><span><b>ElevenLabs</b><small>La plus expressive (chuchote, rit) · 10 000 caractères gratuits par mois</small></span><span class="rond"></span></div>
           <div class="moteur" data-moteur-choix="gemini"><span class="m-ic">♊</span><span><b>Voix Gemini</b><small>Gratuite, expressive, un peu lente à enregistrer</small></span><span class="rond"></span></div>
           <div class="moteur" data-moteur-choix="phone"><span class="m-ic">📱</span><span><b>Voix du téléphone</b><small>Gratuite, hors ligne, plus robotique</small></span><span class="rond"></span></div>
-          <div class="moteur" data-moteur-choix="gcloud"><span class="m-ic">☁️</span><span><b>Voix québécoise Google</b><small>Demande un compte Google Cloud avec facturation</small></span><span class="rond"></span></div>
+          <div class="moteur" data-moteur-choix="gcloud"><span class="m-ic">☁️</span><span><b>Voix Google</b><small>Chirp 3 HD, puis Studio, puis Neural2 · environ 1 million de caractères gratuits par mois pour chaque</small></span><span class="rond"></span></div>
         </div>
 
         <div class="panneau" data-pour="edge auto">
@@ -630,19 +630,25 @@
           <div class="actions"><button class="sec" id="btn-preview-p">▶️ Écouter</button></div>
         </div>
 
-        <div class="panneau" data-pour="gcloud">
-          <div class="panneau-tete">☁️ Voix québécoise Google</div>
-          <label for="gc-voice">Voix</label>
+        <div class="panneau" data-pour="gcloud auto">
+          <div class="panneau-tete">☁️ Voix Google (ta facturation Google)</div>
+          <p class="hint" style="margin-top:4px">La meilleure d'abord : <b>Chirp 3 HD</b> jusqu'à 995 000 caractères dans le mois, puis <b>Studio</b> jusqu'à 995 000, puis <b>Neural2</b>. Chaque palier a son million gratuit par mois chez Google.</p>
+          <label for="gc-voice">1. Chirp 3 HD (la plus naturelle)</label>
           <div style="display:flex; gap:8px">
-            <select id="gc-voice" style="flex:1"><option value="">— entre la clé (section Clés) —</option></select>
-            <button class="sec" id="btn-gc-voices" title="Recharger les voix">↻</button>
+            <select id="gc-voice" style="flex:1"><option value="">— touche ↻ —</option></select>
+            <button class="sec" id="btn-gc-voices" title="Charger les voix">↻</button>
           </div>
+          <label for="gc-voice-studio">2. Studio</label>
+          <select id="gc-voice-studio"><option value="">— touche ↻ —</option></select>
+          <label for="gc-voice-neural">3. Neural2</label>
+          <select id="gc-voice-neural"><option value="">— touche ↻ —</option></select>
           <div class="regle"><label for="gc-rate">Vitesse</label><output data-pour="gc-rate"></output></div>
           <input id="gc-rate" type="range" min="0.7" max="1.15" step="0.05" value="0.9">
-          <label for="gc-plafond">Plafond du mois (caractères)</label>
-          <input id="gc-plafond" type="number" min="10000" step="10000" value="900000">
+          <label for="gc-plafond">Changer de palier après (caractères par mois)</label>
+          <input id="gc-plafond" type="number" min="10000" step="5000" value="995000">
           <div id="gc-quota" class="hint">—</div>
           <div class="actions"><button class="sec" id="btn-preview-gc">▶️ Écouter</button></div>
+          <p class="hint">Utilise ta clé Gemini (ou la clé Google Cloud des Clés). L'API « Cloud Text-to-Speech » doit être activée sur ton projet : <a href="https://console.cloud.google.com/apis/library/texttospeech.googleapis.com" target="_blank">l'activer</a>.</p>
         </div>
       </div>
     </details>
@@ -1049,7 +1055,7 @@ const chipVal = g => document.querySelector(`.chips[data-group="${g}"] .chip.on`
 
 /* ==================== RÉGLAGES ==================== */
 const SETTINGS = ['k-gemini', 'm-gemini', 'k-eleven', 'voice-id', 'm-eleven', 'stability', 'lang', 'name', 'age', 'friends',
-  'engine', 'g-voice', 'p-voice', 'p-rate', 'musique-vol', 'drive-url', 'drive-key', 'img-nb', 'img-style', 'k-gcloud', 'gc-voice', 'gc-rate', 'gc-plafond', 'ms-voice', 'ms-rate'];
+  'engine', 'g-voice', 'p-voice', 'p-rate', 'musique-vol', 'drive-url', 'drive-key', 'img-nb', 'img-style', 'k-gcloud', 'gc-voice', 'gc-voice-studio', 'gc-voice-neural', 'gc-rate', 'gc-plafond', 'ms-voice', 'ms-rate'];
 const CHECKS = ['opt-musique', 'opt-suivre', 'opt-image', 'opt-drive', 'opt-multivoix'];
 SETTINGS.forEach(id => { const v = store.get('set:' + id); if (v) $(id).value = v; });
 CHECKS.forEach(id => { const v = store.get('set:' + id); if (v) $(id).checked = v === '1'; });
@@ -1211,12 +1217,12 @@ async function choisirMoteur(nb) {
 }
 /* Voix de secours, dans l'ordre : québécoise Google (sous le plafond), Gemini, téléphone */
 function secours(nb, sauf) {
+  if (sauf !== 'gcloud' && gcCle() && gcPalier(nb)) return 'gcloud';
   if (sauf !== 'edge' && !edgeEnPanne) return 'edge';
-  if (sauf !== 'gcloud' && $('k-gcloud').value.trim() && gcVoix() && gcUtilise() + nb <= gcPlafond()) return 'gcloud';
   if (sauf !== 'gemini' && $('k-gemini').value.trim()) return 'gemini';
   return 'phone';
 }
-const NOMS_VOIX = { edge: 'la voix québécoise Microsoft', eleven: 'ElevenLabs', gcloud: 'la voix québécoise Google', gemini: 'la voix Gemini', phone: 'la voix du téléphone' };
+const NOMS_VOIX = { edge: 'la voix québécoise Microsoft', eleven: 'ElevenLabs', gcloud: 'la voix Google', gemini: 'la voix Gemini', phone: 'la voix du téléphone' };
 
 /* ==================== GEMINI : TEXTE ==================== */
 async function appelGemini(user, schema, onStatus, opts = {}) {
@@ -1924,73 +1930,104 @@ $('btn-livre').onclick = () => {
   status($('tts-status'), '📕 Dans la fenêtre d\'impression, choisis « Enregistrer au format PDF » (ou ton imprimante).', 'ok');
 };
 
-/* ==================== VOIX QUÉBÉCOISE GOOGLE (Cloud Text-to-Speech) ==================== */
-const gcMois = () => 'gc:' + new Date().toISOString().slice(0, 7);
-const gcUtilise = () => parseInt(store.get(gcMois(), '0'), 10) || 0;
-const gcPlafond = () => parseInt($('gc-plafond').value, 10) || 900000;
-const gcVoix = () => $('gc-voice').value || store.get('set:gc-voice') || '';
+/* ==================== VOIX GOOGLE (Cloud Text-to-Speech) ====================
+   Trois paliers, du meilleur au moins bon : Chirp 3 HD → Studio → Neural2. Chacun a environ un million de
+   caractères gratuits par mois chez Google ; l'app passe au palier suivant à 995 000 (compteur par palier,
+   tenu par l'app, remis à zéro chaque mois). Clé : celle des Clés « Google Cloud », sinon la clé Gemini
+   (même projet, facturation activée ; l'API Cloud Text-to-Speech doit y être activée). */
+const GC_PALIERS = [
+  { id: 'chirp', nom: 'Chirp 3 HD', champ: 'gc-voice', test: n => /Chirp3-HD/.test(n) },
+  { id: 'studio', nom: 'Studio', champ: 'gc-voice-studio', test: n => /Studio/.test(n) },
+  { id: 'neural', nom: 'Neural2', champ: 'gc-voice-neural', test: n => /Neural2/.test(n) }
+];
+const gcCle = () => $('k-gcloud').value.trim() || $('k-gemini').value.trim();
+const gcMoisP = id => 'gc:' + id + ':' + new Date().toISOString().slice(0, 7);
+const gcUtilise = (id = 'chirp') => parseInt(store.get(gcMoisP(id), '0'), 10) || 0;
+const gcPlafond = () => parseInt($('gc-plafond').value, 10) || 995000;
+const gcVoixDe = pl => $(pl.champ).value || store.get('set:' + pl.champ) || '';
+const gcVoix = () => GC_PALIERS.map(gcVoixDe).find(Boolean) || '';
+/* Le palier qui peut lire ce texte maintenant (ou null si tous sont pleins) */
+function gcPalier(nb = 0) { return GC_PALIERS.find(pl => gcVoixDe(pl) && gcUtilise(pl.id) + nb <= gcPlafond()) || null; }
 function gcAfficher() {
-  const u = gcUtilise(), p = gcPlafond();
-  $('gc-quota').innerHTML = `Ce mois-ci : <b>${fmt(u)}</b> caractères utilisés sur ${fmt(p)} (compté par l'app)`;
+  const pc = gcPalier();
+  $('gc-quota').innerHTML = GC_PALIERS.map(pl => `${pl === pc ? '▶ ' : ''}<b>${pl.nom}</b> : ${fmt(gcUtilise(pl.id))} / ${fmt(gcPlafond())}${gcVoixDe(pl) ? '' : ' (aucune voix)'}`).join('<br>') +
+    '<br>Ce mois-ci, compté par l\'app' + (pc ? '' : ' · <b>tous les paliers sont pleins</b>');
 }
 async function gcChargerVoix() {
-  const key = $('k-gcloud').value.trim();
-  if (!key) return status($('set-status'), 'Entre d\'abord ta clé Google Cloud.', 'err');
+  const key = gcCle();
+  if (!key) return status($('set-status'), 'Entre d\'abord ta clé Gemini (ou Google Cloud) dans Clés.', 'err');
   try {
-    const r = await fetch(`https://texttospeech.googleapis.com/v1/voices?languageCode=fr-CA&key=${encodeURIComponent(key)}`);
-    if (!r.ok) throw new Error(await errText(r));
-    const voices = ((await r.json()).voices || []).filter(v => v.languageCodes?.includes('fr-CA'));
-    // Les plus naturelles d'abord : Chirp3-HD, puis Neural2, WaveNet, Standard
-    const rang = n => /Chirp3-HD/.test(n) ? 0 : /Chirp/.test(n) ? 1 : /Neural2/.test(n) ? 2 : /Wavenet/i.test(n) ? 3 : 4;
-    voices.sort((a, b) => rang(a.name) - rang(b.name) || a.name.localeCompare(b.name));
-    const cur = gcVoix();
+    const r = await fetch(`https://texttospeech.googleapis.com/v1/voices?languageCode=fr&key=${encodeURIComponent(key)}`);
+    if (!r.ok) {
+      const m = await errText(r);
+      throw new Error(/SERVICE_DISABLED|has not been used|disabled/i.test(m) ? 'active l\'API « Cloud Text-to-Speech » sur ton projet (lien plus bas), puis réessaie dans 2 minutes'
+        : /API_KEY_SERVICE_BLOCKED|blocked/i.test(m) ? 'ta clé est limitée à Gemini : dans console.cloud.google.com → Identifiants → ta clé, ajoute « Cloud Text-to-Speech API »' : m);
+    }
+    const toutes = ((await r.json()).voices || []).filter(v => v.languageCodes?.some(l => l === 'fr-CA' || l === 'fr-FR'));
     const genre = g => g === 'FEMALE' ? 'femme' : g === 'MALE' ? 'homme' : '';
-    $('gc-voice').innerHTML = voices.map(v =>
-      `<option value="${esc(v.name)}" ${v.name === cur ? 'selected' : ''}>${esc(v.name.replace('fr-CA-', ''))} — ${genre(v.ssmlGender)}</option>`).join('');
-    if (!cur && voices.length) $('gc-voice').value = voices.find(v => /Chirp3-HD/.test(v.name) && v.ssmlGender === 'FEMALE')?.name || voices[0].name;
-    store.set('set:gc-voice', $('gc-voice').value);
-    status($('set-status'), `✔ ${voices.length} voix québécoises chargées.`, 'ok');
-  } catch (e) { status($('set-status'), 'Google Cloud : ' + e.message, 'err'); }
+    let resume = [];
+    for (const pl of GC_PALIERS) {
+      // les voix d'ici d'abord ; s'il n'y en a pas dans ce palier, celles de France
+      let l = toutes.filter(v => pl.test(v.name) && v.languageCodes.includes('fr-CA'));
+      const france = !l.length;
+      if (france) l = toutes.filter(v => pl.test(v.name) && v.languageCodes.includes('fr-FR'));
+      l.sort((a, b) => a.name.localeCompare(b.name));
+      const cur = gcVoixDe(pl);
+      $(pl.champ).innerHTML = '<option value="">— aucune —</option>' + l.map(v =>
+        `<option value="${esc(v.name)}" ${v.name === cur ? 'selected' : ''}>${esc(v.name.replace(/^fr-(CA|FR)-/, ''))} — ${genre(v.ssmlGender)}${france ? ' (France)' : ''}</option>`).join('');
+      if (!cur && l.length) $(pl.champ).value = (l.find(v => v.ssmlGender === 'FEMALE') || l[0]).name;
+      store.set('set:' + pl.champ, $(pl.champ).value);
+      resume.push(`${pl.nom} : ${l.length}${france && l.length ? ' (France)' : ''}`);
+    }
+    gcAfficher();
+    status($('set-status'), '✔ Voix Google chargées — ' + resume.join(' · '), 'ok');
+  } catch (e) { status($('set-status'), 'Voix Google : ' + e.message, 'err'); }
 }
 $('btn-gc-voices').onclick = () => { saveSettings(); gcChargerVoix(); };
-$('gc-voice').onchange = () => store.set('set:gc-voice', $('gc-voice').value);
+GC_PALIERS.forEach(pl => $(pl.champ).addEventListener('change', () => { store.set('set:' + pl.champ, $(pl.champ).value); gcAfficher(); }));
 $('gc-plafond').onchange = gcAfficher;
 $('btn-preview-gc').onclick = async () => {
   saveSettings();
   status($('set-status'), '<span class="spin"></span>Google enregistre un extrait…');
   try {
+    const pl = gcPalier(200);
     const blob = await ttsGcloud(stripTags(EXTRAIT()));
     new Audio(URL.createObjectURL(blob)).play();
-    status($('set-status'), '✔ Lecture de l\'extrait (voix québécoise Google)', 'ok');
+    status($('set-status'), `✔ Lecture de l'extrait (Google ${pl ? pl.nom : ''})`, 'ok');
   } catch (e) { status($('set-status'), 'Erreur : ' + e.message, 'err'); }
 };
 async function ttsGcloud(text, onStatus, prog) {
-  const key = $('k-gcloud').value.trim();
-  if (!key) throw new Error('Ajoute ta clé Google Cloud dans ⚙️ Réglages.');
-  const voix = gcVoix();
-  if (!voix) throw new Error('Choisis une voix québécoise Google dans ⚙️ Réglages (bouton ↻).');
+  const key = gcCle();
+  if (!key) throw new Error('Ajoute ta clé Gemini (ou Google Cloud) dans ⚙️ Réglages → Clés.');
+  if (!gcVoix()) throw new Error('Choisis les voix Google dans ⚙️ Réglages → Qui raconte → ↻.');
   const propre = pourVoixSimple(text);
-  if (gcUtilise() + propre.length > gcPlafond()) {
-    const e = new Error(`plafond du mois atteint pour la voix Google (${fmt(gcUtilise())} / ${fmt(gcPlafond())})`); e.quota = true; throw e;
-  }
+  const pl = gcPalier(propre.length);
+  if (!pl) { const e = new Error(`les trois paliers de voix Google sont pleins ce mois-ci (${fmt(gcPlafond())} chacun)`); e.quota = true; throw e; }
+  const voix = gcVoixDe(pl), langue = voix.slice(0, 5);
   const morceaux = chunk(propre, 1500), blobs = [];
   let vitesse = true;
   for (let i = 0; i < morceaux.length; i++) {
-    onStatus?.(`<span class="spin"></span>Voix québécoise Google… (${i + 1}/${morceaux.length})`);
+    onStatus?.(`<span class="spin"></span>Voix Google ${pl.nom}… (${i + 1}/${morceaux.length})`);
     const corps = () => JSON.stringify({
       input: { text: morceaux[i] },
-      voice: { languageCode: 'fr-CA', name: voix },
+      voice: { languageCode: langue, name: voix },
       audioConfig: { audioEncoding: 'MP3', ...(vitesse ? { speakingRate: parseFloat($('gc-rate').value) || .9 } : {}) }
     });
-    let r = await withRetry(() => fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${encodeURIComponent(key)}`, { method: 'POST', body: corps() }));
+    const url = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${encodeURIComponent(key)}`;
+    let r = await withRetry(() => fetch(url, { method: 'POST', body: corps() }));
     if (!r.ok && r.status === 400 && vitesse) {                // certaines voix refusent la vitesse : on réessaie sans
       const m = await errText(r);
-      if (/rate|speaking/i.test(m)) { vitesse = false; r = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${encodeURIComponent(key)}`, { method: 'POST', body: corps() }); }
+      if (/rate|speaking/i.test(m)) { vitesse = false; r = await fetch(url, { method: 'POST', body: corps() }); }
       else throw new Error('Google : ' + m);
     }
-    if (!r.ok) throw new Error('Google : ' + await errText(r));
+    if (!r.ok) {
+      const m = await errText(r);
+      const e = new Error('Google : ' + (/SERVICE_DISABLED|has not been used/i.test(m) ? 'active l\'API « Cloud Text-to-Speech » sur ton projet (Réglages → Qui raconte → lien)' : m));
+      e.quota = r.status === 429 || /quota/i.test(m);
+      throw e;
+    }
     blobs.push(deB64((await r.json()).audioContent, 'audio/mpeg'));
-    store.set(gcMois(), String(gcUtilise() + morceaux[i].length));
+    store.set(gcMoisP(pl.id), String(gcUtilise(pl.id) + morceaux[i].length));
     prog?.((i + 1) / morceaux.length);
   }
   gcAfficher();
@@ -2704,7 +2741,7 @@ if (!SUR_SERVEUR && location.protocol === 'https:') demenager();
 
 /* Voix québécoise Google : voix et compteur du mois ; coller la clé suffit (les voix se chargent seules) */
 gcAfficher();
-if ($('k-gcloud').value.trim()) gcChargerVoix().then(() => { if (!$('set-status').classList.contains('err')) status($('set-status'), ''); });
+if (gcCle() && !gcVoix()) gcChargerVoix().then(() => { if (!$('set-status').classList.contains('err')) status($('set-status'), ''); });
 $('k-gcloud').addEventListener('change', () => { saveSettings(); if ($('k-gcloud').value.trim()) gcChargerVoix(); });
 /* Histoires pas encore sauvegardées dans le Drive (hors ligne, erreur) : on réessaie à l'ouverture */
 if (driveActif()) setTimeout(async () => { for (const s of await DB.all()) if (s.driveAttente || !s.drive) await driveSauver(s); }, 3000);

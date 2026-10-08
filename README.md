@@ -103,3 +103,7 @@ Astuce : `…/#gemini=CLÉ&eleven=CLÉ&voice=VOICE_ID` enregistre les clés en u
 - Facturation activée par Jonathan sur sa clé Gemini (même clé que le texte).
 - `dessinerGemini()` : couverture d'abord (ou le dessin de l'enfant comme modèle), puis les autres images 3 à la fois avec la couverture en référence. Modèles « flash » seulement (les « pro » écartés : trop chers).
 - Refus de facturation → Pollinations pendant 1 h (`img-gemini-ko`). Le chemin suivi dans une histoire à choix est dessiné en premier.
+
+## v19 — voix Google en paliers (2026-10-08)
+- Cloud Text-to-Speech avec la clé Gemini (ou k-gcloud) : Chirp 3 HD → Studio → Neural2, bascule à 995 000 caractères par palier et par mois (compteurs `gc:<palier>:AAAA-MM`, tenus par l'app). Voix fr-CA, sinon fr-FR pour le palier (Studio n'a peut-être pas de fr-CA).
+- Ordre automatique : ElevenLabs (crédits) → Google (palier libre) → Microsoft → Gemini → téléphone.
