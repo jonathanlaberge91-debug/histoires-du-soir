@@ -91,6 +91,13 @@ function doPost(e) {
   verrou.waitLock(30000);
   try {
     if (b.a === 'sauver') return sortie(sauver(b));
+    if (b.a === 'cle') {
+      // Une clé de plus dans le lien du document (ex. la clé des voix Google), sans changer la clé de sauvegarde.
+      if (b.nom !== 'gcloud' || typeof b.valeur !== 'string' || !/^[\w-]{20,60}$/.test(b.valeur)) return sortie({ ok: false, erreur: 'clé refusée' });
+      P().setProperty('GCLOUD', b.valeur);
+      creerDocConfig(P().getProperty('SECRET'));
+      return sortie({ ok: true });
+    }
     if (b.a === 'rotation') {
       // Nouvelle clé (l'ancienne reste valable 14 jours) + clé du relais des voix, puis nouveau document de configuration.
       // La nouvelle clé n'est renvoyée à personne : elle n'existe que dans le document du Drive.
@@ -231,7 +238,8 @@ function creerDocConfig(secret) {
   const it = r.getFilesByName(NOM_CONFIG);
   while (it.hasNext()) it.next().setTrashed(true);
   const relais = P().getProperty('RELAIS');
-  const lien = APP + '#drive=' + encodeURIComponent(URL_SERVICE) + '&driveKey=' + secret + (relais ? '&relais=' + relais : '');
+  const gcloud = P().getProperty('GCLOUD');
+  const lien = APP + '#drive=' + encodeURIComponent(URL_SERVICE) + '&driveKey=' + secret + (relais ? '&relais=' + relais : '') + (gcloud ? '&gcloud=' + gcloud : '');
   const doc = DocumentApp.create(NOM_CONFIG);
   const b = doc.getBody();
   b.appendParagraph('Activer la sauvegarde Drive de l\'app Histoires du soir').setHeading(DocumentApp.ParagraphHeading.HEADING1);

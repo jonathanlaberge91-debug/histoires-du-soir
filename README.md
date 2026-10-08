@@ -107,3 +107,6 @@ Astuce : `…/#gemini=CLÉ&eleven=CLÉ&voice=VOICE_ID` enregistre les clés en u
 ## v19 — voix Google en paliers (2026-10-08)
 - Cloud Text-to-Speech avec la clé Gemini (ou k-gcloud) : Chirp 3 HD → Studio → Neural2, bascule à 995 000 caractères par palier et par mois (compteurs `gc:<palier>:AAAA-MM`, tenus par l'app). Voix fr-CA, sinon fr-FR pour le palier (Studio n'a peut-être pas de fr-CA).
 - Ordre automatique : ElevenLabs (crédits) → Google (palier libre) → Microsoft → Gemini → téléphone.
+
+## v20 (2026-10-08)
+- Clé des voix Google dans **maison-app-jl** (« Histoires du soir - voix Google », référent `https://95.groupelaberge.ca/*`, API Cloud Text-to-Speech seulement), créée avec gcloud. Donnée à l'app par le lien du document « ⚙️ Configurer l'app » (`&gcloud=`, action `cle` du script Drive). Pas de voix Studio fr-CA chez Google : l'app prend Studio fr-FR (France).
