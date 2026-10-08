@@ -2,7 +2,7 @@
 // Toujours le réseau d'abord, SANS le cache HTTP du navigateur : une nouvelle version arrive dès la
 // réouverture. Le cache ne sert que hors ligne. Les polices (Google Fonts) sont gardées pour de bon :
 // sans réseau, l'app garde son look.
-const CACHE = 'histoires-v20';
+const CACHE = 'histoires-v21';
 const POLICES = 'histoires-polices';
 const FILES = ['./', 'index.html', 'manifest.json', 'icon.svg', 'icon-192.png', 'icon-512.png'];
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES.map(f => new Request(f, { cache: 'reload' })))).then(() => self.skipWaiting())));

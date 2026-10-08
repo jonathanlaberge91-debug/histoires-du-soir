@@ -346,7 +346,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v20</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v21</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -1081,7 +1081,11 @@ if (location.hash.length > 1) {
   if (h.get('eleven')) store.set('set:k-eleven', $('k-eleven').value = h.get('eleven'));
   if (h.get('voice')) store.set('set:voice-id', $('voice-id').value = h.get('voice'));
   if (h.get('relais')) store.set('set:relais-key', h.get('relais'));
-  if (h.get('gcloud')) store.set('set:k-gcloud', $('k-gcloud').value = h.get('gcloud'));   // clé des voix Google (maison-app)
+  if (h.get('gcloud')) {                              // clé des voix Google (projet Histoire)
+    store.set('set:k-gcloud', $('k-gcloud').value = h.get('gcloud'));
+    // charge la liste des voix tout de suite, sinon aucune voix n'est choisie et l'app saute la voix Google
+    setTimeout(() => { if (!GC_PALIERS.some(gcVoixDe)) gcChargerVoix(); }, 500);
+  }
   if (h.get('drive') && h.get('driveKey')) {          // lien du document « ⚙️ Configurer l'app » du Drive
     store.set('set:drive-url', $('drive-url').value = h.get('drive'));
     store.set('set:drive-key', $('drive-key').value = h.get('driveKey'));
