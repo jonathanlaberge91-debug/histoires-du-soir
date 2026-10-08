@@ -190,6 +190,11 @@ async def partager(req):
         b = await req.json()
         audio, ext_a = decode(b.get("audio"), TYPES_AUDIO, AUDIO_MAX)
         image, ext_i = decode(b.get("image"), TYPES_IMAGE, IMAGE_MAX)
+        illus = []                        # illustrations : [(avant quel paragraphe, octets)]
+        for im in (b.get("images") or [])[:8]:
+            data, _ = decode(im, TYPES_IMAGE, IMAGE_MAX)
+            if data:
+                illus.append((max(0, int(im.get("avant", 0))), data))
     except ValueError as e:
         return refuse(req, 400, str(e))
     except Exception:
@@ -199,14 +204,17 @@ async def partager(req):
     jeton = secrets.token_urlsafe(18)       # pour retirer le partage plus tard (gardé par l'app)
     infos = {"titre": titre, "texte": texte, "prenom": str(b.get("prenom", "")).strip()[:60], "cree": int(time.time()),
              "retrait": jeton,
-             "audio": ext_a, "image": ext_i}
-    faire_place((len(audio) if audio else 0) + (len(image) if image else 0) + len(texte) * 2)
+             "audio": ext_a, "image": ext_i, "illus": [a for a, _ in illus]}
+    faire_place((len(audio) if audio else 0) + (len(image) if image else 0) + sum(len(x) for _, x in illus) + len(texte) * 2)
     pid = secrets.token_urlsafe(9)
     d = os.path.join(PARTAGES, pid)
     os.makedirs(d)
     if audio:
         with open(os.path.join(d, "audio." + ext_a), "wb") as f:
             f.write(audio)
+    for k, (_, data) in enumerate(illus):
+        with open(os.path.join(d, f"illus{k}.jpg"), "wb") as f:
+            f.write(data)
     if image:
         with open(os.path.join(d, "image." + ext_i), "wb") as f:
             f.write(image)
@@ -228,6 +236,17 @@ def lire_partage(pid):
             return d, json.load(f)
     except Exception:
         return None, None
+
+
+async def illus_partage(req):
+    d, infos = lire_partage(req.match_info["id"])
+    k = int(req.match_info["k"])
+    if not infos or k >= len(infos.get("illus") or []):
+        raise web.HTTPNotFound()
+    rep = web.FileResponse(os.path.join(d, f"illus{k}.jpg"))
+    rep.content_type = "image/jpeg"
+    rep.headers["Cache-Control"] = "public, max-age=86400"
+    return rep
 
 
 async def fichier_partage(req):
@@ -277,7 +296,10 @@ async def ecouter(req):
         og_image=f'<meta property="og:image" content="{img_url}">' if infos.get("image") else "",
         image=f'<img src="{img_url}" alt="">' if infos.get("image") else "",
         audio=f'<audio controls preload="metadata" src="{PUBLIC}/histoires/partage/{pid}/audio"></audio>' if infos.get("audio") else "",
-        texte="".join(f"<p>{html.escape(p.strip())}</p>" for p in infos.get("texte", "").split("\n\n") if p.strip()),
+        texte="".join(
+            "".join(f'<img src="{PUBLIC}/histoires/partage/{pid}/illus/{k}" alt="">' for k, a in enumerate(infos.get("illus") or []) if a == i)
+            + f"<p>{html.escape(p.strip())}</p>"
+            for i, p in enumerate(x for x in infos.get("texte", "").split("\n\n") if x.strip())),
     )
     return web.Response(text=corps, content_type="text/html", headers={"Cache-Control": "no-cache"})
 
@@ -309,6 +331,7 @@ app.router.add_post("/histoires/partage", partager)
 app.router.add_route("OPTIONS", "/histoires/partage/{id}/retirer", options)
 app.router.add_post("/histoires/partage/{id}/retirer", retirer)
 app.router.add_get("/histoires/partage/{id}/{quoi:audio|image}", fichier_partage)
+app.router.add_get("/histoires/partage/{id}/illus/{k:\\d+}", illus_partage)
 app.router.add_get("/histoires/ecouter/{id}", ecouter)
 
 if __name__ == "__main__":

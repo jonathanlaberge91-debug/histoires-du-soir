@@ -92,3 +92,9 @@ Astuce : `…/#gemini=CLÉ&eleven=CLÉ&voice=VOICE_ID` enregistre les clés en u
 - `genererArbre()` : un seul appel Gemini écrit les 7 morceaux (début, suites A/B, fins AA/AB/BA/BB) → `s.arbre`, chemin courant `s.chemin`.
 - `enregistrerArbre()` : une seule voix pour tout l'arbre (choisie sur la longueur totale) ; le morceau à l'écran d'abord, les autres en file pendant l'écoute (`s.audioNoeuds`). Choisir = aucune attente de Gemini ; si la branche n'est pas finie, on attend seulement elle.
 - « 🔀 Recommencer et choisir autrement » à la fin. Les anciennes histoires à choix (sans arbre) gardent l'ancien fonctionnement.
+
+## v17 — illustrations (2026-10-08)
+- Plan par Gemini (`planifierImages`) : fiche des personnages (anglais, courte, reprise par les chapitres) + 3 à 5 scènes (une par morceau pour une histoire à choix). Clés `p<n>` / `n<chemin>`.
+- Dessins : Pollinations SANS compte (`image.pollinations.ai`, seul le vieux modèle est gratuit), file d'attente une image à la fois, réessais sur 402/429 (en pratique 1 à 3 min par image), logo coupé (bas 8,7 %). Consigne : scène D'ABORD, puis fiche, puis style (sinon la scène est ignorée et le rendu fait « photo »).
+- Les images vont dans le texte, la couverture, le livre PDF, le partage (`images[]` au relais, `/partage/<id>/illus/<k>`) et le Drive (fichiers + Google Doc, propriété `il:<id>`, restaurées par « Récupérer »).
+- Les modèles qui regardent l'image précédente demandent un compte Pollinations (pollen) ou Gemini avec facturation : à brancher plus tard.

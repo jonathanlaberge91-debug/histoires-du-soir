@@ -179,6 +179,10 @@
   details.plus .dedans > label:first-child { margin-top: 0; }
   .dessin-zone { display: flex; gap: 8px; flex-wrap: wrap; }
   .cover { width: 100%; border-radius: var(--r); margin: 2px 0 12px; display: block; }
+  .story figure.illus { margin: 6px 0 16px; }
+  .story figure.illus img { width: 100%; aspect-ratio: 768 / 526; object-fit: cover; border-radius: var(--r); display: block; background: var(--surface2); }
+  .story figure.illus.attente { aspect-ratio: 768 / 526; border-radius: var(--r); background: var(--surface2); display: grid; place-items: center; color: var(--doux); font-size: .85rem; }
+  body.nuit .story figure.illus { opacity: .3; }
 
   /* ───── l'histoire ───── */
   #story-card { padding: 14px; }
@@ -316,6 +320,8 @@
     .l-texte p { font-size: 15pt; line-height: 1.6; margin: 0 0 5mm; text-align: justify; }
     .l-texte p:first-child::first-letter { font-size: 42pt; float: left; line-height: .9; margin: 1mm 2mm 0 0; }
     .l-fin { text-align: center !important; font-style: italic; margin-top: 12mm !important; }
+    .l-illus { margin: 6mm 0; text-align: center; page-break-inside: avoid; }
+    .l-illus img { max-width: 100%; max-height: 110mm; border-radius: 4mm; }
   }
 
   /* ───── mode nuit : écran noir, texte en gros, lumière chaude (même pour les thèmes clairs) ───── */
@@ -340,7 +346,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v15</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v17</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -436,6 +442,7 @@
     <div class="chap" id="s-chap"></div>
     <h2 id="s-title"></h2>
     <div class="hint" id="drive-info" style="margin-top:0"></div>
+    <div class="hint" id="illus-status" style="margin-top:2px"></div>
     <div class="barre-lecture">
       <button class="sec" id="btn-read">🔊 Raconter</button>
       <button class="sec" id="btn-nuit" title="Mode nuit">🌙</button>
@@ -447,6 +454,7 @@
       <button class="sec" id="btn-cast">📡 Haut-parleur</button>
       <button class="sec" id="btn-livre">📕 Livre PDF</button>
       <button class="sec" id="btn-departager" style="display:none">🚫 Retirer le partage</button>
+      <button class="sec" id="btn-illustrer" style="display:none">🎨 Illustrer</button>
       <button class="sec" id="btn-tags">🏷️ Balises</button>
     </div>
     <audio id="cast-audio" preload="none" style="display:none"></audio>
@@ -643,7 +651,22 @@
       <summary><span class="r-ic">🌙</span><span class="r-txt"><b>Pendant l'histoire</b><small id="res-pendant">—</small></span></summary>
       <div class="dedans">
         <label class="check"><input type="checkbox" id="opt-suivre" checked>Le texte suit la lecture</label>
-        <label class="check"><input type="checkbox" id="opt-image" checked>Image de couverture</label>
+        <label class="check"><input type="checkbox" id="opt-image" checked>Illustrations dans l'histoire</label>
+        <div class="row" style="margin-top:6px">
+          <div><label for="img-nb">Combien ?</label>
+            <select id="img-nb">
+              <option value="1">Couverture seulement</option>
+              <option value="4" selected>3 à 5 images</option>
+            </select></div>
+          <div><label for="img-style">Style</label>
+            <select id="img-style">
+              <option value="aquarelle">Aquarelle douce</option>
+              <option value="crayons">Crayons de couleur</option>
+              <option value="anime">Dessin animé</option>
+              <option value="papier">Papier découpé</option>
+            </select></div>
+        </div>
+        <p class="hint">Dessinées gratuitement par Pollinations, une image à la fois (environ 40 secondes chacune), pendant que tu écoutes.</p>
         <label class="check"><input type="checkbox" id="opt-musique">Musique douce en fond</label>
         <div class="regle"><label for="musique-vol">Volume de la musique</label><output data-pour="musique-vol"></output></div>
         <input id="musique-vol" type="range" min="0.05" max="0.6" step="0.05" value="0.2">
@@ -1026,7 +1049,7 @@ const chipVal = g => document.querySelector(`.chips[data-group="${g}"] .chip.on`
 
 /* ==================== RÉGLAGES ==================== */
 const SETTINGS = ['k-gemini', 'm-gemini', 'k-eleven', 'voice-id', 'm-eleven', 'stability', 'lang', 'name', 'age', 'friends',
-  'engine', 'g-voice', 'p-voice', 'p-rate', 'musique-vol', 'drive-url', 'drive-key', 'k-gcloud', 'gc-voice', 'gc-rate', 'gc-plafond', 'ms-voice', 'ms-rate'];
+  'engine', 'g-voice', 'p-voice', 'p-rate', 'musique-vol', 'drive-url', 'drive-key', 'img-nb', 'img-style', 'k-gcloud', 'gc-voice', 'gc-rate', 'gc-plafond', 'ms-voice', 'ms-rate'];
 const CHECKS = ['opt-musique', 'opt-suivre', 'opt-image', 'opt-drive', 'opt-multivoix'];
 SETTINGS.forEach(id => { const v = store.get('set:' + id); if (v) $(id).value = v; });
 CHECKS.forEach(id => { const v = store.get('set:' + id); if (v) $(id).checked = v === '1'; });
@@ -1402,15 +1425,151 @@ async function reduireImage(blob) {           // ≤ 900 px de large, en JPEG : 
   } catch { return blob; }
 }
 function imageEnFond(s) {
-  if (!$('opt-image').checked || !$('k-gemini').value.trim() || s.image) return;
-  genererImage(s).then(async img => {
-    s.image = img; await DB.put(s);
-    driveSauver(s);
-    if (current && current.id === s.id) afficherCouverture(s);
-  }).catch(e => {
-    if (current && current.id === s.id) status($('gen-status'), `✔ Histoire prête ! (image de couverture non disponible : ${esc(e.message.slice(0, 120))})`, 'ok');
+  if (!$('opt-image').checked || !$('k-gemini').value.trim()) return;
+  illustrer(s);
+}
+
+/* ==================== ILLUSTRATIONS (Pollinations, gratuit) ====================
+   1. Gemini fait le plan : une FICHE des personnages (leur allure exacte, en anglais) et 3 à 5 scènes
+      (une par morceau pour une histoire à choix). La même fiche est répétée dans chaque dessin pour
+      que les personnages se ressemblent d'une image à l'autre (et reprise par les chapitres suivants).
+   2. Pollinations dessine, une image à la fois (le service gratuit en accepte environ une aux 40 s).
+      Son logo (coin en bas à droite) est coupé. La première image devient la couverture.
+   Clés des images : 'p<n>' = avant le paragraphe n ; 'n<chemin>' = morceau d'une histoire à choix. */
+/* Le dessinateur gratuit lit surtout le DÉBUT de la consigne : la scène d'abord, puis la fiche, puis le style
+   (essais du 2026-10-08 : style et fiche en tête → la scène était ignorée et le rendu faisait « photo »). */
+const STYLES_IMAGE = {
+  aquarelle: ['Watercolor picture book illustration', 'Soft pastel watercolor, storybook art, not a photo.'],
+  crayons: ['Colored pencil picture book illustration', 'Colored pencil drawing on textured paper, storybook art, not a photo.'],
+  anime: ['Cute cartoon animation illustration', 'Bright cheerful cartoon style, rounded shapes, not a photo.'],
+  papier: ['Cut paper collage picture book illustration', 'Layered paper craft collage, soft shadows, storybook art, not a photo.']
+};
+const SCHEMA_ILLUS = { type: 'OBJECT', properties: {
+  fiche: { type: 'STRING' },
+  scenes: { type: 'ARRAY', items: { type: 'OBJECT', properties: { ou: { type: 'STRING' }, description: { type: 'STRING' } }, required: ['ou', 'description'] } }
+}, required: ['fiche', 'scenes'] };
+async function planifierImages(s) {
+  const nb = parseInt($('img-nb').value, 10) || 4;
+  const ficheAvant = s.serie ? (await DB.liste()).filter(x => (x.serie || x.id) === s.serie && x.illus?.fiche && x.id !== s.id).map(x => x.illus.fiche)[0] : '';
+  let morceaux;
+  if (s.arbre) morceaux = Object.entries(s.arbre).map(([c, n]) => `[${c || 'debut'}] ${stripTags(n.texte)}`).join('\n\n');
+  else morceaux = paras(stripTags(s.histoire)).map((t, i) => `[${i}] ${t}`).join('\n\n');
+  const combien = s.arbre ? (nb === 1 ? 'UNE seule scène, pour [debut]' : 'UNE scène pour CHAQUE morceau ([debut], [A], [B], [AA], [AB], [BA], [BB]) ; « ou » = l\'étiquette du morceau sans crochets')
+    : (nb === 1 ? 'UNE seule scène, pour la couverture, avec « ou » = "0"' : `entre 3 et 5 scènes réparties du début à la fin (la première à « ou » = "0", c'est la couverture) ; « ou » = le numéro du paragraphe où la scène commence`);
+  const user = [
+    'Tu prépares les illustrations d\'un livre d\'histoire pour enfants. Écris EN ANGLAIS (pour le dessinateur).',
+    `- « fiche » : la description visuelle FIXE de chaque personnage qui revient (2 à 3 personnages au plus) : nom, espèce, âge, cheveux ou pelage, vêtements avec leurs COULEURS exactes. Une courte phrase par personnage (20 mots au plus), très concrète. Exemple : "Abby is a 5-year-old girl with curly red hair, yellow raincoat, red boots. Biscuit is a small light brown puppy with a blue collar."`,
+    ficheAvant ? `- Ces personnages ont déjà été dessinés dans les chapitres précédents : reprends EXACTEMENT cette fiche, en ajoutant seulement les nouveaux : ${ficheAvant}` : '',
+    s.dessin ? '- L\'enfant a fait un dessin pour cette histoire : décris les personnages comme dans son dessin.' : '',
+    `- « scenes » : ${combien}. Chaque « description » est une seule phrase visuelle et courte : qui (par leur nom, et ce qu'ils sont : « Abby and her puppy Biscuit »), fait quoi, où, l'heure. Les objets importants sont nommés avec leur couleur. Rien d'effrayant.`,
+    '---', morceaux
+  ].filter(Boolean).join('\n');
+  const j = await appelGemini(user, SCHEMA_ILLUS, () => {}, { system: 'Tu es directeur artistique de livres pour enfants. Tu réponds en JSON.', temperature: 0.4 });
+  const scenes = (j.scenes || []).slice(0, s.arbre ? 7 : 5).map(sc => {
+    const ou = String(sc.ou || '').replace(/[\[\]\s]/g, '');
+    const cle = s.arbre ? 'n' + (ou === 'debut' || ou === '' ? '' : ou.toUpperCase()) : 'p' + Math.max(0, parseInt(ou, 10) || 0);
+    return { cle, description: String(sc.description || '') };
+  }).filter((sc, i, t) => sc.description && t.findIndex(x => x.cle === sc.cle) === i && (!s.arbre || /^n[AB]{0,2}$/.test(sc.cle)));
+  if (!scenes.length) throw new Error('pas de scène proposée');
+  return { fiche: String(j.fiche || ''), style: $('img-style').value, scenes };
+}
+/* Un dessin Pollinations, logo coupé. Le service gratuit refuse (402/429) s'il est trop sollicité : on attend. */
+async function dessiner(prompt, graine, onAttente) {
+  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=768&height=576&seed=${graine}&nologo=true`;
+  for (let essai = 0; essai < 12; essai++) {
+    let r;
+    try { r = await fetch(url); } catch { r = null; }
+    if (r && r.ok && (r.headers.get('content-type') || '').startsWith('image')) return couperLogo(await r.blob());
+    if (r && r.status && r.status !== 402 && r.status !== 429 && r.status < 500) throw new Error('service d\'images : HTTP ' + r.status);
+    onAttente?.();
+    await sleep(essai < 3 ? 15000 : 25000);
+  }
+  throw new Error('le service d\'images gratuit est trop occupé, réessaie plus tard (bouton 🎨)');
+}
+async function couperLogo(blob) {
+  const img = await createImageBitmap(blob);
+  const bas = Math.round(img.height * 0.087);           // le logo occupe le bas à droite
+  const c = document.createElement('canvas'); c.width = img.width; c.height = img.height - bas;
+  c.getContext('2d').drawImage(img, 0, 0, img.width, img.height - bas, 0, 0, c.width, c.height);
+  return await new Promise(ok => c.toBlob(b => ok(b || blob), 'image/jpeg', .86));
+}
+const hashTexte = t => { let h = 0; for (const ch of t) h = (h * 31 + ch.charCodeAt(0)) | 0; return Math.abs(h); };
+let fileDessins = Promise.resolve();
+const illustrationsEnCours = new Set();
+function illustrer(s, forcer) {
+  if (illustrationsEnCours.has(s.id) && !forcer) return;
+  illustrationsEnCours.add(s.id);
+  const etat = m => { if (current?.id === s.id) $('illus-status').innerHTML = m; };
+  fileDessins = fileDessins.catch(() => {}).then(async () => {
+    try {
+      if (!s.illus?.scenes?.length) {
+        etat('<span class="spin"></span>🎨 Préparation des illustrations…');
+        s.illus = await planifierImages(s);
+        s.illusImages = s.illusImages || {};
+        await DB.put(s);
+        if (current?.id === s.id) placerIllustrations(s);
+      }
+      const [avant, apres] = STYLES_IMAGE[s.illus.style] || STYLES_IMAGE.aquarelle;
+      const base = hashTexte(s.id) % 90000;
+      const total = s.illus.scenes.length;
+      for (let i = 0; i < total; i++) {
+        const sc = s.illus.scenes[i];
+        if (s.illusImages?.[sc.cle]) continue;
+        const fait = () => Object.keys(s.illusImages || {}).length;
+        etat(`<span class="spin"></span>🎨 Illustration ${fait() + 1} sur ${total}…`);
+        const prompt = `${avant}: ${sc.description} ${s.illus.fiche} ${apres} No text.`;
+        const blob = await dessiner(prompt, base + i * 101, () => etat(`<span class="spin"></span>🎨 Illustration ${fait() + 1} sur ${total} : le dessinateur gratuit est occupé, on patiente…`));
+        s.illusImages = s.illusImages || {};
+        s.illusImages[sc.cle] = blob;
+        if (!s.image && i === 0) { s.image = blob; if (current?.id === s.id) afficherCouverture(s); }
+        await DB.put(s);
+        if (current?.id === s.id) majIllustrations(s);
+      }
+      etat(`🎨 ${total} illustration${total > 1 ? 's' : ''}`);
+      driveSauver(s);
+    } catch (e) {
+      etat(`🎨 Illustrations interrompues : ${esc(e.message)}`);
+    } finally { illustrationsEnCours.delete(s.id); if (current?.id === s.id) majBoutonIllustrer(s); }
   });
 }
+/* Où va chaque image dans le texte affiché */
+function clesParParagraphe(s) {
+  const out = {};
+  if (!s.illus?.scenes) return out;
+  if (s.arbre) {
+    plagesParties(s).forEach(([d], k) => { const c = 'n' + (s.chemin || '').slice(0, k); if (k > 0 && s.illus.scenes.some(x => x.cle === c)) out[d] = c; });
+  } else {
+    for (const sc of s.illus.scenes) { const n = parseInt(sc.cle.slice(1), 10); if (n > 0) out[n] = sc.cle; }   // la scène 0 = la couverture
+  }
+  return out;
+}
+const urlsIllus = new Map();
+function urlIllus(blob) { if (!urlsIllus.has(blob)) urlsIllus.set(blob, URL.createObjectURL(blob)); return urlsIllus.get(blob); }
+function placerIllustrations(s) {
+  document.querySelectorAll('#s-text figure.illus').forEach(f => f.remove());
+  const cles = clesParParagraphe(s);
+  for (const [i, cle] of Object.entries(cles)) {
+    const p = document.querySelector(`#s-text p[data-i="${i}"]`); if (!p) continue;
+    const f = document.createElement('figure');
+    f.className = 'illus'; f.dataset.cle = cle;
+    p.before(f);
+  }
+  majIllustrations(s);
+}
+function majIllustrations(s) {
+  document.querySelectorAll('#s-text figure.illus').forEach(f => {
+    const b = s.illusImages?.[f.dataset.cle];
+    if (b) { f.classList.remove('attente'); f.innerHTML = `<img src="${urlIllus(b)}" alt="">`; }
+    else { f.classList.add('attente'); f.textContent = '🎨 Le dessin arrive…'; }
+  });
+}
+function majBoutonIllustrer(s) {
+  const complet = s.illus?.scenes?.length && s.illus.scenes.every(x => s.illusImages?.[x.cle]);
+  $('btn-illustrer').style.display = !complet && !illustrationsEnCours.has(s.id) && $('k-gemini').value.trim() ? '' : 'none';
+  $('btn-illustrer').textContent = s.illus?.scenes?.length ? '🎨 Finir les illustrations' : '🎨 Illustrer';
+  if (!illustrationsEnCours.has(s.id)) $('illus-status').textContent = complet ? `🎨 ${s.illus.scenes.length} illustration${s.illus.scenes.length > 1 ? 's' : ''}` : '';
+}
+$('btn-illustrer').onclick = () => { if (current) { illustrer(current, true); majBoutonIllustrer(current); } };
 
 /* ==================== ELEVENLABS ==================== */
 async function tts(text) {
@@ -1599,12 +1758,15 @@ async function audioComplet(s) {
 /* Met l'histoire (texte, voix, couverture) sur ton serveur : lien pour la famille + adresse pour le haut-parleur */
 async function publier(s, st) {
   const audio = await audioComplet(s);
-  const sig = [audio ? audio.size : 0, s.image ? s.image.size : 0, s.histoire.length].join(':');
+  const cles = clesParParagraphe(s);
+  const illus = Object.entries(cles).filter(([, c]) => s.illusImages?.[c]);
+  const sig = [audio ? audio.size : 0, s.image ? s.image.size : 0, s.histoire.length, illus.length].join(':');
   if (s.partage?.sig === sig) return s.partage;
   st?.('<span class="spin"></span>Préparation du lien…');
   const corps = { titre: s.titre, texte: paras(stripTags(s.histoire)).join('\n\n'), prenom: s.meta?.name || '' };
   if (audio) corps.audio = { b64: await b64(audio), type: audio.type || 'audio/mpeg' };
   if (s.image) corps.image = { b64: await b64(s.image), type: s.image.type || 'image/jpeg' };
+  if (illus.length) corps.images = await Promise.all(illus.map(async ([i, c]) => ({ avant: parseInt(i, 10), b64: await b64(s.illusImages[c]), type: 'image/jpeg' })));
   const r = await fetch(URL_RELAIS + '/histoires/partage', { method: 'POST', headers: entetesRelais(), body: JSON.stringify(corps) });
   const j = await r.json().catch(() => ({}));
   if (!r.ok || !j.ok) throw new Error(j.erreur || 'HTTP ' + r.status);
@@ -1674,10 +1836,13 @@ $('btn-livre').onclick = () => {
   const date = new Date(s.createdAt).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric' });
   L.innerHTML = `<section class="l-couv">${img ? `<img src="${img}" alt="">` : ''}<h1>${esc(s.titre)}</h1>` +
     `${s.meta?.name ? `<p class="l-pour">Une histoire pour ${esc(s.meta.name)}</p>` : ''}<p class="l-date">${date}</p></section>` +
-    `<section class="l-texte">${paras(stripTags(s.histoire)).map(p => `<p>${esc(p)}</p>`).join('')}<p class="l-fin">— Fin —</p></section>`;
+    `<section class="l-texte">${paras(stripTags(s.histoire)).map((p, i) => {
+      const b = s.illusImages?.[clesParParagraphe(s)[i]];
+      return (b ? `<figure class="l-illus"><img src="${URL.createObjectURL(b)}" alt=""></figure>` : '') + `<p>${esc(p)}</p>`;
+    }).join('')}<p class="l-fin">— Fin —</p></section>`;
   const imprimer = () => setTimeout(() => window.print(), 250);
-  const im = L.querySelector('img');
-  if (im && !im.complete) { im.onload = imprimer; im.onerror = imprimer; } else imprimer();
+  const ims = [...L.querySelectorAll('img')];
+  Promise.all(ims.map(im => im.complete ? 0 : new Promise(ok => { im.onload = ok; im.onerror = ok; }))).then(imprimer);
   status($('tts-status'), '📕 Dans la fenêtre d\'impression, choisis « Enregistrer au format PDF » (ou ton imprimante).', 'ok');
 };
 
@@ -1900,6 +2065,9 @@ function showStory(s) {
   $('s-title').textContent = s.titre;
   $('s-text').innerHTML = paras(s.histoire).map((p, i) =>
     `<p data-i="${i}">${esc(p).replace(/\[([^\]\n]{1,40})\]\s*/g, '<span class="tag">$1 </span>')}</p>`).join('');
+  placerIllustrations(s);
+  majBoutonIllustrer(s);
+  if (illustrationsEnCours.has(s.id)) $('illus-status').innerHTML = '<span class="spin"></span>🎨 Illustrations en cours…';
   const enCours = s.interactive && s.parts.length < NB_PARTIES;
   $('btn-suite').style.display = enCours ? 'none' : '';
   majChoix();
@@ -2277,11 +2445,14 @@ function driveSauver(s) {
 async function driveEnvoyer(id) {
   const s = await DB.get(id);
   if (!s || (s.interactive && !s.parts?.length)) return;
-  const { audio, image, partAudio, audioNoeuds, drive, driveAudio, driveImage, driveAttente, ...story } = s;
+  const { audio, image, partAudio, audioNoeuds, illusImages, driveIllus, drive, driveAudio, driveImage, driveAttente, ...story } = s;
   const corps = { a: 'sauver', story };
   const sigA = audio ? audio.size + ':' + audio.type : '', sigI = image ? String(image.size) : '';
   if (audio && driveAudio !== sigA) corps.audio = { b64: await b64(audio), type: audio.type || 'audio/mpeg' };
   if (image && driveImage !== sigI) corps.image = { b64: await b64(image), type: image.type || 'image/jpeg' };
+  const clesIllus = Object.entries(clesParParagraphe(s)).filter(([, c]) => illusImages?.[c]);
+  const sigIl = clesIllus.map(([i, c]) => i + c).join(',');
+  if (clesIllus.length && driveIllus !== sigIl) corps.images = await Promise.all(clesIllus.map(async ([i, c]) => ({ avant: parseInt(i, 10), cle: c, b64: await b64(illusImages[c]), type: 'image/jpeg' })));
   const maj = async champs => {
     const s2 = await DB.get(id); if (!s2) return;
     Object.assign(s2, champs);
@@ -2295,6 +2466,7 @@ async function driveEnvoyer(id) {
     const champs = { drive: { at: Date.now(), dossier: j.dossier } };
     if (corps.audio) champs.driveAudio = sigA;
     if (corps.image) champs.driveImage = sigI;
+    if (corps.images) champs.driveIllus = sigIl;
     await maj(champs);
   } catch (e) {
     driveErreur = e.message;
@@ -2338,6 +2510,11 @@ $('btn-drive-recup').onclick = async () => {
       const s = j.story;
       if (j.audio) { s.audio = deB64(j.audio.b64, j.audio.type); s.driveAudio = s.audio.size + ':' + s.audio.type; }
       if (j.image) { s.image = deB64(j.image.b64, j.image.type); s.driveImage = String(s.image.size); }
+      if (j.images?.length) {
+        s.illusImages = {};
+        for (const im of j.images) if (im.cle) s.illusImages[im.cle] = deB64(im.b64, im.type || 'image/jpeg');
+        s.driveIllus = j.images.map(im => im.avant + im.cle).join(',');
+      }
       s.drive = { at: Date.now() };
       await DB.put(s);
       renderLib();
@@ -2520,7 +2697,7 @@ function majCurseurs() { document.querySelectorAll('output[data-pour]').forEach(
 /* Résumés sous chaque section, et ✓ sur les clés remplies */
 function majResumes() {
   majMoteur(); majCurseurs();
-  const p = [$('opt-suivre').checked && 'texte qui suit', $('opt-image').checked && 'couverture', $('opt-musique').checked && 'musique'].filter(Boolean);
+  const p = [$('opt-suivre').checked && 'texte qui suit', $('opt-image').checked && ($('img-nb').value === '1' ? 'couverture' : 'illustrations'), $('opt-musique').checked && 'musique'].filter(Boolean);
   $('res-pendant').textContent = (p.join(' · ') || 'rien de plus') + ' · ' + $('lang').selectedOptions[0].text;
   $('res-drive').textContent = driveActif() ? 'Activée' : $('opt-drive').checked ? 'À configurer (lien du document du Drive)' : 'Désactivée';
   const cles = ['k-gemini', 'k-eleven', 'k-gcloud'];

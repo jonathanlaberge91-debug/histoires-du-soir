@@ -127,6 +127,20 @@ function sauver(b) {
     if (parents.hasNext() && parents.next().getId() !== enfant.getId()) d.moveTo(enfant);
   }
 
+  // Illustrations (envoyées seulement quand elles changent) : fichiers + place dans le texte
+  if (Array.isArray(b.images) && b.images.length) {
+    let vieilles = [];
+    try { vieilles = JSON.parse(pr.getProperty('il:' + id) || '[]'); } catch (x) {}
+    vieilles.forEach(v => { const f = fichier(v.id); if (f) f.setTrashed(true); });
+    const nouvelles = b.images.slice(0, 8).map((im, k) => {
+      const f = d.createFile(Utilities.newBlob(Utilities.base64Decode(im.b64), im.type || 'image/jpeg', 'illustration-' + (k + 1) + '.jpg'));
+      return { avant: Number(im.avant) || 0, cle: String(im.cle || ''), id: f.getId() };
+    });
+    pr.setProperty('il:' + id, JSON.stringify(nouvelles));
+  }
+  let illus = [];
+  try { illus = JSON.parse(pr.getProperty('il:' + id) || '[]'); } catch (x) {}
+
   // Google Doc lisible (réécrit à chaque sauvegarde : une histoire à choix s'allonge, etc.)
   let doc;
   const docId = pr.getProperty('d:' + id);
@@ -141,7 +155,17 @@ function sauver(b) {
     s.chap > 1 ? 'chapitre ' + s.chap : '', s.interactive ? 'histoire à choix' : '',
     Utilities.formatDate(new Date(s.createdAt || Date.now()), 'America/Montreal', 'd MMMM yyyy')].filter(String).join(' · ');
   body.appendParagraph(details).setItalic(true);
-  sansBalises(s.histoire).split(/\n\s*\n/).forEach(t => { if (t.trim()) body.appendParagraph(t.trim()).setItalic(false); });
+  sansBalises(s.histoire).split(/\n\s*\n/).filter(t => t.trim()).forEach((t, i) => {
+    illus.filter(x => x.avant === i).forEach(x => {
+      const f = fichier(x.id);
+      if (!f) return;
+      try {
+        const im = body.appendImage(f.getBlob());
+        const k = 440 / im.getWidth(); im.setWidth(440).setHeight(Math.round(im.getHeight() * k));
+      } catch (e) {}
+    });
+    body.appendParagraph(t.trim()).setItalic(false);
+  });
   doc.saveAndClose();
 
   // infos.json : tout, pour remettre l'histoire dans l'app sur un autre appareil
@@ -195,6 +219,10 @@ function charger(id) {
   if (fa) out.audio = { b64: Utilities.base64Encode(fa.getBlob().getBytes()), type: fa.getMimeType() };
   const fi = fichier(pr.getProperty('i:' + id));
   if (fi) out.image = { b64: Utilities.base64Encode(fi.getBlob().getBytes()), type: fi.getMimeType() };
+  try {
+    out.images = JSON.parse(pr.getProperty('il:' + id) || '[]').map(x => ({ x, f: fichier(x.id) })).filter(o => o.f)
+      .map(o => ({ cle: o.x.cle, avant: o.x.avant, b64: Utilities.base64Encode(o.f.getBlob().getBytes()), type: 'image/jpeg' }));
+  } catch (e) {}
   return out;
 }
 
