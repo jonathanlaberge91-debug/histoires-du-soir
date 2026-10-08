@@ -359,7 +359,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v31</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v32</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -687,6 +687,12 @@
       <summary><span class="r-ic">🌙</span><span class="r-txt"><b>Pendant l'histoire</b><small id="res-pendant">—</small></span></summary>
       <div class="dedans">
         <label class="check"><input type="checkbox" id="opt-suivre" checked>Le texte suit la lecture</label>
+        <label for="vit-mode">Vitesse des histoires</label>
+        <select id="vit-mode">
+          <option value="lecture" selected>À la lecture : la vitesse change en tout temps, sans réenregistrer</option>
+          <option value="voix">Par la voix : un peu plus naturel, mais changer la vitesse = réenregistrer</option>
+        </select>
+        <p class="hint">La vitesse se règle avec le curseur de chaque voix (Google, Microsoft). Les extraits « Écouter » appliquent toujours la vitesse à la lecture : ils restent gratuits à réécouter.</p>
         <div class="row" style="margin-top:6px">
           <div style="grid-column: 1 / -1"><label for="img-style">Style des images</label>
             <select id="img-style">
@@ -1081,7 +1087,7 @@ const chipVal = g => document.querySelector(`.chips[data-group="${g}"] .chip.on`
 
 /* ==================== RÉGLAGES ==================== */
 const SETTINGS = ['k-gemini', 'm-gemini', 'k-eleven', 'voice-id', 'm-eleven', 'stability', 'lang', 'name', 'age', 'friends',
-  'engine', 'g-voice', 'p-voice', 'p-rate', 'musique-vol', 'drive-url', 'drive-key', 'img-style', 'k-gcloud', 'gc-voice', 'gc-voice-studio', 'gc-voice-neural', 'gc-rate', 'gc-plafond', 'ms-voice', 'ms-rate'];
+  'engine', 'g-voice', 'p-voice', 'p-rate', 'musique-vol', 'drive-url', 'drive-key', 'img-style', 'k-gcloud', 'gc-voice', 'gc-voice-studio', 'gc-voice-neural', 'gc-rate', 'gc-plafond', 'ms-voice', 'ms-rate', 'vit-mode'];
 const CHECKS = ['opt-musique', 'opt-suivre', 'opt-drive', 'opt-multivoix'];
 SETTINGS.forEach(id => { const v = store.get('set:' + id); if (v) $(id).value = v; });
 CHECKS.forEach(id => { const v = store.get('set:' + id); if (v) $(id).checked = v === '1'; });
@@ -1162,6 +1168,21 @@ $('btn-voices').onclick = loadVoices;
 const EXTRAIT = () => $('lang').value === 'en'
   ? '[warmly] Once upon a time… [whispers] in a forest full of secrets, [excited] a little fox found a GLOWING stone!'
   : '[warmly] Il était une fois… [whispers] dans une forêt pleine de secrets, [excited] un petit renard qui trouva une pierre BRILLANTE !';
+/* ───── Vitesse : à l'enregistrement ou à la lecture ─────
+   « À la lecture » : la voix enregistre à sa vitesse de base (curseur par défaut : Google 0,9 ; Microsoft −10 %)
+   et le lecteur accélère ou ralentit le son sans changer la hauteur de la voix. */
+let forcerVitesseNeutre = false;
+const vitesseALaLecture = () => forcerVitesseNeutre || ($('vit-mode')?.value || 'lecture') === 'lecture';
+const curseurGc = () => vitesseALaLecture() ? .9 : (parseFloat($('gc-rate').value) || .9);
+const curseurMs = () => vitesseALaLecture() ? -10 : (parseInt($('ms-rate').value, 10) || 0);
+async function neutreDurant(f) { forcerVitesseNeutre = true; try { return await f(); } finally { forcerVitesseNeutre = false; } }
+/* Facteur de lecture d'un son enregistré à la vitesse de base par ce moteur */
+function facteurLecture(moteur) {
+  if (moteur === 'gcloud') return (parseFloat($('gc-rate').value) || .9) / .9;
+  if (moteur === 'edge') return (100 + (parseInt($('ms-rate').value, 10) || 0)) / 90;
+  return 1;
+}
+function regleVitesse(a, f) { a.preservesPitch = true; a.defaultPlaybackRate = f; a.playbackRate = f; }
 /* Un seul extrait de voix à la fois : un nouveau clic coupe l'extrait en cours ;
    si on clique deux fois pendant l'enregistrement, seul le dernier extrait demandé joue. */
 let extraitAudio = null, extraitNo = 0;
@@ -1184,10 +1205,11 @@ async function extraitGarde(cle, fabriquer) {
   return { blob, garde: false };
 }
 const gratuit = x => x.garde ? ' · déjà enregistré, gratuit' : ' · enregistré, les prochaines écoutes seront gratuites';
-function jouerExtrait(no, blob) {
+function jouerExtrait(no, blob, facteur = 1) {
   if (no !== extraitNo) return false;                 // un clic plus récent a pris le relais
   arreterExtrait();
   extraitAudio = new Audio(URL.createObjectURL(blob));
+  regleVitesse(extraitAudio, facteur);
   extraitAudio.play();
   return true;
 }
@@ -1442,7 +1464,7 @@ function enregistrerArbre(s, moteur) {
       const r = await enregistrer(s.arbre[c].texte, () => {}, () => {}, moteur);
       if (!r.blob) throw new Error('voix sans enregistrement');
       s.audioNoeuds = s.audioNoeuds || {};
-      s.audioNoeuds[c] = r.blob;
+      s.audioNoeuds[c] = r.blob; s.vitMoteur = r.moteur; s.vitNeutre = r.neutre;
       await DB.put(s);
       const fait = Object.keys(s.audioNoeuds).length;
       if (current?.id === s.id) status($('choix-status'), fait < total ? `🎙️ Les autres choix s'enregistrent pendant l'écoute… ${fait}/${total}` : '✔ Tous les choix sont prêts : plus aucune attente', fait < total ? '' : 'ok');
@@ -1787,7 +1809,7 @@ async function ttsEdge(text, onStatus, prog) {
   const morceaux = chunk(pourVoixSimple(text), 2500), blobs = [];
   for (let i = 0; i < morceaux.length; i++) {
     onStatus?.(`<span class="spin"></span>Voix québécoise Microsoft… (${i + 1}/${morceaux.length})`);
-    blobs.push(await edgeMorceau(morceaux[i], $('ms-voice').value, parseInt($('ms-rate').value, 10)));
+    blobs.push(await edgeMorceau(morceaux[i], $('ms-voice').value, curseurMs()));
     prog?.((i + 1) / morceaux.length);
   }
   return new Blob(blobs, { type: 'audio/mpeg' });
@@ -1843,7 +1865,7 @@ async function ttsEdgeMulti(texte, onStatus, prog) {
   const j = await distribuerRoles(texte, onStatus);
   const roles = attribuerVoix(j.personnages || []);
   const narr = { voix: $('ms-voice').value, hauteur: 0, vitesse: 0 };
-  const base = parseInt($('ms-rate').value, 10);
+  const base = curseurMs();
   const segs = [];                                             // morceaux voisins de la même voix : réunis
   for (const x of j.segments) {
     const t = (x.texte || '').trim(); if (!t) continue;
@@ -2205,8 +2227,8 @@ $('btn-preview-gc').onclick = async () => {
   const no = nouvelExtrait();
   try {
     const pl = gcPalier(200);
-    const x = pl ? await extraitGarde(['gcloud', gcVoixDe(pl), gcVitesse(pl), EXTRAIT()], () => ttsGcloud(EXTRAIT())) : { blob: await ttsGcloud(EXTRAIT()) };
-    if (!jouerExtrait(no, x.blob)) return;
+    const x = pl ? await extraitGarde(['gcloud', gcVoixDe(pl), EXTRAIT()], () => neutreDurant(() => ttsGcloud(EXTRAIT()))) : { blob: await neutreDurant(() => ttsGcloud(EXTRAIT())) };
+    if (!jouerExtrait(no, x.blob, facteurLecture('gcloud'))) return;
     status($('set-status'), `✔ Lecture de l'extrait (Google ${pl ? pl.nom : ''})` + gratuit(x), 'ok');
   } catch (e) { status($('set-status'), 'Erreur : ' + e.message, 'err'); }
 };
@@ -2284,7 +2306,7 @@ async function gcMorceau(texte, pl, voix, vitesse, base) {
   }
   throw new Error('Google : lecture refusée');
 }
-const gcVitesse = (pl) => (parseFloat($('gc-rate').value) || .9) + (pl && pl.id !== 'chirp' ? .1 : 0);
+const gcVitesse = (pl) => curseurGc() + (pl && pl.id !== 'chirp' ? .1 : 0);
 const gcEstime = t => Math.round(pourVoixSimple(t).length * 1.3);   // balises SSML comprises
 function gcPalierOuErreur(texte) {
   const pl = gcPalier(gcEstime(texte));
@@ -2536,6 +2558,13 @@ function texteALire(s) {
   if (s.interactive && s.parts.length < NB_PARTIES) return s.parts[s.parts.length - 1].texte;
   return s.histoire;
 }
+const vitesseHistoire = s => s?.vitNeutre ? facteurLecture(s.vitMoteur) : 1;
+function appliquerVitesseLecteur() { regleVitesse($('player'), vitesseHistoire(current)); }
+['loadedmetadata', 'play'].forEach(ev => $('player').addEventListener(ev, appliquerVitesseLecteur));
+['gc-rate', 'ms-rate'].forEach(id => $(id).addEventListener('input', () => {
+  appliquerVitesseLecteur();
+  if (extraitAudio) regleVitesse(extraitAudio, facteurLecture(id === 'gc-rate' ? 'gcloud' : 'edge'));
+}));
 function setAudio(s) {
   if (audioUrl) URL.revokeObjectURL(audioUrl);
   const blob = s.audio || null;
@@ -2723,7 +2752,7 @@ async function enregistrer(texte, onStatus, prog, moteurImpose) {
         blobs.push(await tts(parts[i]));
         prog((i + 1) / parts.length);
       }
-      return { blob: new Blob(blobs, { type: 'audio/mpeg' }) };
+      return { moteur, neutre: vitesseALaLecture(), blob: new Blob(blobs, { type: 'audio/mpeg' }) };
     } catch (e) {
       if (!(e.quota && $('engine').value === 'auto')) throw e;
       moteur = secours(texte.length, 'eleven');
@@ -2733,10 +2762,10 @@ async function enregistrer(texte, onStatus, prog, moteurImpose) {
   if (moteur === 'edge') {
     try {
       if ($('opt-multivoix').checked && $('k-gemini').value.trim()) {
-        try { return { blob: await ttsEdgeMulti(texte, onStatus, prog) }; }
+        try { return { moteur, neutre: vitesseALaLecture(), blob: await ttsEdgeMulti(texte, onStatus, prog) }; }
         catch (e) { if (/injoignable|Voix Microsoft/.test(e.message)) throw e; onStatus(`<span class="spin"></span>Une voix par personnage impossible (${esc(e.message)}) → une seule voix`); }
       }
-      return { blob: await ttsEdge(texte, onStatus, prog) };
+      return { moteur, neutre: vitesseALaLecture(), blob: await ttsEdge(texte, onStatus, prog) };
     } catch (e) {
       if ($('engine').value !== 'auto') throw e;
       edgeEnPanne = true;                                     // pour cette session : on n'insiste pas
@@ -2747,10 +2776,10 @@ async function enregistrer(texte, onStatus, prog, moteurImpose) {
   if (moteur === 'gcloud') {
     try {
       if ($('opt-multivoix').checked && $('k-gemini').value.trim()) {
-        try { return { blob: await ttsGcloudMulti(texte, onStatus, prog) }; }
+        try { return { moteur, neutre: vitesseALaLecture(), blob: await ttsGcloudMulti(texte, onStatus, prog) }; }
         catch (e) { if (e.quota || /^Google/.test(e.message)) throw e; onStatus(`<span class="spin"></span>Une voix par personnage impossible (${esc(e.message)}) → une seule voix`); }
       }
-      return { blob: await ttsGcloud(texte, onStatus, prog) };
+      return { moteur, neutre: vitesseALaLecture(), blob: await ttsGcloud(texte, onStatus, prog) };
     } catch (e) {
       if ($('engine').value !== 'auto') throw e;
       ({ moteur } = await apresGoogle(texte.length));
@@ -2760,7 +2789,7 @@ async function enregistrer(texte, onStatus, prog, moteurImpose) {
   if (moteur === 'gemini') {
     prog(.05);
     const blob = await ttsGemini(texte, m => { onStatus('<span class="spin"></span>' + m); const r = /\((\d+)\/(\d+)\)/.exec(m); if (r) prog(r[1] / r[2]); });
-    return { blob };
+    return { moteur, neutre: vitesseALaLecture(), blob };
   }
   return { telephone: true };
 }
@@ -2828,14 +2857,14 @@ $('btn-read').onclick = async () => {
       return;
     }
     if (s.interactive) {
-      s.partAudio[iPart] = r.blob;
+      s.partAudio[iPart] = r.blob; s.vitMoteur = r.moteur; s.vitNeutre = r.neutre;
       if (s.parts.length === NB_PARTIES && s.partAudio.length === NB_PARTIES && s.partAudio.every(Boolean)) s.audio = await concatAudio(s.partAudio);
       await DB.put(s);
       driveSauver(s);
       setAudio(s);
       jouerFile([{ url: URL.createObjectURL(r.blob), debut: plages[iPart][0], fin: plages[iPart][1], texte }]);
     } else {
-      s.audio = r.blob;
+      s.audio = r.blob; s.vitMoteur = r.moteur; s.vitNeutre = r.neutre;
       await DB.put(s);
       driveSauver(s);
       setAudio(s);
@@ -3034,8 +3063,8 @@ $('btn-preview-ms').onclick = async () => {
   status($('set-status'), '<span class="spin"></span>Enregistrement d\'un extrait…');
   const no = nouvelExtrait();
   try {
-    const x = await extraitGarde(['ms', $('ms-voice').value, $('ms-rate').value, EXTRAIT()], () => ttsEdge(stripTags(EXTRAIT())));
-    if (!jouerExtrait(no, x.blob)) return;
+    const x = await extraitGarde(['ms', $('ms-voice').value, EXTRAIT()], () => neutreDurant(() => ttsEdge(stripTags(EXTRAIT()))));
+    if (!jouerExtrait(no, x.blob, facteurLecture('edge'))) return;
     status($('set-status'), '✔ Lecture de l\'extrait (voix québécoise Microsoft)' + gratuit(x), 'ok');
   } catch (e) { status($('set-status'), 'Erreur : ' + e.message, 'err'); }
 };
