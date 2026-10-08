@@ -183,6 +183,8 @@
   details.choix-enfant .dedans > label { margin-top: 12px; }
   .idees { display: flex; gap: 6px; overflow-x: auto; padding: 6px 0 2px; scrollbar-width: none; }
   .idees::-webkit-scrollbar { display: none; }
+  .idees-lecons { flex-wrap: wrap; overflow: visible; }
+  .idees button.on { background: var(--accent); color: var(--accent-txt); border-color: var(--accent); }
   .idees button { flex: none; padding: 6px 11px; border-radius: 999px; background: var(--surface); border: 1px solid var(--ligne); color: var(--texte); font: inherit; font-size: .85rem; cursor: pointer; }
   .enfant-carte { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--ligne); }
   .enfant-tete { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
@@ -357,7 +359,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v28</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v29</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -456,7 +458,8 @@
         <label for="journee">Sa journée (ce qui s'est vraiment passé)</label>
         <textarea id="journee" placeholder="ex. Abby est allée au parc, elle a perdu sa mitaine rouge, grand-maman est venue souper…"></textarea>
         <label for="moral">Une leçon, tout en douceur</label>
-        <input id="moral" placeholder="ex. le partage, le courage, être gentil avec sa sœur">
+        <input id="moral" placeholder="Touche une ou plusieurs idées, ou écris la tienne">
+        <div class="idees idees-lecons" id="lecons"></div>
       </div>
     </details>
 
@@ -1881,6 +1884,28 @@ function dicter(id, btn) {
   w.className = 'avec-micro';
   el.parentNode.insertBefore(w, el); w.appendChild(el); w.appendChild(b);
 });
+
+/* ==================== LEÇONS : des idées à toucher (une ou plusieurs), ou la sienne ==================== */
+const LECONS = ['🤝 le partage', '🦁 le courage', '💛 la gentillesse', '👫 l’amitié', '🗣️ dire la vérité', '⏳ la patience',
+  '💪 persévérer quand c’est difficile', '🙏 savoir s’excuser', '🫶 aider les autres', '🌈 accepter les différences',
+  '😤 calmer sa colère', '⭐ la confiance en soi', '👂 écouter ses parents', '🌳 prendre soin de la nature',
+  '🙋 la politesse', '🧸 ranger ses affaires', '👶 être un bon grand frère ou une bonne grande sœur', '😴 aimer l’heure du dodo'];
+const leconsChoisies = () => $('moral').value.split(',').map(x => x.trim()).filter(Boolean);
+function majLecons() {
+  const l = leconsChoisies().map(x => x.toLowerCase());
+  $('lecons').querySelectorAll('button').forEach(b => b.classList.toggle('on', l.includes(b.dataset.lecon.toLowerCase())));
+}
+$('lecons').innerHTML = LECONS.map(x => { const v = x.replace(/^[^\p{L}]+/u, '').trim(); return `<button type="button" data-lecon="${esc(v)}">${esc(x)}</button>`; }).join('');
+$('lecons').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const v = b.dataset.lecon, l = leconsChoisies();
+  const i = l.findIndex(x => x.toLowerCase() === v.toLowerCase());
+  if (i >= 0) l.splice(i, 1); else l.push(v);          // toucher = ajouter ; retoucher = enlever
+  $('moral').value = l.join(', ');
+  majLecons();
+});
+$('moral').addEventListener('input', majLecons);
+majLecons();
 
 /* ==================== PLUSIEURS ENFANTS, CHACUN SES CHOIX ====================
    L'enfant 1 garde les champs Prénom / Âge du haut ; les autres s'ajoutent avec « Ajouter un enfant ».
