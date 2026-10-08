@@ -2,12 +2,13 @@
 // Toujours le réseau d'abord, SANS le cache HTTP du navigateur : une nouvelle version arrive dès la
 // réouverture. Le cache ne sert que hors ligne. Les polices (Google Fonts) sont gardées pour de bon :
 // sans réseau, l'app garde son look.
-const CACHE = 'histoires-v30';
+const CACHE = 'histoires-v31';
 const POLICES = 'histoires-polices';
+const EXTRAITS = 'histoires-extraits';   // extraits de voix déjà écoutés : gardés entre les versions
 const FILES = ['./', 'index.html', 'manifest.json', 'icon.svg', 'icon-192.png', 'icon-512.png'];
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES.map(f => new Request(f, { cache: 'reload' })))).then(() => self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(
-  caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE && k !== POLICES).map(k => caches.delete(k)))).then(() => self.clients.claim())));
+  caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE && k !== POLICES && k !== EXTRAITS).map(k => caches.delete(k)))).then(() => self.clients.claim())));
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   const u = new URL(e.request.url);

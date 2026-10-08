@@ -359,7 +359,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v30</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v31</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -1170,6 +1170,20 @@ function arreterExtrait() {
   try { speechSynthesis.cancel(); } catch {}
 }
 function nouvelExtrait() { arreterExtrait(); try { $('player').pause(); } catch {} return ++extraitNo; }
+/* Chaque extrait est enregistré UNE fois puis gardé sur l'appareil (Cache Storage, gardé entre les versions) :
+   les écoutes suivantes sont gratuites. La clé contient la voix, ses réglages et le texte de l'extrait :
+   changer de voix, de vitesse ou de langue donne un nouvel extrait. */
+const EXTRAITS = 'histoires-extraits';
+function hacher(s) { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36) + '-' + s.length; }
+async function extraitGarde(cle, fabriquer) {
+  const url = 'https://extraits.histoires.local/' + hacher(JSON.stringify(cle));
+  let c = null;
+  try { c = await caches.open(EXTRAITS); const r = await c.match(url); if (r) return { blob: await r.blob(), garde: true }; } catch { c = null; }
+  const blob = await fabriquer();
+  try { if (c) await c.put(url, new Response(blob, { headers: { 'Content-Type': blob.type || 'audio/mpeg' } })); } catch {}
+  return { blob, garde: false };
+}
+const gratuit = x => x.garde ? ' · déjà enregistré, gratuit' : ' · enregistré, les prochaines écoutes seront gratuites';
 function jouerExtrait(no, blob) {
   if (no !== extraitNo) return false;                 // un clic plus récent a pris le relais
   arreterExtrait();
@@ -1184,9 +1198,9 @@ $('btn-preview').onclick = async () => {
   status($('set-status'), '<span class="spin"></span>Génération d\'un extrait…');
   try {
     const no = nouvelExtrait();
-    const blob = await tts(EXTRAIT());
-    if (!jouerExtrait(no, blob)) return;
-    status($('set-status'), '✔ Lecture de l\'extrait', 'ok');
+    const x = await extraitGarde(['eleven', id, $('m-eleven').value, $('stability').value, EXTRAIT()], () => tts(EXTRAIT()));
+    if (!jouerExtrait(no, x.blob)) return;
+    status($('set-status'), '✔ Lecture de l\'extrait' + gratuit(x), 'ok');
   } catch (e) { status($('set-status'), 'Erreur : ' + e.message, 'err'); }
 };
 $('btn-preview-g').onclick = async () => {
@@ -1194,9 +1208,10 @@ $('btn-preview-g').onclick = async () => {
   status($('set-status'), '<span class="spin"></span>Gemini enregistre un extrait…');
   const no = nouvelExtrait();
   try {
-    const blob = await ttsGemini(EXTRAIT(), m => status($('set-status'), '<span class="spin"></span>' + m));
-    if (!jouerExtrait(no, blob)) return;
-    status($('set-status'), '✔ Lecture de l\'extrait (voix Gemini)', 'ok');
+    const x = await extraitGarde(['gemini', $('g-voice').value, $('lang').value, EXTRAIT()],
+      () => ttsGemini(EXTRAIT(), m => status($('set-status'), '<span class="spin"></span>' + m)));
+    if (!jouerExtrait(no, x.blob)) return;
+    status($('set-status'), '✔ Lecture de l\'extrait (voix Gemini)' + gratuit(x), 'ok');
   } catch (e) { status($('set-status'), 'Erreur : ' + e.message, 'err'); }
 };
 $('btn-preview-p').onclick = () => { saveSettings(); nouvelExtrait(); parler([stripTags(EXTRAIT())], () => {}, () => {}); };
@@ -2190,9 +2205,9 @@ $('btn-preview-gc').onclick = async () => {
   const no = nouvelExtrait();
   try {
     const pl = gcPalier(200);
-    const blob = await ttsGcloud(EXTRAIT());
-    if (!jouerExtrait(no, blob)) return;
-    status($('set-status'), `✔ Lecture de l'extrait (Google ${pl ? pl.nom : ''})`, 'ok');
+    const x = pl ? await extraitGarde(['gcloud', gcVoixDe(pl), gcVitesse(pl), EXTRAIT()], () => ttsGcloud(EXTRAIT())) : { blob: await ttsGcloud(EXTRAIT()) };
+    if (!jouerExtrait(no, x.blob)) return;
+    status($('set-status'), `✔ Lecture de l'extrait (Google ${pl ? pl.nom : ''})` + gratuit(x), 'ok');
   } catch (e) { status($('set-status'), 'Erreur : ' + e.message, 'err'); }
 };
 /* ───── Direction de jeu pour les voix Google ─────
@@ -3019,9 +3034,9 @@ $('btn-preview-ms').onclick = async () => {
   status($('set-status'), '<span class="spin"></span>Enregistrement d\'un extrait…');
   const no = nouvelExtrait();
   try {
-    const blob = await ttsEdge(stripTags(EXTRAIT()));
-    if (!jouerExtrait(no, blob)) return;
-    status($('set-status'), '✔ Lecture de l\'extrait (voix québécoise Microsoft)', 'ok');
+    const x = await extraitGarde(['ms', $('ms-voice').value, $('ms-rate').value, EXTRAIT()], () => ttsEdge(stripTags(EXTRAIT())));
+    if (!jouerExtrait(no, x.blob)) return;
+    status($('set-status'), '✔ Lecture de l\'extrait (voix québécoise Microsoft)' + gratuit(x), 'ok');
   } catch (e) { status($('set-status'), 'Erreur : ' + e.message, 'err'); }
 };
 
