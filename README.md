@@ -98,3 +98,8 @@ Astuce : `…/#gemini=CLÉ&eleven=CLÉ&voice=VOICE_ID` enregistre les clés en u
 - Dessins : Pollinations SANS compte (`image.pollinations.ai`, seul le vieux modèle est gratuit), file d'attente une image à la fois, réessais sur 402/429 (en pratique 1 à 3 min par image), logo coupé (bas 8,7 %). Consigne : scène D'ABORD, puis fiche, puis style (sinon la scène est ignorée et le rendu fait « photo »).
 - Les images vont dans le texte, la couverture, le livre PDF, le partage (`images[]` au relais, `/partage/<id>/illus/<k>`) et le Drive (fichiers + Google Doc, propriété `il:<id>`, restaurées par « Récupérer »).
 - Les modèles qui regardent l'image précédente demandent un compte Pollinations (pollen) ou Gemini avec facturation : à brancher plus tard.
+
+## v18 — images Gemini (2026-10-08)
+- Facturation activée par Jonathan sur sa clé Gemini (même clé que le texte).
+- `dessinerGemini()` : couverture d'abord (ou le dessin de l'enfant comme modèle), puis les autres images 3 à la fois avec la couverture en référence. Modèles « flash » seulement (les « pro » écartés : trop chers).
+- Refus de facturation → Pollinations pendant 1 h (`img-gemini-ko`). Le chemin suivi dans une histoire à choix est dessiné en premier.

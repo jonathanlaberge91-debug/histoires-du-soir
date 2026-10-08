@@ -346,7 +346,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v17</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v18</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -666,7 +666,7 @@
               <option value="papier">Papier découpé</option>
             </select></div>
         </div>
-        <p class="hint">Dessinées gratuitement par Pollinations, une image à la fois (environ 40 secondes chacune), pendant que tu écoutes.</p>
+        <p class="hint">Dessinées par Gemini (quelques secondes chacune, environ 4 ¢ l'image, la couverture sert de modèle aux autres). Si Gemini refuse, le dessinateur gratuit Pollinations prend le relais (1 à 3 min par image).</p>
         <label class="check"><input type="checkbox" id="opt-musique">Musique douce en fond</label>
         <div class="regle"><label for="musique-vol">Volume de la musique</label><output data-pour="musique-vol"></output></div>
         <input id="musique-vol" type="range" min="0.05" max="0.6" step="0.05" value="0.2">
@@ -822,7 +822,7 @@ async function majModeles() {
   const recents = l => l.sort((a, b) => b.localeCompare(a, 'en', { numeric: true }));
   remplacer(FALLBACK_MODELS, ['gemini-flash-latest', ...recents(noms.filter(n => /flash/.test(n) && !/tts|image|live|audio|embed|thinking|lite|exp/.test(n))).slice(0, 4), 'gemini-flash-lite-latest'].filter(n => n === 'gemini-flash-latest' || noms.includes(n)));
   remplacer(TTS_MODELS, recents(noms.filter(n => /tts/.test(n))).sort((a, b) => /flash/.test(b) - /flash/.test(a)));
-  remplacer(IMAGE_MODELS, recents(noms.filter(n => /image/.test(n) && !/imagen/.test(n))));
+  remplacer(IMAGE_MODELS, recents(noms.filter(n => /image/.test(n) && !/imagen|pro/.test(n))).sort((a, b) => /flash/.test(b) - /flash/.test(a)));
 }
 /* Voix de base ElevenLabs (utilisées si la clé n'a pas la permission « Voices read ») */
 const PREMADE_VOICES = [
@@ -1486,6 +1486,46 @@ async function dessiner(prompt, graine, onAttente) {
   }
   throw new Error('le service d\'images gratuit est trop occupé, réessaie plus tard (bouton 🎨)');
 }
+const STYLES_GEMINI = {
+  aquarelle: 'soft watercolor children\'s picture book style, gentle pastel colors, warm light',
+  crayons: 'colored pencil children\'s picture book style, textured paper, warm colors',
+  anime: 'cute cartoon animation style, bright cheerful colors, rounded shapes',
+  papier: 'cut paper collage children\'s picture book style, layered paper, soft shadows'
+};
+async function dessinerGemini(s, sc, refs) {
+  const key = $('k-gemini').value.trim();
+  const texte = [
+    `Illustrate this scene for a children's picture book, in a ${STYLES_GEMINI[s.illus.style] || STYLES_GEMINI.aquarelle}, landscape format: ${sc.description}`,
+    `Characters: ${s.illus.fiche}`,
+    refs.length ? 'Keep the characters EXACTLY as in the reference image: same faces, hair, clothes, colors and art style. Only the scene, pose and setting change.' : '',
+    'Gentle and reassuring, nothing scary. No text, no letters, no speech bubbles.'
+  ].filter(Boolean).join('\n');
+  const parts = [{ text: texte }];
+  for (const r of refs) parts.push({ inlineData: { mimeType: r.type || 'image/jpeg', data: await b64(r) } });
+  let derniere = '';
+  for (const model of IMAGE_MODELS) {
+    for (let essai = 1; essai <= 3; essai++) {
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+        body: JSON.stringify({ contents: [{ parts }], generationConfig: { responseModalities: ['TEXT', 'IMAGE'] } })
+      });
+      if (r.ok) {
+        const d = await r.json();
+        const im = (d.candidates?.[0]?.content?.parts || []).find(x => x.inlineData?.data);
+        if (im) return reduireImage(deB64(im.inlineData.data, im.inlineData.mimeType || 'image/png'));
+        derniere = 'pas d\'image renvoyée (' + (d.candidates?.[0]?.finishReason || d.promptFeedback?.blockReason || '?') + ')';
+        break;
+      }
+      derniere = await errText(r);
+      if ((r.status === 429 && !/limit: 0|billing|free tier/i.test(derniere)) || r.status >= 500) { await sleep(4000 * essai); continue; }
+      break;
+    }
+    if (/limit: 0|billing|free tier|not available|permission|PERMISSION_DENIED/i.test(derniere)) {
+      const e = new Error('facturation Gemini non active pour les images'); e.facturation = true; throw e;
+    }
+  }
+  throw new Error(derniere || 'aucun modèle d\'images Gemini');
+}
 async function couperLogo(blob) {
   const img = await createImageBitmap(blob);
   const bas = Math.round(img.height * 0.087);           // le logo occupe le bas à droite
@@ -1512,18 +1552,56 @@ function illustrer(s, forcer) {
       const [avant, apres] = STYLES_IMAGE[s.illus.style] || STYLES_IMAGE.aquarelle;
       const base = hashTexte(s.id) % 90000;
       const total = s.illus.scenes.length;
-      for (let i = 0; i < total; i++) {
-        const sc = s.illus.scenes[i];
-        if (s.illusImages?.[sc.cle]) continue;
-        const fait = () => Object.keys(s.illusImages || {}).length;
-        etat(`<span class="spin"></span>🎨 Illustration ${fait() + 1} sur ${total}…`);
-        const prompt = `${avant}: ${sc.description} ${s.illus.fiche} ${apres} No text.`;
-        const blob = await dessiner(prompt, base + i * 101, () => etat(`<span class="spin"></span>🎨 Illustration ${fait() + 1} sur ${total} : le dessinateur gratuit est occupé, on patiente…`));
-        s.illusImages = s.illusImages || {};
+      s.illusImages = s.illusImages || {};
+      const fait = () => Object.keys(s.illusImages).length;
+      const ranger = async (sc, i, blob) => {
         s.illusImages[sc.cle] = blob;
         if (!s.image && i === 0) { s.image = blob; if (current?.id === s.id) afficherCouverture(s); }
         await DB.put(s);
         if (current?.id === s.id) majIllustrations(s);
+      };
+      // Le chemin que l'enfant suit est dessiné en premier
+      const ordre = s.illus.scenes.map((sc, i) => ({ sc, i }))
+        .sort((a, b) => (a.i === 0 ? -1 : b.i === 0 ? 1 : 0) || (s.arbre ? (s.chemin || '').startsWith(b.sc.cle.slice(1)) - (s.chemin || '').startsWith(a.sc.cle.slice(1)) : 0));
+      const restants = ordre.filter(o => !s.illusImages[o.sc.cle]);
+
+      // 1. Gemini (avec facturation) : quelques secondes par image ; la couverture (ou le dessin de l'enfant)
+      //    sert de modèle à toutes les autres images, pour garder les mêmes visages et vêtements.
+      let gemini = $('k-gemini').value.trim() && Date.now() - Number(store.get('img-gemini-ko', '0')) > 3600000;
+      if (gemini) {
+        try {
+          const modele = () => (s.dessin && s.image) ? s.image : (s.illusImages[s.illus.scenes[0].cle] || null);
+          const premier = restants.find(o => o.i === 0);
+          if (premier) {
+            etat(`<span class="spin"></span>🎨 Couverture (Gemini)…`);
+            await ranger(premier.sc, 0, await dessinerGemini(s, premier.sc, s.dessin && s.image ? [s.image] : []));
+          }
+          let k = 0;
+          const autres = restants.filter(o => o.i !== 0);
+          const travailleur = async () => {
+            while (k < autres.length) {
+              const o = autres[k++];
+              etat(`<span class="spin"></span>🎨 Illustrations (Gemini)… ${fait()}/${total}`);
+              const ref = modele();
+              await ranger(o.sc, o.i, await dessinerGemini(s, o.sc, ref ? [ref] : []));
+            }
+          };
+          await Promise.all([travailleur(), travailleur(), travailleur()]);      // 3 à la fois
+        } catch (e) {
+          if (e.facturation) store.set('img-gemini-ko', String(Date.now()));   // pas de facturation : Pollinations pendant 1 h
+          gemini = false;
+          etat(`<span class="spin"></span>🎨 Gemini indisponible (${esc(e.message.slice(0, 80))}) → dessinateur gratuit…`);
+        }
+      }
+      // 2. Pollinations gratuit, une image à la fois, pour ce qui manque encore
+      if (!gemini) {
+        for (const { sc, i } of ordre) {
+          if (s.illusImages[sc.cle]) continue;
+          etat(`<span class="spin"></span>🎨 Illustration ${fait() + 1} sur ${total}…`);
+          const prompt = `${avant}: ${sc.description} ${s.illus.fiche} ${apres} No text.`;
+          const blob = await dessiner(prompt, base + i * 101, () => etat(`<span class="spin"></span>🎨 Illustration ${fait() + 1} sur ${total} : le dessinateur gratuit est occupé, on patiente…`));
+          await ranger(sc, i, blob);
+        }
       }
       etat(`🎨 ${total} illustration${total > 1 ? 's' : ''}`);
       driveSauver(s);
