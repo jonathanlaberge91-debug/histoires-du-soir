@@ -346,7 +346,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v21</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v22</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -549,12 +549,12 @@
           <option value="phone">Voix du téléphone</option>
         </select>
         <div class="moteurs">
-          <div class="moteur" data-moteur-choix="auto"><span class="m-ic">✨</span><span><b>Automatique</b><small>ElevenLabs tant qu'il reste des crédits, puis les voix Google (Chirp, Studio, Neural2), puis la voix Microsoft</small></span><span class="rond"></span></div>
+          <div class="moteur" data-moteur-choix="auto"><span class="m-ic">✨</span><span><b>Automatique</b><small>Les voix Google d'abord (Chirp 3 HD, Neural2, Studio), puis ElevenLabs s'il reste des crédits, puis la voix Microsoft</small></span><span class="rond"></span></div>
           <div class="moteur" data-moteur-choix="edge"><span class="m-ic">🍁</span><span><b>Voix québécoise Microsoft</b><small>Gratuite, sans limite · Sylvie, Antoine, Jean, Thierry</small></span><span class="rond"></span></div>
           <div class="moteur" data-moteur-choix="eleven"><span class="m-ic">🎭</span><span><b>ElevenLabs</b><small>La plus expressive (chuchote, rit) · 10 000 caractères gratuits par mois</small></span><span class="rond"></span></div>
           <div class="moteur" data-moteur-choix="gemini"><span class="m-ic">♊</span><span><b>Voix Gemini</b><small>Gratuite, expressive, un peu lente à enregistrer</small></span><span class="rond"></span></div>
           <div class="moteur" data-moteur-choix="phone"><span class="m-ic">📱</span><span><b>Voix du téléphone</b><small>Gratuite, hors ligne, plus robotique</small></span><span class="rond"></span></div>
-          <div class="moteur" data-moteur-choix="gcloud"><span class="m-ic">☁️</span><span><b>Voix Google</b><small>Chirp 3 HD, puis Studio, puis Neural2 · environ 1 million de caractères gratuits par mois pour chaque</small></span><span class="rond"></span></div>
+          <div class="moteur" data-moteur-choix="gcloud"><span class="m-ic">☁️</span><span><b>Voix Google</b><small>Chirp 3 HD, puis Neural2, puis Studio · environ 1 million de caractères gratuits par mois pour chaque</small></span><span class="rond"></span></div>
         </div>
 
         <div class="panneau" data-pour="edge auto">
@@ -632,16 +632,16 @@
 
         <div class="panneau" data-pour="gcloud auto">
           <div class="panneau-tete">☁️ Voix Google (ta facturation Google)</div>
-          <p class="hint" style="margin-top:4px">La meilleure d'abord : <b>Chirp 3 HD</b> jusqu'à 995 000 caractères dans le mois, puis <b>Studio</b> jusqu'à 995 000, puis <b>Neural2</b>. Chaque palier a son million gratuit par mois chez Google.</p>
+          <p class="hint" style="margin-top:4px">La meilleure d'abord : <b>Chirp 3 HD</b> jusqu'à 995 000 caractères dans le mois, puis <b>Neural2</b> (accent d'ici) jusqu'à 995 000, puis <b>Studio</b> (voix de France). Chaque palier a son million gratuit par mois chez Google. Avec « Une voix par personnage », chaque personnage reçoit sa propre voix Google.</p>
           <label for="gc-voice">1. Chirp 3 HD (la plus naturelle)</label>
           <div style="display:flex; gap:8px">
             <select id="gc-voice" style="flex:1"><option value="">— touche ↻ —</option></select>
             <button class="sec" id="btn-gc-voices" title="Charger les voix">↻</button>
           </div>
-          <label for="gc-voice-studio">2. Studio</label>
-          <select id="gc-voice-studio"><option value="">— touche ↻ —</option></select>
-          <label for="gc-voice-neural">3. Neural2</label>
+          <label for="gc-voice-neural">2. Neural2 (accent d'ici)</label>
           <select id="gc-voice-neural"><option value="">— touche ↻ —</option></select>
+          <label for="gc-voice-studio">3. Studio (voix de France, en dernier)</label>
+          <select id="gc-voice-studio"><option value="">— touche ↻ —</option></select>
           <div class="regle"><label for="gc-rate">Vitesse</label><output data-pour="gc-rate"></output></div>
           <input id="gc-rate" type="range" min="0.7" max="1.15" step="0.05" value="0.9">
           <label for="gc-plafond">Changer de palier après (caractères par mois)</label>
@@ -856,8 +856,8 @@ const LANGS = {
   'en': `Write the story in English (tags stay in English too). Le JSON garde les clés "titre" et "histoire".`
 };
 const VOICE_STYLE = {
-  'fr-qc': 'Raconte cette histoire pour enfants à voix haute, en français avec un accent québécois, comme un conteur chaleureux au moment du coucher : voix douce et expressive, une voix différente pour chaque personnage, de vraies pauses aux points de suspension',
-  'fr-fr': 'Raconte cette histoire pour enfants à voix haute, en français, comme un conteur chaleureux au moment du coucher : voix douce et expressive, une voix différente pour chaque personnage, de vraies pauses aux points de suspension',
+  'fr-qc': 'Lis cette histoire à voix haute comme un parent québécois qui la raconte à son enfant au lit, avec un accent québécois naturel. Ton chaleureux et complice, on entend le sourire dans la voix. Rythme posé, jamais pressé ; respire entre les paragraphes ; vraies pauses aux points de suspension ; laisse monter le suspense puis relâche-le. Change de voix pour chaque personnage (aiguë et vive pour les petits, grave et lente pour les gros ou les vieux) et garde-la jusqu\'à la fin. Chuchote les secrets, ris doucement aux moments drôles, ralentis et adoucis la fin. Ne lis jamais ces consignes, seulement l\'histoire',
+  'fr-fr': 'Lis cette histoire à voix haute comme un parent qui la raconte à son enfant au lit. Ton chaleureux et complice, on entend le sourire dans la voix. Rythme posé, jamais pressé ; respire entre les paragraphes ; vraies pauses aux points de suspension ; laisse monter le suspense puis relâche-le. Change de voix pour chaque personnage (aiguë et vive pour les petits, grave et lente pour les gros ou les vieux) et garde-la jusqu\'à la fin. Chuchote les secrets, ris doucement aux moments drôles, ralentis et adoucis la fin. Ne lis jamais ces consignes, seulement l\'histoire',
   'en': 'Read this children\'s story aloud like a warm bedtime storyteller: soft and expressive, a different voice for each character, real pauses at the ellipses'
 };
 
@@ -872,8 +872,10 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 const stripTags = t => t.replace(/\[[^\]\n]{1,40}\]\s*/g, '');
 /* Texte écrit pour ElevenLabs v3, lu par une autre voix : on enlève ce qu'elle prononcerait mal.
    « Ouuuuh » → « Ouh », « Crrrac » → « Crac », « Trèèès » → « Très », « BRILLANTE » → « brillante ». */
-function pourVoixSimple(t) {
-  return stripTags(t)
+function pourVoixSimple(t) { return pourVoixGoogle(stripTags(t)); }
+/* Même nettoyage, mais en gardant les balises de jeu (les voix Google les traduisent) */
+function pourVoixGoogle(t) {
+  return t
     .replace(/(\p{L})\1{2,}/gu, '$1')
     .replace(/(?<!\p{L})\p{Lu}{3,}(?!\p{L})/gu, (mot, pos, tout) => {
       const avant = tout.slice(0, pos).trimEnd();
@@ -1212,6 +1214,11 @@ $('btn-quota').onclick = () => afficherQuota(true);
 async function choisirMoteur(nb) {
   const m = $('engine').value;
   if (m !== 'auto') return { moteur: m };
+  if (gcCle() && gcPalier(Math.round(nb * 1.3))) return { moteur: 'gcloud' };   // les voix Google d'abord
+  return apresGoogle(nb);
+}
+/* Après les voix Google : ElevenLabs s'il reste des crédits, puis Microsoft, Gemini, téléphone */
+async function apresGoogle(nb) {
   const kE = $('k-eleven').value.trim();
   if (kE) {
     const q = await quotaEleven();
@@ -1936,14 +1943,14 @@ $('btn-livre').onclick = () => {
 };
 
 /* ==================== VOIX GOOGLE (Cloud Text-to-Speech) ====================
-   Trois paliers, du meilleur au moins bon : Chirp 3 HD → Studio → Neural2. Chacun a environ un million de
+   Trois paliers : Chirp 3 HD → Neural2 (accent d'ici) → Studio (seulement des voix de France). Chacun a environ un million de
    caractères gratuits par mois chez Google ; l'app passe au palier suivant à 995 000 (compteur par palier,
    tenu par l'app, remis à zéro chaque mois). Clé : celle des Clés « Google Cloud », sinon la clé Gemini
    (même projet, facturation activée ; l'API Cloud Text-to-Speech doit y être activée). */
 const GC_PALIERS = [
   { id: 'chirp', nom: 'Chirp 3 HD', champ: 'gc-voice', test: n => /Chirp3-HD/.test(n) },
-  { id: 'studio', nom: 'Studio', champ: 'gc-voice-studio', test: n => /Studio/.test(n) },
-  { id: 'neural', nom: 'Neural2', champ: 'gc-voice-neural', test: n => /Neural2/.test(n) }
+  { id: 'neural', nom: 'Neural2', champ: 'gc-voice-neural', test: n => /Neural2/.test(n) },
+  { id: 'studio', nom: 'Studio', champ: 'gc-voice-studio', test: n => /Studio/.test(n) }
 ];
 const gcCle = () => $('k-gcloud').value.trim() || $('k-gemini').value.trim();
 const gcMoisP = id => 'gc:' + id + ':' + new Date().toISOString().slice(0, 7);
@@ -1982,6 +1989,7 @@ async function gcChargerVoix() {
         `<option value="${esc(v.name)}" ${v.name === cur ? 'selected' : ''}>${esc(v.name.replace(/^fr-(CA|FR)-/, ''))} — ${genre(v.ssmlGender)}${france ? ' (France)' : ''}</option>`).join('');
       if (!cur && l.length) $(pl.champ).value = (l.find(v => v.ssmlGender === 'FEMALE') || l[0]).name;
       store.set('set:' + pl.champ, $(pl.champ).value);
+      store.set('gc:liste:' + pl.id, JSON.stringify(l.map(v => ({ n: v.name, g: v.ssmlGender }))));
       resume.push(`${pl.nom} : ${l.length}${france && l.length ? ' (France)' : ''}`);
     }
     gcAfficher();
@@ -1996,47 +2004,159 @@ $('btn-preview-gc').onclick = async () => {
   status($('set-status'), '<span class="spin"></span>Google enregistre un extrait…');
   try {
     const pl = gcPalier(200);
-    const blob = await ttsGcloud(stripTags(EXTRAIT()));
+    const blob = await ttsGcloud(EXTRAIT());
     new Audio(URL.createObjectURL(blob)).play();
     status($('set-status'), `✔ Lecture de l'extrait (Google ${pl ? pl.nom : ''})`, 'ok');
   } catch (e) { status($('set-status'), 'Erreur : ' + e.message, 'err'); }
 };
-async function ttsGcloud(text, onStatus, prog) {
-  const key = gcCle();
-  if (!key) throw new Error('Ajoute ta clé Gemini (ou Google Cloud) dans ⚙️ Réglages → Clés.');
-  if (!gcVoix()) throw new Error('Choisis les voix Google dans ⚙️ Réglages → Qui raconte → ↻.');
-  const propre = pourVoixSimple(text);
-  const pl = gcPalier(propre.length);
+/* ───── Direction de jeu pour les voix Google ─────
+   L'histoire est écrite avec des balises de jeu ([whispers], [deep voice], [pause]…). Au lieu de les jeter :
+   - Chirp 3 HD : comprend seulement les pauses (« markup ») ; il joue déjà tout seul l'intonation de la ponctuation.
+   - Neural2 et Studio : SSML, chaque balise devient une vitesse, une hauteur et un volume sur la phrase qu'elle colore
+     (Studio refuse la hauteur : on la retire). Google compte aussi les caractères des balises : le compteur les inclut. */
+const GC_JEU = {
+  whispers: { r: 88, p: -1, v: 'soft' }, softly: { r: 90, v: 'soft' }, sleepy: { r: 82, p: -1, v: 'soft' },
+  tenderly: { r: 90, v: 'soft' }, warmly: { r: 94 }, relieved: { r: 92 },
+  excited: { r: 110, p: 2 }, happy: { r: 105, p: 1 }, playfully: { r: 105, p: 1 }, mischievously: { r: 103, p: 1 },
+  proud: { p: 1 }, amazed: { r: 92, p: 2 }, surprised: { r: 106, p: 2 }, curious: { r: 98, p: 1 }, quickly: { r: 115 },
+  sad: { r: 88, p: -2, v: 'soft' }, nervous: { r: 106, p: 1 }, scared: { r: 108, p: 2, v: 'soft' }, grumpy: { r: 95, p: -2 },
+  slowly: { r: 82 }, mysteriously: { r: 86, p: -1, v: 'soft' }, dramatically: { r: 88, p: -1 }, shouting: { r: 105, p: 2, v: 'loud' },
+  'deep voice': { r: 92, p: -5 }, 'booming voice': { r: 92, p: -4, v: 'loud' }, 'old voice': { r: 85, p: -3 },
+  'squeaky voice': { r: 108, p: 5 }, 'tiny voice': { r: 105, p: 6, v: 'soft' }
+};
+const xmlEsc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const gcTexteSsml = t => xmlEsc(t).replace(/…(?!\s*[»"])/g, '…<break time="350ms"/>');
+function gcProsodie(t, j, studio, brut) {
+  const a = [];
+  if (j?.r && j.r !== 100) a.push(`rate="${j.r}%"`);
+  if (j?.p && !studio) a.push(`pitch="${j.p > 0 ? '+' : ''}${j.p}st"`);
+  if (j?.v) a.push(`volume="${j.v}"`);
+  const c = brut ? t : gcTexteSsml(t);
+  return a.length ? `<prosody ${a.join(' ')}>${c}</prosody>` : c;
+}
+/* Un paragraphe → SSML : la balise colore la réplique entière si elle précède « … », sinon la phrase qui suit */
+function gcParaSsml(p, studio) {
+  const m = p.split(/\[([^\]\n]{1,40})\]\s*/);
+  let out = gcTexteSsml(m[0]), jeu = null;
+  for (let i = 1; i < m.length; i += 2) {
+    const tag = m[i].trim().toLowerCase(), suite = m[i + 1] || '';
+    if (/^pause/.test(tag)) { out += '<break time="900ms"/>' + gcTexteSsml(suite); jeu = null; continue; }
+    const j = GC_JEU[tag];
+    if (j) jeu = { ...(jeu || {}), ...j };
+    if (!suite.trim()) continue;                              // balises collées : elles se combinent
+    if (!jeu) { out += gcTexteSsml(suite); continue; }        // [laughs], [sighs]… : la voix ne sait pas les faire
+    const portee = (/^\s*«[^»]*»/.exec(suite) || /^[^.!?…]*[.!?…]+[»"]?/.exec(suite) || [suite])[0];
+    out += gcProsodie(portee, jeu, studio) + gcTexteSsml(suite.slice(portee.length));
+    jeu = null;
+  }
+  return out;
+}
+/* Texte (avec balises) → entrée Google selon le palier ; base = jeu d'un personnage (mode une voix par personnage) */
+function gcEntree(texte, pl, base) {
+  if (pl.id === 'chirp') {                                    // pauses seulement : entre paragraphes et aux [pause]
+    return { markup: paras(texte).map(p => stripTags(p.replace(/\[\s*pause[^\]]*\]/gi, '\u0001')).replace(/\u0001/g, '[pause long] ')).join(' [pause] ') };
+  }
+  const studio = pl.id === 'studio';
+  const corps = paras(texte).map(p => `<p>${gcParaSsml(p, studio)}</p>`).join('<break time="450ms"/>');
+  return { ssml: `<speak>${base ? gcProsodie(corps, base, studio, true) : corps}</speak>` };
+}
+/* Un morceau → MP3 ; compte les caractères envoyés dans le palier */
+async function gcMorceau(texte, pl, voix, vitesse, base) {
+  const url = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${encodeURIComponent(gcCle())}`;
+  let entree = gcEntree(texte, pl, base), rate = vitesse;
+  for (let essai = 0; essai < 3; essai++) {
+    const corps = JSON.stringify({
+      input: entree, voice: { languageCode: voix.slice(0, 5), name: voix },
+      audioConfig: { audioEncoding: 'MP3', ...(rate ? { speakingRate: rate } : {}) }
+    });
+    const r = await withRetry(() => fetch(url, { method: 'POST', body: corps }));
+    if (r.ok) {
+      store.set(gcMoisP(pl.id), String(gcUtilise(pl.id) + (entree.ssml || entree.markup || entree.text).length));
+      return deB64((await r.json()).audioContent, 'audio/mpeg');
+    }
+    const m = await errText(r);
+    if (r.status === 400 && rate && /rate|speaking/i.test(m)) { rate = 0; continue; }          // voix qui refuse la vitesse
+    if (r.status === 400 && !entree.text) { entree = { text: stripTags(texte) }; continue; }   // direction de jeu refusée : texte simple
+    const e = new Error('Google : ' + (/SERVICE_DISABLED|has not been used/i.test(m) ? 'active l\'API « Cloud Text-to-Speech » sur ton projet (Réglages → Qui raconte → lien)' : m));
+    e.quota = r.status === 429 || /quota/i.test(m);
+    throw e;
+  }
+  throw new Error('Google : lecture refusée');
+}
+const gcVitesse = () => parseFloat($('gc-rate').value) || .9;
+const gcEstime = t => Math.round(pourVoixSimple(t).length * 1.3);   // balises SSML comprises
+function gcPalierOuErreur(texte) {
+  const pl = gcPalier(gcEstime(texte));
   if (!pl) { const e = new Error(`les trois paliers de voix Google sont pleins ce mois-ci (${fmt(gcPlafond())} chacun)`); e.quota = true; throw e; }
-  const voix = gcVoixDe(pl), langue = voix.slice(0, 5);
-  const morceaux = chunk(propre, 1500), blobs = [];
-  let vitesse = true;
+  return pl;
+}
+async function ttsGcloud(text, onStatus, prog) {
+  if (!gcCle()) throw new Error('Ajoute ta clé Gemini (ou Google Cloud) dans ⚙️ Réglages → Clés.');
+  if (!gcVoix()) throw new Error('Choisis les voix Google dans ⚙️ Réglages → Qui raconte → ↻.');
+  const pl = gcPalierOuErreur(text);
+  const morceaux = chunk(pourVoixGoogle(text), pl.id === 'chirp' ? 1500 : 1100), blobs = [];
   for (let i = 0; i < morceaux.length; i++) {
     onStatus?.(`<span class="spin"></span>Voix Google ${pl.nom}… (${i + 1}/${morceaux.length})`);
-    const corps = () => JSON.stringify({
-      input: { text: morceaux[i] },
-      voice: { languageCode: langue, name: voix },
-      audioConfig: { audioEncoding: 'MP3', ...(vitesse ? { speakingRate: parseFloat($('gc-rate').value) || .9 } : {}) }
-    });
-    const url = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${encodeURIComponent(key)}`;
-    let r = await withRetry(() => fetch(url, { method: 'POST', body: corps() }));
-    if (!r.ok && r.status === 400 && vitesse) {                // certaines voix refusent la vitesse : on réessaie sans
-      const m = await errText(r);
-      if (/rate|speaking/i.test(m)) { vitesse = false; r = await fetch(url, { method: 'POST', body: corps() }); }
-      else throw new Error('Google : ' + m);
-    }
-    if (!r.ok) {
-      const m = await errText(r);
-      const e = new Error('Google : ' + (/SERVICE_DISABLED|has not been used/i.test(m) ? 'active l\'API « Cloud Text-to-Speech » sur ton projet (Réglages → Qui raconte → lien)' : m));
-      e.quota = r.status === 429 || /quota/i.test(m);
-      throw e;
-    }
-    blobs.push(deB64((await r.json()).audioContent, 'audio/mpeg'));
-    store.set(gcMoisP(pl.id), String(gcUtilise(pl.id) + morceaux[i].length));
+    blobs.push(await gcMorceau(morceaux[i], pl, gcVoixDe(pl), gcVitesse()));
     prog?.((i + 1) / morceaux.length);
   }
   gcAfficher();
   return new Blob(blobs, { type: 'audio/mpeg' });
+}
+/* ───── Une vraie voix Google différente par personnage ─────
+   Même découpage par Gemini que pour Microsoft. Chirp 3 HD a 30 voix d'ici (15 femmes, 15 hommes) ;
+   Neural2 n'en a que 4 : on varie alors la hauteur. Enfant = plus vif et plus aigu, vieux = plus lent et plus grave. */
+async function gcListe(pl) {
+  try { const l = JSON.parse(store.get('gc:liste:' + pl.id, 'null')); if (l?.length) return l; } catch {}
+  const r = await fetch(`https://texttospeech.googleapis.com/v1/voices?languageCode=fr&key=${encodeURIComponent(gcCle())}`);
+  if (!r.ok) throw new Error('liste des voix Google : ' + await errText(r));
+  const lang = gcVoixDe(pl).slice(0, 5);
+  const l = ((await r.json()).voices || []).filter(v => pl.test(v.name) && v.languageCodes.includes(lang)).map(v => ({ n: v.name, g: v.ssmlGender }));
+  store.set('gc:liste:' + pl.id, JSON.stringify(l));
+  return l;
+}
+async function ttsGcloudMulti(texte, onStatus, prog) {
+  if (!gcCle() || !gcVoix()) throw new Error('voix Google pas choisies');
+  const pl = gcPalierOuErreur(texte);
+  onStatus('<span class="spin"></span>Gemini distribue les rôles…');
+  const j = await distribuerRoles(texte, onStatus);
+  const narr = gcVoixDe(pl), liste = await gcListe(pl);
+  const pool = g => liste.filter(v => v.g === g && v.n !== narr).map(v => v.n);
+  const F = pool('FEMALE'), M = pool('MALE');
+  const roles = {};
+  let iF = 0, iM = 0;
+  for (const p of j.personnages || []) {
+    const l = p.genre === 'm' ? M : F;
+    if (!l.length) continue;
+    const i = p.genre === 'm' ? iM++ : iF++;
+    const base = { r: 100, p: (p.genre === 'm' ? -3 : 3) * Math.floor(i / l.length) };   // plus de personnages que de voix
+    if (p.age === 'enfant') { base.r = 106; base.p += 3; } else if (p.age === 'vieux') { base.r = 88; base.p -= 3; }
+    roles[p.nom] = { voix: l[i % l.length], base };
+  }
+  const segs = [];                                             // morceaux voisins de la même voix : réunis
+  for (const x of j.segments) {
+    const t = (x.texte || '').trim(); if (!t) continue;
+    const qui = roles[x.qui] ? x.qui : 'narrateur';
+    const der = segs[segs.length - 1];
+    if (der && der.qui === qui && der.t.length + t.length < 1000) der.t += (qui === 'narrateur' ? '\n\n' : ' ') + t;
+    else segs.push({ qui, t });
+  }
+  const out = new Array(segs.length);
+  let fait = 0, k = 0;
+  const travailleur = async () => {
+    while (k < segs.length) {
+      const i = k++, r = roles[segs[i].qui];
+      // Chirp ne connaît pas la hauteur : seulement la vitesse du personnage ; Neural2/Studio : SSML
+      const vit = gcVitesse() * (r && pl.id === 'chirp' ? r.base.r / 100 : 1);
+      out[i] = await gcMorceau(segs[i].t, pl, r ? r.voix : narr, vit, r && pl.id !== 'chirp' ? r.base : null);
+      fait++;
+      onStatus(`<span class="spin"></span>Voix Google ${pl.nom}, une par personnage (${Object.keys(roles).length})… ${fait}/${segs.length}`);
+      prog?.(fait / segs.length);
+    }
+  };
+  await Promise.all([travailleur(), travailleur(), travailleur()]);   // 3 à la fois
+  gcAfficher();
+  return new Blob(out, { type: 'audio/mpeg' });
 }
 
 /* ==================== VOIX GEMINI ==================== */
@@ -2425,11 +2545,15 @@ async function enregistrer(texte, onStatus, prog, moteurImpose) {
   }
   if (moteur === 'gcloud') {
     try {
+      if ($('opt-multivoix').checked && $('k-gemini').value.trim()) {
+        try { return { blob: await ttsGcloudMulti(texte, onStatus, prog) }; }
+        catch (e) { if (e.quota || /^Google/.test(e.message)) throw e; onStatus(`<span class="spin"></span>Une voix par personnage impossible (${esc(e.message)}) → une seule voix`); }
+      }
       return { blob: await ttsGcloud(texte, onStatus, prog) };
     } catch (e) {
-      if (!(e.quota && $('engine').value === 'auto')) throw e;
-      moteur = secours(texte.length, 'gcloud');
-      onStatus(`<span class="spin"></span>${e.message} → ${NOMS_VOIX[moteur]}`);
+      if ($('engine').value !== 'auto') throw e;
+      ({ moteur } = await apresGoogle(texte.length));
+      onStatus(`<span class="spin"></span>${esc(e.message)} → ${NOMS_VOIX[moteur]}`);
     }
   }
   if (moteur === 'gemini') {
