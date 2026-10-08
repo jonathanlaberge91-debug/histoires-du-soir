@@ -359,7 +359,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v29</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v30</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -1162,27 +1162,44 @@ $('btn-voices').onclick = loadVoices;
 const EXTRAIT = () => $('lang').value === 'en'
   ? '[warmly] Once upon a time… [whispers] in a forest full of secrets, [excited] a little fox found a GLOWING stone!'
   : '[warmly] Il était une fois… [whispers] dans une forêt pleine de secrets, [excited] un petit renard qui trouva une pierre BRILLANTE !';
+/* Un seul extrait de voix à la fois : un nouveau clic coupe l'extrait en cours ;
+   si on clique deux fois pendant l'enregistrement, seul le dernier extrait demandé joue. */
+let extraitAudio = null, extraitNo = 0;
+function arreterExtrait() {
+  if (extraitAudio) { extraitAudio.pause(); URL.revokeObjectURL(extraitAudio.src); extraitAudio = null; }
+  try { speechSynthesis.cancel(); } catch {}
+}
+function nouvelExtrait() { arreterExtrait(); try { $('player').pause(); } catch {} return ++extraitNo; }
+function jouerExtrait(no, blob) {
+  if (no !== extraitNo) return false;                 // un clic plus récent a pris le relais
+  arreterExtrait();
+  extraitAudio = new Audio(URL.createObjectURL(blob));
+  extraitAudio.play();
+  return true;
+}
 $('btn-preview').onclick = async () => {
   const id = $('voice-id').value.trim() || $('voice').value;
   if (!id) return status($('set-status'), 'Choisis une voix.', 'err');
   saveSettings();
   status($('set-status'), '<span class="spin"></span>Génération d\'un extrait…');
   try {
+    const no = nouvelExtrait();
     const blob = await tts(EXTRAIT());
-    new Audio(URL.createObjectURL(blob)).play();
+    if (!jouerExtrait(no, blob)) return;
     status($('set-status'), '✔ Lecture de l\'extrait', 'ok');
   } catch (e) { status($('set-status'), 'Erreur : ' + e.message, 'err'); }
 };
 $('btn-preview-g').onclick = async () => {
   saveSettings();
   status($('set-status'), '<span class="spin"></span>Gemini enregistre un extrait…');
+  const no = nouvelExtrait();
   try {
     const blob = await ttsGemini(EXTRAIT(), m => status($('set-status'), '<span class="spin"></span>' + m));
-    new Audio(URL.createObjectURL(blob)).play();
+    if (!jouerExtrait(no, blob)) return;
     status($('set-status'), '✔ Lecture de l\'extrait (voix Gemini)', 'ok');
   } catch (e) { status($('set-status'), 'Erreur : ' + e.message, 'err'); }
 };
-$('btn-preview-p').onclick = () => { saveSettings(); parler([stripTags(EXTRAIT())], () => {}, () => {}); };
+$('btn-preview-p').onclick = () => { saveSettings(); nouvelExtrait(); parler([stripTags(EXTRAIT())], () => {}, () => {}); };
 
 /* Réessaie automatiquement si le service est surchargé (429 / 5xx) */
 async function withRetry(fn, onRetry) {
@@ -2170,10 +2187,11 @@ $('gc-plafond').onchange = gcAfficher;
 $('btn-preview-gc').onclick = async () => {
   saveSettings();
   status($('set-status'), '<span class="spin"></span>Google enregistre un extrait…');
+  const no = nouvelExtrait();
   try {
     const pl = gcPalier(200);
     const blob = await ttsGcloud(EXTRAIT());
-    new Audio(URL.createObjectURL(blob)).play();
+    if (!jouerExtrait(no, blob)) return;
     status($('set-status'), `✔ Lecture de l'extrait (Google ${pl ? pl.nom : ''})`, 'ok');
   } catch (e) { status($('set-status'), 'Erreur : ' + e.message, 'err'); }
 };
@@ -2999,9 +3017,10 @@ if ($('k-eleven').value) afficherQuota();
 $('btn-preview-ms').onclick = async () => {
   saveSettings();
   status($('set-status'), '<span class="spin"></span>Enregistrement d\'un extrait…');
+  const no = nouvelExtrait();
   try {
     const blob = await ttsEdge(stripTags(EXTRAIT()));
-    new Audio(URL.createObjectURL(blob)).play();
+    if (!jouerExtrait(no, blob)) return;
     status($('set-status'), '✔ Lecture de l\'extrait (voix québécoise Microsoft)', 'ok');
   } catch (e) { status($('set-status'), 'Erreur : ' + e.message, 'err'); }
 };
