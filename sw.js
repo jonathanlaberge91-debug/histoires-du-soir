@@ -2,7 +2,7 @@
 // Toujours le réseau d'abord, SANS le cache HTTP du navigateur : une nouvelle version arrive dès la
 // réouverture. Le cache ne sert que hors ligne. Les polices (Google Fonts) sont gardées pour de bon :
 // sans réseau, l'app garde son look.
-const CACHE = 'histoires-v35';
+const CACHE = 'histoires-v36';
 const POLICES = 'histoires-polices';
 const EXTRAITS = 'histoires-extraits';   // extraits de voix déjà écoutés : gardés entre les versions
 const FILES = ['./', 'index.html', 'manifest.json', 'icon.svg', 'icon-192.png', 'icon-512.png'];

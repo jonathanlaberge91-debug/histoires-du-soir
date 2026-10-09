@@ -104,8 +104,19 @@ function index() {
 function indexSauver() { indexFichier().setContent(JSON.stringify(INDEX || {})); }
 const fiche = id => (index()[id] = index()[id] || {});
 
+/* Nouvelle clé du serveur des voix : posée depuis relais-a-poser.js (fichier poussé par clasp, JAMAIS dans git),
+   puis donnée aux appareils par l'action « relais » : ils la prennent tout seuls, sans retoucher le lien du document. */
+function poserRelais() {
+  if (typeof RELAIS_A_POSER !== 'string' || !/^[\w-]{20,100}$/.test(RELAIS_A_POSER)) return;
+  const pr = P();
+  if (pr.getProperty('RELAIS') === RELAIS_A_POSER) return;
+  pr.setProperty('RELAIS', RELAIS_A_POSER);
+  if (pr.getProperty('SECRET')) creerDocConfig(pr.getProperty('SECRET'));   // le lien du document porte aussi la nouvelle clé
+}
+
 /* ───────── GET : première ouverture (configuration) ; liste et chargement gardés pour les vieux appareils ───────── */
 function doGet(e) {
+  try { poserRelais(); } catch (x) {}
   const p = (e && e.parameter) || {};
   let secret = P().getProperty('SECRET');
   if (!secret) {
@@ -129,6 +140,8 @@ function doPost(e) {
   const verrou = LockService.getScriptLock();
   try {
     if (!verrou.tryLock(30000)) return sortie({ ok: false, erreur: 'Drive occupé, nouvel essai plus tard' });
+    try { poserRelais(); } catch (x) {}
+    if (b.a === 'relais') return sortie({ ok: true, relais: P().getProperty('RELAIS') || '' });
     if (b.a === 'liste') return sortie({ ok: true, histoires: liste() });
     if (b.a === 'charger') return sortie(charger(b.id));
     if (b.a === 'sauver') return sortie(sauver(b));

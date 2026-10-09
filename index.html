@@ -359,7 +359,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v35</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v36</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -1836,6 +1836,22 @@ let edgeEnPanne = false;
 /* Un morceau de texte → MP3 (voix, vitesse en %, hauteur en Hz) */
 const cleRelais = () => store.get('set:relais-key');
 const entetesRelais = () => ({ 'Content-Type': 'application/json', 'X-Relais': cleRelais() });
+/* La clé du serveur peut changer : si le serveur la refuse (401), l'app reprend la clé actuelle dans le Drive
+   (gardée par le script de sauvegarde, que seul ton compte Google peut lire) et réessaie. Rien à toucher. */
+let relaisEnCours = null;
+function relaisDepuisDrive() {
+  if (!driveActif()) return Promise.resolve(false);
+  return relaisEnCours = relaisEnCours || drivePost({ a: 'relais' }).then(j => {
+    const k = String(j?.relais || '');
+    if (!/^[\w-]{20,100}$/.test(k) || k === cleRelais()) return false;
+    store.set('set:relais-key', k); return true;
+  }).catch(() => false).finally(() => { setTimeout(() => { relaisEnCours = null; }, 5000); });
+}
+async function fetchRelais(url, init = {}) {
+  let r = await fetch(url, { ...init, headers: entetesRelais() });
+  if (r.status === 401 && await relaisDepuisDrive()) r = await fetch(url, { ...init, headers: entetesRelais() });
+  return r;
+}
 /* Tous les appels à Google (Gemini, voix Google) passent par le serveur, qui garde les clés.
    Un appareil n'a donc plus besoin d'aucune clé Google : seulement la clé du relais (lien du document du Drive).
    Sans relais (rare), l'appareil utilise sa propre clé, s'il en a une. */
@@ -1844,13 +1860,13 @@ function cleGemini() { return parServeur() ? 'serveur' : $('k-gemini').value.tri
 async function gFetch(url, init = {}) {
   if (!parServeur()) return fetch(url, init);
   const relais = location.hostname === '95.groupelaberge.ca' ? '' : 'https://95.groupelaberge.ca';
-  return fetch(`${relais}/histoires/tts/google`, { method: 'POST', headers: entetesRelais(),
+  return fetchRelais(`${relais}/histoires/tts/google`, { method: 'POST', headers: entetesRelais(),
     body: JSON.stringify({ u: url, m: init.method || 'GET', b: init.body ? JSON.parse(init.body) : null }) });
 }
 async function edgeMorceau(texte, voix, vitesse, hauteur = 0) {
   let r;
   try {
-    r = await withRetry(() => fetch(URL_TTS_EDGE, {
+    r = await withRetry(() => fetchRelais(URL_TTS_EDGE, {
       method: 'POST', headers: entetesRelais(),
       body: JSON.stringify({ texte, voix, vitesse, hauteur })
     }));
@@ -2142,7 +2158,7 @@ async function publier(s, st) {
   if (audio) corps.audio = { b64: await b64(audio), type: audio.type || 'audio/mpeg' };
   if (s.image) corps.image = { b64: await b64(s.image), type: s.image.type || 'image/jpeg' };
   if (illus.length) corps.images = await Promise.all(illus.map(async ([i, c]) => ({ avant: parseInt(i, 10), b64: await b64(s.illusImages[c]), type: 'image/jpeg' })));
-  const r = await fetch(URL_RELAIS + '/histoires/partage', { method: 'POST', headers: entetesRelais(), body: JSON.stringify(corps) });
+  const r = await fetchRelais(URL_RELAIS + '/histoires/partage', { method: 'POST', headers: entetesRelais(), body: JSON.stringify(corps) });
   const j = await r.json().catch(() => ({}));
   if (!r.ok || !j.ok) throw new Error(j.erreur || 'HTTP ' + r.status);
   s.partage = { id: j.id, url: j.url, audio: j.audio, sig, jeton: j.jeton };
@@ -2158,7 +2174,7 @@ $('btn-departager').onclick = async () => {
   const st = (m, c) => status($('tts-status'), m, c);
   try {
     if (s.partage.jeton) {
-      const r = await fetch(`${URL_RELAIS}/histoires/partage/${encodeURIComponent(s.partage.id)}/retirer`,
+      const r = await fetchRelais(`${URL_RELAIS}/histoires/partage/${encodeURIComponent(s.partage.id)}/retirer`,
         { method: 'POST', headers: entetesRelais(), body: JSON.stringify({ jeton: s.partage.jeton }) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok || !j.ok) throw new Error(j.erreur || 'HTTP ' + r.status);
@@ -3128,7 +3144,7 @@ $('lib-list').addEventListener('click', async e => {
     e.stopPropagation();
     if (confirm('Supprimer cette histoire ?' + (driveActif() ? ' Elle ira aussi à la corbeille de ton Google Drive (récupérable 30 jours).' : ''))) {
       const s = await DB.get(del.dataset.del);
-      if (s?.partage?.jeton) fetch(`${URL_RELAIS}/histoires/partage/${encodeURIComponent(s.partage.id)}/retirer`,
+      if (s?.partage?.jeton) fetchRelais(`${URL_RELAIS}/histoires/partage/${encodeURIComponent(s.partage.id)}/retirer`,
         { method: 'POST', headers: entetesRelais(), body: JSON.stringify({ jeton: s.partage.jeton }) }).catch(() => {});
       await DB.del(del.dataset.del);
       if (driveActif()) drivePost({ a: 'supprimer', id: del.dataset.del }).catch(() => {});   // aussi à la corbeille du Drive
