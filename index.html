@@ -359,7 +359,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v33</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v34</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -939,13 +939,21 @@ const DB = {
       t.onabort = () => rej(t.error || new Error('stockage du téléphone plein ou refusé'));
     });
   },
-  put: s => { DB.cache = null; return DB.tx('readwrite', st => st.put(s)); },
-  del: id => { DB.cache = null; return DB.tx('readwrite', st => st.delete(id)); },
+  /* Une seule copie vivante par histoire : tout le code (dessins, voix, partage, bibliothèque) modifie le MÊME objet,
+     donc une sauvegarde ne peut plus écraser ce qu'une autre tâche vient d'ajouter. */
+  vivantes: new Map(),
+  put: s => { DB.cache = null; DB.vivantes.set(s.id, s); return DB.tx('readwrite', st => st.put(s)); },
+  del: id => { DB.cache = null; DB.vivantes.delete(id); return DB.tx('readwrite', st => st.delete(id)); },
   cache: null,
   /* La bibliothèque relit la base seulement si elle a changé (l'audio n'est lu qu'à l'écoute) */
   async liste() { return DB.cache || (DB.cache = await DB.all()); },
-  all: () => DB.tx('readonly', st => st.getAll()),
-  get: id => DB.tx('readonly', st => st.get(id))
+  all: async () => (await DB.tx('readonly', st => st.getAll())).map(x => DB.vivantes.get(x.id) || x),
+  get: async id => {
+    if (DB.vivantes.has(id)) return DB.vivantes.get(id);
+    const s = await DB.tx('readonly', st => st.get(id));
+    if (s && !DB.vivantes.has(id)) DB.vivantes.set(id, s);
+    return DB.vivantes.get(id) || s;
+  }
 };
 
 /* ==================== AUDIO : WAV, bruits doux, boîte à musique ==================== */
@@ -1170,7 +1178,7 @@ async function loadVoices() {
     fillPremade();
     status($('set-status'), /voices_read|permission/i.test(e.message)
       ? 'Ta clé n\'a pas la permission « Voices (read) » : voici les voix de base d\'ElevenLabs. Elles fonctionnent toutes très bien.'
-      : 'Impossible de charger tes voix (' + e.message + ') : voici les voix de base.', /voices_read|permission/i.test(e.message) ? '' : 'err');
+      : 'Impossible de charger tes voix (' + esc(e.message) + ') : voici les voix de base.', /voices_read|permission/i.test(e.message) ? '' : 'err');
   }
 }
 $('btn-voices').onclick = loadVoices;
@@ -1180,11 +1188,9 @@ const EXTRAIT = () => $('lang').value === 'en'
 /* ───── Vitesse : à l'enregistrement ou à la lecture ─────
    « À la lecture » : la voix enregistre à sa vitesse de base (curseur par défaut : Google 0,9 ; Microsoft −10 %)
    et le lecteur accélère ou ralentit le son sans changer la hauteur de la voix. */
-let forcerVitesseNeutre = false;
-const vitesseALaLecture = () => forcerVitesseNeutre || ($('vit-mode')?.value || 'lecture') === 'lecture';
-const curseurGc = () => vitesseALaLecture() ? .9 : (parseFloat($('gc-rate').value) || .9);
-const curseurMs = () => vitesseALaLecture() ? -10 : (parseInt($('ms-rate').value, 10) || 0);
-async function neutreDurant(f) { forcerVitesseNeutre = true; try { return await f(); } finally { forcerVitesseNeutre = false; } }
+const vitesseALaLecture = () => ($('vit-mode')?.value || 'lecture') === 'lecture';
+const curseurGc = (neutre = vitesseALaLecture()) => neutre ? .9 : (parseFloat($('gc-rate').value) || .9);
+const curseurMs = (neutre = vitesseALaLecture()) => neutre ? -10 : (parseInt($('ms-rate').value, 10) || 0);
 /* Facteur de lecture d'un son enregistré à la vitesse de base par ce moteur */
 function facteurLecture(moteur) {
   if (moteur === 'gcloud') return (parseFloat($('gc-rate').value) || .9) / .9;
@@ -1205,8 +1211,13 @@ function nouvelExtrait() { arreterExtrait(); try { $('player').pause(); } catch 
    changer de voix, de vitesse ou de langue donne un nouvel extrait. */
 const EXTRAITS = 'histoires-extraits';
 function hacher(s) { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36) + '-' + s.length; }
-async function extraitGarde(cle, fabriquer) {
+const extraitsEnCours = new Map();
+function extraitGarde(cle, fabriquer) {
   const url = 'https://extraits.histoires.local/' + hacher(JSON.stringify(cle));
+  if (!extraitsEnCours.has(url)) extraitsEnCours.set(url, extraitGarde2(url, fabriquer).finally(() => extraitsEnCours.delete(url)));
+  return extraitsEnCours.get(url);
+}
+async function extraitGarde2(url, fabriquer) {
   let c = null;
   try { c = await caches.open(EXTRAITS); const r = await c.match(url); if (r) return { blob: await r.blob(), garde: true }; } catch { c = null; }
   const blob = await fabriquer();
@@ -1233,7 +1244,7 @@ $('btn-preview').onclick = async () => {
     const x = await extraitGarde(['eleven', id, $('m-eleven').value, $('stability').value, EXTRAIT()], () => tts(EXTRAIT()));
     if (!jouerExtrait(no, x.blob)) return;
     status($('set-status'), '✔ Lecture de l\'extrait' + gratuit(x), 'ok');
-  } catch (e) { status($('set-status'), 'Erreur : ' + e.message, 'err'); }
+  } catch (e) { status($('set-status'), 'Erreur : ' + esc(e.message), 'err'); }
 };
 $('btn-preview-g').onclick = async () => {
   saveSettings();
@@ -1244,7 +1255,7 @@ $('btn-preview-g').onclick = async () => {
       () => ttsGemini(EXTRAIT(), m => status($('set-status'), '<span class="spin"></span>' + m)));
     if (!jouerExtrait(no, x.blob)) return;
     status($('set-status'), '✔ Lecture de l\'extrait (voix Gemini)' + gratuit(x), 'ok');
-  } catch (e) { status($('set-status'), 'Erreur : ' + e.message, 'err'); }
+  } catch (e) { status($('set-status'), 'Erreur : ' + esc(e.message), 'err'); }
 };
 $('btn-preview-p').onclick = () => { saveSettings(); nouvelExtrait();
   if (!('speechSynthesis' in window)) return status($('set-status'), 'Ce navigateur n’a pas de voix intégrée.', 'err');
@@ -1363,13 +1374,14 @@ const SCHEMA_CHOIX = { type: 'OBJECT', properties: { titre: { type: 'STRING' }, 
 
 /* Quelle voix va raconter ? On l'estime AVANT d'écrire, pour adapter le texte :
    ElevenLabs v3 comprend les balises et les effets ; les autres voix les prononcent mal. */
-let voixSimple = false;
+let voixSimple = false, voixGoogle = false;
 const LONGUEUR_ESTIMEE = { court: 2600, moyen: 5000, long: 8500 };
 async function preparerEcriture(nbCaracteres) {
   try {
     const { moteur } = await choisirMoteur(nbCaracteres || LONGUEUR_ESTIMEE[chipVal('length')] || 5000);
     voixSimple = !(moteur === 'eleven' && $('m-eleven').value === 'eleven_v3');
-  } catch { voixSimple = true; }
+    voixGoogle = moteur === 'gcloud';
+  } catch { voixSimple = true; voixGoogle = false; }
   return voixSimple;
 }
 const CONSIGNE_VOIX_SIMPLE = `TRÈS IMPORTANT — VOIX DE SYNTHÈSE SIMPLE. Cette histoire sera lue par une voix qui NE comprend PAS les balises audio et prononce mal les effets écrits. Remplace les règles « Balises audio » et « Ponctuation expressive » de la section 2 par celles-ci :
@@ -1381,6 +1393,12 @@ const CONSIGNE_VOIX_SIMPLE = `TRÈS IMPORTANT — VOIX DE SYNTHÈSE SIMPLE. Cett
 - Les pauses passent par la ponctuation : points de suspension, virgules, phrases courtes, paragraphes courts.
 - Garde des dialogues vivants avec une incise claire pour savoir qui parle : chaque personnage peut être lu par une voix différente.`;
 
+/* Voix Google : comme la voix simple, mais avec quelques balises qu'elle sait jouer (vitesse, hauteur, volume, silences) */
+const CONSIGNE_VOIX_GOOGLE = CONSIGNE_VOIX_SIMPLE
+  .replace('TRÈS IMPORTANT — VOIX DE SYNTHÈSE SIMPLE. Cette histoire sera lue par une voix qui NE comprend PAS les balises audio et prononce mal les effets écrits.',
+    'TRÈS IMPORTANT — VOIX GOOGLE. Cette histoire sera lue par une voix de synthèse qui comprend SEULEMENT quelques balises et prononce mal les effets écrits.')
+  .replace('- AUCUNE balise entre crochets, nulle part.',
+    '- Balises permises, et SEULEMENT celles-ci, en anglais entre crochets, juste avant la phrase ou la réplique qu\'elles colorent, avec parcimonie (une toutes les deux ou trois phrases au plus) : émotions [whispers] [softly] [excited] [happy] [sad] [scared] [surprised] [amazed] [grumpy] ; manière [slowly] [quickly] [mysteriously] [dramatically] [warmly] [sleepy] ; voix d\'un personnage juste avant sa réplique entre guillemets [deep voice] [squeaky voice] [tiny voice] [old voice] [booming voice] (chaque personnage garde toujours la même) ; [pause] pour un vrai silence. Aucune autre balise, jamais de réaction comme [laughs] ou [sighs] : écris-la avec des mots.');
 /* Les consignes communes, d'après le formulaire */
 function consignes(opts = {}) {
   const friends = $('friends').value.trim();
@@ -1398,7 +1416,7 @@ function consignes(opts = {}) {
     !opts.sansIdee && dessin ? `L'enfant a fait le DESSIN joint en image. L'histoire raconte CE dessin : ses personnages, ses couleurs, ses détails (même un gribouillis devient quelque chose de magique). Décris-les pour que l'enfant reconnaisse son dessin et soit fier.` : '',
     `Ambiance : ${MOODS[mood]}`,
     LANGS[lang],
-    voixSimple ? CONSIGNE_VOIX_SIMPLE : ''
+    voixGoogle ? CONSIGNE_VOIX_GOOGLE : voixSimple ? CONSIGNE_VOIX_SIMPLE : ''
   ].filter(Boolean);
 }
 
@@ -1480,7 +1498,9 @@ function enregistrerArbre(s, moteur) {
       const r = await enregistrer(s.arbre[c].texte, () => {}, () => {}, moteur);
       if (!r.blob) throw new Error('voix sans enregistrement');
       s.audioNoeuds = s.audioNoeuds || {};
-      s.audioNoeuds[c] = r.blob; s.vitMoteur = r.moteur; s.vitNeutre = r.neutre;
+      s.audioNoeuds[c] = r.blob;
+      s.vitNoeuds = s.vitNoeuds || {}; s.vitNoeuds[c] = { m: r.moteur, n: r.neutre };
+      if (c === '') { s.vitMoteur = r.moteur; s.vitNeutre = r.neutre; }
       await DB.put(s);
       const fait = Object.keys(s.audioNoeuds).length;
       if (current?.id === s.id) status($('choix-status'), fait < total ? `🎙️ Les autres choix s'enregistrent pendant l'écoute… ${fait}/${total}` : '✔ Tous les choix sont prêts : plus aucune attente', fait < total ? '' : 'ok');
@@ -1601,6 +1621,11 @@ async function planifierImages(s) {
     return { cle, description: String(sc.description || '') };
   }).filter((sc, i, t) => sc.description && t.findIndex(x => x.cle === sc.cle) === i && (!s.arbre || /^n[AB]{0,2}$/.test(sc.cle)));
   if (!scenes.length) throw new Error('pas de scène proposée');
+  // la couverture = la scène du début : sinon la même image serait à la fois en couverture et dans le texte
+  const rang = c => s.arbre ? (c === 'n' ? -1 : c.length) : parseInt(c.slice(1), 10);
+  scenes.sort((x, y) => rang(x.cle) - rang(y.cle));
+  if (!s.arbre && scenes[0].cle !== 'p0') scenes[0].cle = 'p0';
+  if (s.arbre && scenes[0].cle !== 'n') scenes[0].cle = 'n';
   return { fiche: String(j.fiche || ''), style: $('img-style').value, scenes };
 }
 /* Un dessin Pollinations, logo coupé. Le service gratuit refuse (402/429) s'il est trop sollicité : on attend. */
@@ -1822,11 +1847,11 @@ async function edgeMorceau(texte, voix, vitesse, hauteur = 0) {
   if (!r.ok) throw new Error('Voix Microsoft : ' + await errText(r).catch(() => 'HTTP ' + r.status));
   return r.blob();
 }
-async function ttsEdge(text, onStatus, prog) {
+async function ttsEdge(text, onStatus, prog, neutre) {
   const morceaux = chunk(pourVoixSimple(text), 2500), blobs = [];
   for (let i = 0; i < morceaux.length; i++) {
     onStatus?.(`<span class="spin"></span>Voix québécoise Microsoft… (${i + 1}/${morceaux.length})`);
-    blobs.push(await edgeMorceau(morceaux[i], $('ms-voice').value, curseurMs()));
+    blobs.push(await edgeMorceau(morceaux[i], $('ms-voice').value, curseurMs(neutre)));
     prog?.((i + 1) / morceaux.length);
   }
   return new Blob(blobs, { type: 'audio/mpeg' });
@@ -1877,12 +1902,12 @@ function attribuerVoix(personnages) {
   }
   return roles;
 }
-async function ttsEdgeMulti(texte, onStatus, prog) {
+async function ttsEdgeMulti(texte, onStatus, prog, neutre) {
   onStatus('<span class="spin"></span>Gemini distribue les rôles…');
   const j = await distribuerRoles(texte, onStatus);
   const roles = attribuerVoix(j.personnages || []);
   const narr = { voix: $('ms-voice').value, hauteur: 0, vitesse: 0 };
-  const base = curseurMs();
+  const base = curseurMs(neutre);
   const segs = [];                                             // morceaux voisins de la même voix : réunis
   for (const x of j.segments) {
     const qui = roles[x.qui] ? x.qui : 'narrateur';
@@ -2211,7 +2236,7 @@ async function gcChargerVoix() {
   const key = gcCle();
   if (!key) return status($('set-status'), 'Entre d\'abord ta clé Gemini (ou Google Cloud) dans Clés.', 'err');
   try {
-    const r = await fetch(`https://texttospeech.googleapis.com/v1/voices?languageCode=fr&key=${encodeURIComponent(key)}`);
+    const r = await fetch('https://texttospeech.googleapis.com/v1/voices?languageCode=fr', { headers: { 'x-goog-api-key': key } });
     if (!r.ok) {
       const m = await errText(r);
       throw new Error(/API keys are not supported|OAuth2/i.test(m) ? 'la clé des voix Google manque sur cet appareil : dans ton Google Drive, ouvre le document « ⚙️ Configurer l’app » et touche son lien'
@@ -2237,7 +2262,7 @@ async function gcChargerVoix() {
     }
     gcAfficher();
     status($('set-status'), '✔ Voix Google chargées — ' + resume.join(' · '), 'ok');
-  } catch (e) { status($('set-status'), 'Voix Google : ' + e.message, 'err'); }
+  } catch (e) { status($('set-status'), 'Voix Google : ' + esc(e.message), 'err'); }
 }
 $('btn-gc-voices').onclick = () => { saveSettings(); gcChargerVoix(); };
 GC_PALIERS.forEach(pl => $(pl.champ).addEventListener('change', () => { store.set('set:' + pl.champ, $(pl.champ).value); gcAfficher(); }));
@@ -2248,10 +2273,10 @@ $('btn-preview-gc').onclick = async () => {
   const no = nouvelExtrait();
   try {
     const pl = gcPalier(200);
-    const x = pl ? await extraitGarde(['gcloud', gcVoixDe(pl), EXTRAIT()], () => neutreDurant(() => ttsGcloud(EXTRAIT()))) : { blob: await neutreDurant(() => ttsGcloud(EXTRAIT())) };
+    const x = pl ? await extraitGarde(['gcloud', gcVoixDe(pl), EXTRAIT()], () => ttsGcloud(EXTRAIT(), null, null, true)) : { blob: await ttsGcloud(EXTRAIT(), null, null, true) };
     if (!jouerExtrait(no, x.blob, facteurLecture('gcloud'))) return;
     status($('set-status'), `✔ Lecture de l'extrait (Google ${pl ? pl.nom : ''})` + gratuit(x), 'ok');
-  } catch (e) { status($('set-status'), 'Erreur : ' + e.message, 'err'); }
+  } catch (e) { status($('set-status'), 'Erreur : ' + esc(e.message), 'err'); }
 };
 /* ───── Direction de jeu pour les voix Google ─────
    L'histoire est écrite avec des balises de jeu ([whispers], [deep voice], [pause]…). Au lieu de les jeter :
@@ -2306,14 +2331,14 @@ function gcEntree(texte, pl, base) {
 }
 /* Un morceau → MP3 ; compte les caractères envoyés dans le palier */
 async function gcMorceau(texte, pl, voix, vitesse, base) {
-  const url = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${encodeURIComponent(gcCle())}`;
+  const url = 'https://texttospeech.googleapis.com/v1/text:synthesize', entetes = { 'x-goog-api-key': gcCle(), 'Content-Type': 'application/json' };
   let entree = gcEntree(texte, pl, base), rate = vitesse;
   for (let essai = 0; essai < 3; essai++) {
     const corps = JSON.stringify({
       input: entree, voice: { languageCode: voix.slice(0, 5), name: voix },
       audioConfig: { audioEncoding: 'MP3', ...(rate ? { speakingRate: rate } : {}) }
     });
-    const r = await withRetry(() => fetch(url, { method: 'POST', body: corps }));
+    const r = await withRetry(() => fetch(url, { method: 'POST', headers: entetes, body: corps }));
     if (r.ok) {
       store.set(gcMoisP(pl.id), String(gcUtilise(pl.id) + (entree.ssml || entree.markup || entree.text).length));
       return deB64((await r.json()).audioContent, 'audio/mpeg');
@@ -2327,21 +2352,21 @@ async function gcMorceau(texte, pl, voix, vitesse, base) {
   }
   throw new Error('Google : lecture refusée');
 }
-const gcVitesse = (pl) => curseurGc() + (pl && pl.id !== 'chirp' ? .1 : 0);
+const gcVitesse = (pl, neutre) => curseurGc(neutre) + (pl && pl.id !== 'chirp' ? .1 : 0);
 const gcEstime = t => Math.round(pourVoixSimple(t).length * 1.3);   // balises SSML comprises
 function gcPalierOuErreur(texte) {
   const pl = gcPalier(gcEstime(texte));
   if (!pl) { const e = new Error(`les trois paliers de voix Google sont pleins ce mois-ci (${fmt(gcPlafond())} chacun)`); e.quota = true; throw e; }
   return pl;
 }
-async function ttsGcloud(text, onStatus, prog) {
+async function ttsGcloud(text, onStatus, prog, neutre) {
   if (!gcCle()) throw new Error('Ajoute ta clé Gemini (ou Google Cloud) dans ⚙️ Réglages → Clés.');
   if (!gcVoix()) throw new Error('Choisis les voix Google dans ⚙️ Réglages → Qui raconte → ↻.');
   const pl = gcPalierOuErreur(text);
   const morceaux = chunk(pourVoixGoogle(text), pl.id === 'chirp' ? 1500 : 1100), blobs = [];
   for (let i = 0; i < morceaux.length; i++) {
     onStatus?.(`<span class="spin"></span>Voix Google ${pl.nom}… (${i + 1}/${morceaux.length})`);
-    blobs.push(await gcMorceau(morceaux[i], pl, gcVoixDe(pl), gcVitesse(pl)));
+    blobs.push(await gcMorceau(morceaux[i], pl, gcVoixDe(pl), gcVitesse(pl, neutre)));
     prog?.((i + 1) / morceaux.length);
   }
   gcAfficher();
@@ -2352,14 +2377,14 @@ async function ttsGcloud(text, onStatus, prog) {
    Neural2 n'en a que 4 : on varie alors la hauteur. Enfant = plus vif et plus aigu, vieux = plus lent et plus grave. */
 async function gcListe(pl) {
   try { const l = JSON.parse(store.get('gc:liste:' + pl.id, 'null')); if (l?.length) return l; } catch {}
-  const r = await fetch(`https://texttospeech.googleapis.com/v1/voices?languageCode=fr&key=${encodeURIComponent(gcCle())}`);
+  const r = await fetch('https://texttospeech.googleapis.com/v1/voices?languageCode=fr', { headers: { 'x-goog-api-key': gcCle() } });
   if (!r.ok) throw new Error('liste des voix Google : ' + await errText(r));
   const lang = gcVoixDe(pl).slice(0, 5);
   const l = ((await r.json()).voices || []).filter(v => pl.test(v.name) && v.languageCodes.includes(lang)).map(v => ({ n: v.name, g: v.ssmlGender }));
   store.set('gc:liste:' + pl.id, JSON.stringify(l));
   return l;
 }
-async function ttsGcloudMulti(texte, onStatus, prog) {
+async function ttsGcloudMulti(texte, onStatus, prog, neutre) {
   if (!gcCle() || !gcVoix()) throw new Error('voix Google pas choisies');
   const pl = gcPalierOuErreur(texte);
   onStatus('<span class="spin"></span>Gemini distribue les rôles…');
@@ -2392,7 +2417,7 @@ async function ttsGcloudMulti(texte, onStatus, prog) {
     while (k < segs.length) {
       const i = k++, r = roles[segs[i].qui];
       // Chirp ne connaît pas la hauteur : seulement la vitesse du personnage ; Neural2/Studio : SSML
-      const vit = gcVitesse(pl) * (r && pl.id === 'chirp' ? r.base.r / 100 : 1);
+      const vit = gcVitesse(pl, neutre) * (r && pl.id === 'chirp' ? r.base.r / 100 : 1);
       out[i] = await gcMorceau(segs[i].t, pl, r ? r.voix : narr, vit, r && pl.id !== 'chirp' ? r.base : null);
       fait++;
       onStatus(`<span class="spin"></span>Voix Google ${pl.nom}, une par personnage (${Object.keys(roles).length})… ${fait}/${segs.length}`);
@@ -2454,6 +2479,7 @@ async function enMp3(pcm, rate) {
     lameCharge = lameCharge || new Promise((ok, ko) => {
       const sc = document.createElement('script');
       sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.0/lame.min.js';
+      sc.integrity = 'sha384-2rzUf3HDgNCBY8eyfofLg9zB+RqSUf3+WMtg5pT41cPnJiljByo3xttywbnon6Bp'; sc.crossOrigin = 'anonymous';
       sc.onload = ok; sc.onerror = ko; document.head.appendChild(sc);
     });
     await lameCharge;
@@ -2516,12 +2542,23 @@ function chunk(text, max = 2500) {
   const parts = [];
   let cur = '';
   const push = s => { if (s.trim()) parts.push(s.trim()); };
-  for (const para of text.split(/\n\s*\n/)) {
-    const pieces = para.length > max ? para.match(/[^.!?…]+[.!?…»"]*\s*/g) || [para] : [para];
-    for (const p of pieces) {
-      if ((cur + '\n\n' + p).length > max) { push(cur); cur = p; }
-      else cur = cur ? cur + (pieces.length > 1 ? ' ' : '\n\n') + p : p;
+  // une phrase plus longue que max : coupée aux virgules, puis aux espaces
+  const couper = s => {
+    if (s.length <= max) return [s];
+    const out = []; let c = '';
+    for (const m of s.split(/(?<=[,;:])\s+|\s+/)) {
+      if ((c + ' ' + m).length > max && c) { out.push(c); c = m; } else c = c ? c + ' ' + m : m;
     }
+    if (c) out.push(c);
+    return out.flatMap(x => x.length > max ? x.match(new RegExp('.{1,' + max + '}', 'g')) : [x]);
+  };
+  for (const para of text.split(/\n\s*\n/)) {
+    const phrases = para.length > max ? (para.match(/[^.!?…]*[.!?…]+[»"]?\s*|[^.!?…]+$/g) || [para]).flatMap(couper) : [para];
+    phrases.forEach((ph, i) => {
+      const sep = i === 0 ? '\n\n' : ' ';                    // frontière de paragraphe gardée
+      if (cur && (cur + sep + ph).length > max) { push(cur); cur = ph; }
+      else cur = cur ? cur + sep + ph : ph;
+    });
   }
   push(cur);
   return parts;
@@ -2581,13 +2618,19 @@ function texteALire(s) {
   return s.histoire;
 }
 const vitesseHistoire = s => s?.vitNeutre ? facteurLecture(s.vitMoteur) : 1;
-function appliquerVitesseLecteur() { regleVitesse($('player'), vitesseHistoire(current)); }
+const vitesseNoeud = (s, c) => { const v = s?.vitNoeuds?.[c]; return v ? (v.n ? facteurLecture(v.m) : 1) : vitesseHistoire(s); };
+let lectureEnFile = false;
+function appliquerVitesseLecteur() {
+  const f = lectureEnFile ? file[fileIdx] : null;
+  regleVitesse($('player'), f && f.noeud != null ? vitesseNoeud(current, f.noeud) : vitesseHistoire(current));
+}
 ['loadedmetadata', 'play'].forEach(ev => $('player').addEventListener(ev, appliquerVitesseLecteur));
 ['gc-rate', 'ms-rate'].forEach(id => $(id).addEventListener('input', () => {
   appliquerVitesseLecteur();
   if (extraitAudio) regleVitesse(extraitAudio, facteurLecture(id === 'gc-rate' ? 'gcloud' : 'edge'));
 }));
 function setAudio(s) {
+  lectureEnFile = false;
   if (audioUrl) URL.revokeObjectURL(audioUrl);
   const blob = s.audio || null;
   audioUrl = blob ? URL.createObjectURL(blob) : null;
@@ -2634,7 +2677,7 @@ $('player').addEventListener('ended', () => {
   if (!(current?.interactive && current.parts.length < NB_PARTIES)) finDeLecture(); else musiquePause();
 });
 function jouerFile(f) {
-  file = f; fileIdx = 0;
+  file = f; fileIdx = 0; lectureEnFile = true;
   $('player').style.display = 'block';
   $('player').src = f[0].url;
   $('player').play().catch(() => {});
@@ -2692,7 +2735,7 @@ $('choix-btns').addEventListener('click', async e => {
   }
   status($('choix-status'), `<span class="spin"></span>Tu as choisi « ${esc(choix)} » ! Gemini écrit la suite…`);
   try {
-    voixSimple = s.ecriture === 'simple';                     // même écriture que le début de l'histoire
+    voixSimple = s.ecriture === 'simple' || s.ecriture === 'google'; voixGoogle = s.ecriture === 'google';   // même écriture que le début
     const j = await genererPartie(s, choix, m => status($('choix-status'), m));
     s.parts.push({ texte: j.histoire, choixA: j.choixA, choixB: j.choixB });
     s.histoire = s.parts.map(x => x.texte).join('\n\n');
@@ -2723,7 +2766,7 @@ async function creer(fn, extra = {}) {
     };
     if (extra.interactive) { s.parts = [{ texte: j.histoire, choixA: j.choixA, choixB: j.choixB }]; s.partAudio = []; }
     if (j.arbre) { s.arbre = j.arbre; s.chemin = ''; s.audioNoeuds = {}; }
-    s.ecriture = voixSimple ? 'simple' : 'eleven';
+    s.ecriture = voixGoogle ? 'google' : voixSimple ? 'simple' : 'eleven';
     if (s.avecDessin && dessin) { s.image = dessin.blob; s.dessin = true; }
     delete s.avecDessin;
     await DB.put(s);
@@ -2733,7 +2776,7 @@ async function creer(fn, extra = {}) {
     $('gen-status').className = 'status ok';
     imageEnFond(s);
     $('story-card').scrollIntoView({ behavior: 'smooth' });
-  } catch (e) { status($('gen-status'), e.message, 'err'); }
+  } catch (e) { status($('gen-status'), esc(e.message), 'err'); }
   btn.disabled = $('btn-regen').disabled = $('btn-suite').disabled = false;
 }
 function onGenerate() {
@@ -2771,7 +2814,7 @@ async function moteurSuivant(nb, essayes) {
   if (!essayes.has('gemini') && $('k-gemini').value.trim()) return 'gemini';
   return 'phone';
 }
-async function fabriquerAvec(moteur, texte, onStatus, prog) {
+async function fabriquerAvec(moteur, texte, onStatus, prog, neutre) {
   if (moteur === 'eleven') {
     const parts = chunk(texte), blobs = [];
     for (let i = 0; i < parts.length; i++) {
@@ -2783,17 +2826,17 @@ async function fabriquerAvec(moteur, texte, onStatus, prog) {
   }
   if (moteur === 'edge') {
     if ($('opt-multivoix').checked && $('k-gemini').value.trim()) {
-      try { return await ttsEdgeMulti(texte, onStatus, prog); }
+      try { return await ttsEdgeMulti(texte, onStatus, prog, neutre); }
       catch (e) { if (/injoignable/.test(e.message)) throw e; onStatus(`<span class="spin"></span>Une voix par personnage impossible (${esc(e.message)}) → une seule voix`); }
     }
-    return ttsEdge(texte, onStatus, prog);
+    return ttsEdge(texte, onStatus, prog, neutre);
   }
   if (moteur === 'gcloud') {
     if ($('opt-multivoix').checked && $('k-gemini').value.trim()) {
-      try { return await ttsGcloudMulti(texte, onStatus, prog); }
+      try { return await ttsGcloudMulti(texte, onStatus, prog, neutre); }
       catch (e) { if (e.quota) throw e; onStatus(`<span class="spin"></span>Une voix par personnage impossible (${esc(e.message)}) → une seule voix`); }
     }
-    return ttsGcloud(texte, onStatus, prog);
+    return ttsGcloud(texte, onStatus, prog, neutre);
   }
   if (moteur === 'gemini') {
     prog(.05);
@@ -2810,7 +2853,7 @@ async function enregistrer(texte, onStatus, prog, moteurImpose) {
   while (moteur !== 'phone' && !essayes.has(moteur)) {
     essayes.add(moteur);
     try {
-      const blob = await fabriquerAvec(moteur, texte, onStatus, prog);
+      const blob = await fabriquerAvec(moteur, texte, onStatus, prog, neutre);
       return { moteur, neutre, blob };
     } catch (e) {
       const auto = $('engine').value === 'auto';
@@ -2829,7 +2872,7 @@ $('btn-read').onclick = async () => {
   if (!s) return;
   const plages = plagesParties(s);
   const interactifEnCours = s.interactive && s.parts.length < NB_PARTIES;
-  const segPart = k => ({ url: URL.createObjectURL(s.partAudio[k]), debut: plages[k][0], fin: plages[k][1], texte: s.parts[k].texte });
+  const segPart = k => ({ url: URL.createObjectURL(s.partAudio[k]), debut: plages[k][0], fin: plages[k][1], texte: s.parts[k].texte, noeud: s.arbre ? (s.chemin || '').slice(0, k) : null });
   if (s.arbre) {
     const cur = s.chemin || '';
     const manque = Object.keys(s.arbre).some(c => !s.audioNoeuds?.[c]);
@@ -2842,7 +2885,7 @@ $('btn-read').onclick = async () => {
         if (!s.audioNoeuds?.[cur]) {
           const btn = $('btn-read'); btn.disabled = true;
           status($('tts-status'), `<span class="spin"></span>${raison ? esc(raison) + ' → ' : ''}${NOMS_VOIX[moteur]} enregistre le début ; les choix suivront pendant l'écoute…`);
-          try { await p[cur]; } catch (e) { btn.disabled = false; return status($('tts-status'), e.message, 'err'); }
+          try { await p[cur]; } catch (e) { btn.disabled = false; return status($('tts-status'), esc(e.message), 'err'); }
           btn.disabled = false;
           status($('tts-status'), '✔ Bonne écoute ! Les autres choix s\'enregistrent en même temps.', 'ok');
         }
@@ -2936,12 +2979,7 @@ async function drivePost(corps) {
   // Requête « simple » (texte brut, sans en-tête) : Google Apps Script l'accepte depuis une autre adresse.
   return driveRep(await fetch($('drive-url').value.trim(), { method: 'POST', body: JSON.stringify({ k: $('drive-key').value.trim(), ...corps }) }));
 }
-async function driveGet(params) {
-  const u = new URL($('drive-url').value.trim());
-  u.searchParams.set('k', $('drive-key').value.trim());
-  for (const [k, v] of Object.entries(params)) u.searchParams.set(k, v);
-  return driveRep(await fetch(u));
-}
+const driveGet = params => drivePost(params);   // liste et chargement aussi par POST : la clé ne va jamais dans une adresse
 let driveFile = Promise.resolve(), driveErreur = '';
 function driveSauver(s) {
   if (!s || !driveActif()) return;
@@ -2952,14 +2990,20 @@ function driveSauver(s) {
 async function driveEnvoyer(id) {
   const s = await DB.get(id);
   if (!s || (s.interactive && !s.parts?.length)) return;
-  const { audio, image, partAudio, audioNoeuds, illusImages, driveIllus, drive, driveAudio, driveImage, driveAttente, ...story } = s;
+  const { audio, image, partAudio, audioNoeuds, illusImages, driveIllus, drive, driveAudio, driveImage, driveAttente, driveNoeuds, ...story } = s;
   const corps = { a: 'sauver', story };
   const sigA = audio ? audio.size + ':' + audio.type : '', sigI = image ? String(image.size) : '';
   if (audio && driveAudio !== sigA) corps.audio = { b64: await b64(audio), type: audio.type || 'audio/mpeg' };
   if (image && driveImage !== sigI) corps.image = { b64: await b64(image), type: image.type || 'image/jpeg' };
-  const clesIllus = Object.entries(clesParParagraphe(s)).filter(([, c]) => illusImages?.[c]);
-  const sigIl = clesIllus.map(([i, c]) => i + c).join(',');
-  if (clesIllus.length && driveIllus !== sigIl) corps.images = await Promise.all(clesIllus.map(async ([i, c]) => ({ avant: parseInt(i, 10), cle: c, b64: await b64(illusImages[c]), type: 'image/jpeg' })));
+  // Toutes les illustrations (une histoire à choix en a hors du chemin lu) ; avant = -1 : pas dans le texte du Doc
+  const place = Object.fromEntries(Object.entries(clesParParagraphe(s)).map(([i, c]) => [c, parseInt(i, 10)]));
+  const clesIllus = Object.keys(illusImages || {}).filter(c => illusImages[c]).sort();
+  const sigIl = clesIllus.map(c => (place[c] ?? -1) + c + ':' + illusImages[c].size).join(',');
+  if (clesIllus.length && driveIllus !== sigIl) corps.images = await Promise.all(clesIllus.map(async c => ({ avant: place[c] ?? -1, cle: c, b64: await b64(illusImages[c]), type: 'image/jpeg' })));
+  // Sons des morceaux d'une histoire à choix : envoyés quand ils changent, pour ne jamais les repayer ailleurs
+  const noeuds = Object.keys(audioNoeuds || {}).filter(c => audioNoeuds[c]).sort();
+  const sigN = noeuds.map(c => c + ':' + audioNoeuds[c].size).join(',');
+  if (noeuds.length && s.driveNoeuds !== sigN) corps.noeuds = await Promise.all(noeuds.map(async c => ({ c, b64: await b64(audioNoeuds[c]), type: audioNoeuds[c].type || 'audio/mpeg' })));
   const maj = async champs => {
     const s2 = await DB.get(id); if (!s2) return;
     Object.assign(s2, champs);
@@ -2974,6 +3018,7 @@ async function driveEnvoyer(id) {
     if (corps.audio) champs.driveAudio = sigA;
     if (corps.image) champs.driveImage = sigI;
     if (corps.images) champs.driveIllus = sigIl;
+    if (corps.noeuds) champs.driveNoeuds = sigN;
     await maj(champs);
   } catch (e) {
     driveErreur = e.message;
@@ -3021,7 +3066,12 @@ $('btn-drive-recup').onclick = async () => {
       if (j.images?.length) {
         s.illusImages = {};
         for (const im of j.images) if (im.cle) s.illusImages[im.cle] = deB64(im.b64, im.type || 'image/jpeg');
-        s.driveIllus = j.images.map(im => im.avant + im.cle).join(',');
+        s.driveIllus = 'recupere';
+      }
+      if (j.noeuds?.length) {
+        s.audioNoeuds = {};
+        for (const x of j.noeuds) if (/^[AB]{0,2}$/.test(x.c)) s.audioNoeuds[x.c] = deB64(x.b64, x.type || 'audio/mpeg');
+        s.driveNoeuds = 'recupere';
       }
       s.drive = { at: Date.now() };
       await DB.put(s);
@@ -3064,11 +3114,12 @@ $('lib-list').addEventListener('click', async e => {
   const del = e.target.closest('[data-del]');
   if (del) {
     e.stopPropagation();
-    if (confirm('Supprimer cette histoire ?')) {
+    if (confirm('Supprimer cette histoire ?' + (driveActif() ? ' Elle ira aussi à la corbeille de ton Google Drive (récupérable 30 jours).' : ''))) {
       const s = await DB.get(del.dataset.del);
       if (s?.partage?.jeton) fetch(`${URL_RELAIS}/histoires/partage/${encodeURIComponent(s.partage.id)}/retirer`,
         { method: 'POST', headers: entetesRelais(), body: JSON.stringify({ jeton: s.partage.jeton }) }).catch(() => {});
       await DB.del(del.dataset.del);
+      if (driveActif()) drivePost({ a: 'supprimer', id: del.dataset.del }).catch(() => {});   // aussi à la corbeille du Drive
       if (current?.id === del.dataset.del) { current = null; $('story-card').style.display = 'none'; try { $('player').pause(); } catch {} }
       renderLib();
     }
@@ -3104,10 +3155,10 @@ $('btn-preview-ms').onclick = async () => {
   status($('set-status'), '<span class="spin"></span>Enregistrement d\'un extrait…');
   const no = nouvelExtrait();
   try {
-    const x = await extraitGarde(['ms', $('ms-voice').value, EXTRAIT()], () => neutreDurant(() => ttsEdge(stripTags(EXTRAIT()))));
+    const x = await extraitGarde(['ms', $('ms-voice').value, EXTRAIT()], () => ttsEdge(stripTags(EXTRAIT()), null, null, true));
     if (!jouerExtrait(no, x.blob, facteurLecture('edge'))) return;
     status($('set-status'), '✔ Lecture de l\'extrait (voix québécoise Microsoft)' + gratuit(x), 'ok');
-  } catch (e) { status($('set-status'), 'Erreur : ' + e.message, 'err'); }
+  } catch (e) { status($('set-status'), 'Erreur : ' + esc(e.message), 'err'); }
 };
 
 /* Version du serveur : on y copie tous les réglages (dans l'adresse, après le #, jamais envoyés au serveur) */
@@ -3194,6 +3245,13 @@ document.querySelectorAll('.picker').forEach(pk => {
   document.querySelectorAll('.chips[data-group="length"], .chips[data-group="format"]').forEach(x => x.addEventListener('click', () => setTimeout(majRecoImages, 0)));
   majRecoImages();
 })();
+document.querySelectorAll('.chip, .moteur, .theme-carte').forEach(el => {
+  if (el.tagName === 'BUTTON') return;
+  el.tabIndex = 0; el.setAttribute('role', 'radio');
+  el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); } });
+});
+const majAria = () => document.querySelectorAll('.chip[role="radio"], .moteur[role="radio"]').forEach(el => el.setAttribute('aria-checked', el.classList.contains('on') ? 'true' : 'false'));
+document.addEventListener('click', () => setTimeout(majAria, 0)); majAria();
 $('voile').onclick = fermerChoix;
 document.addEventListener('keydown', e => { if (e.key === 'Escape') fermerChoix(); });
 

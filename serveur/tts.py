@@ -78,10 +78,14 @@ def refuse(req, code, msg):
 
 
 def ip_de(req):
-    return req.headers.get("X-Forwarded-For", req.remote or "?").split(",")[0].strip()
+    # La DERNIÈRE adresse est celle ajoutée par Caddy (la première peut être inventée par le client).
+    return req.headers.get("X-Forwarded-For", req.remote or "?").split(",")[-1].strip()
 
 
 def trop(files, ip, limite, fenetre):
+    if len(files) > 5000:                        # ménage : la mémoire des adresses ne grossit pas sans fin
+        for k in [k for k, q in files.items() if not q or time.time() - q[-1] > fenetre]:
+            del files[k]
     q, now = files[ip], time.time()
     while q and now - q[0] > fenetre:
         q.popleft()
