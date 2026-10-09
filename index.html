@@ -367,7 +367,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v37</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v38</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -2092,6 +2092,7 @@ async function extrairePersonnages(s) {
   majPersonnages();
 }
 let persosCache = [];
+const cleNomPerso = n => String(n || '').toLowerCase().replace(/^(le|la|les|l')\s*/, '').trim();
 const persosChoisis = new Set((() => { try { return JSON.parse(store.get('set:persos', '[]')); } catch { return []; } })());
 const urlsPersos = new Map();
 async function majPersonnages() {
@@ -2099,7 +2100,7 @@ async function majPersonnages() {
   const vus = new Set(); persosCache = [];
   for (const s of histoires) for (const x of s.personnages) {
     if (x.cache) continue;
-    const cle = x.nom.toLowerCase().replace(/^(le|la|les|l')\s*/, '').trim();
+    const cle = cleNomPerso(x.nom);
     if (vus.has(cle)) continue;                       // le même personnage dans plusieurs histoires : la plus récente
     vus.add(cle); persosCache.push({ ...x, source: s.id, titre: s.titre, image: s.image || null });
   }
@@ -2121,8 +2122,14 @@ $('persos-liste').addEventListener('click', async e => {
     e.stopPropagation();
     const x = persosCache.find(y => y.id === o.dataset.oublier); if (!x) return;
     if (!confirm(`Retirer « ${x.nom} » de la liste ? L'histoire elle-même ne change pas.`)) return;
-    const s = await DB.get(x.source); const q = s?.personnages?.find(y => y.id === x.id);
-    if (q) { q.cache = true; await DB.put(s); driveSauver(s); }
+    // le même personnage peut être noté dans plusieurs histoires (il est revenu) : on le retire partout
+    const cle = cleNomPerso(x.nom);
+    for (const s0 of await DB.liste()) {
+      if (!s0.personnages?.some(y => !y.cache && cleNomPerso(y.nom) === cle)) continue;
+      const s = await DB.get(s0.id);
+      s.personnages.forEach(y => { if (cleNomPerso(y.nom) === cle) y.cache = true; });
+      await DB.put(s); driveSauver(s);
+    }
     persosChoisis.delete(x.id); return majPersonnages();
   }
   const b = e.target.closest('[data-perso]'); if (!b) return;
