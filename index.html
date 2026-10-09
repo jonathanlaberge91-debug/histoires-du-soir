@@ -191,6 +191,14 @@
   .enfant-tete b { flex: 1; }
   .enfant-tete button { padding: 6px 12px; }
   #btn-ajout-enfant { margin-top: 14px; width: 100%; justify-content: center; }
+  .persos { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin-top: 8px; }
+  .perso { position: relative; display: flex; flex-direction: column; gap: 4px; text-align: left; padding: 8px; border-radius: var(--r-petit); border: 1.5px solid var(--ligne); background: var(--surface); color: var(--texte); font: inherit; cursor: pointer; min-width: 0; }
+  .perso img, .perso .sans-image { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 8px; background: var(--surface2); display: grid; place-items: center; font-size: 1.8rem; }
+  .perso b { font-size: .92rem; overflow-wrap: anywhere; }
+  .perso small { color: var(--doux); font-size: .75rem; line-height: 1.25; overflow-wrap: anywhere; }
+  .perso.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
+  .perso.on::after { content: "✓"; position: absolute; top: 6px; left: 6px; width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: var(--accent-txt); display: grid; place-items: center; font-weight: 800; }
+  .perso .oublier { position: absolute; top: 4px; right: 4px; width: 28px; height: 28px; border-radius: 50%; border: 0; background: rgba(0,0,0,.45); color: #fff; font-size: .8rem; cursor: pointer; }
   .cover { width: 100%; border-radius: var(--r); margin: 2px 0 12px; display: block; }
   .story figure.illus { margin: 6px 0 16px; }
   .story figure.illus img { width: 100%; aspect-ratio: 768 / 526; object-fit: cover; border-radius: var(--r); display: block; background: var(--surface2); }
@@ -359,7 +367,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v36</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v37</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -376,6 +384,15 @@
           <button type="button" class="sec" id="btn-ajout-enfant">➕ Ajouter un enfant</button>
           <label for="friends">Avec qui d'autre ? (optionnel : le chien, papa, grand-maman…)</label>
       <input id="friends" placeholder="ex. son frère Max (3 ans) et son chien Biscuit" autocomplete="off">
+      <details class="plus choix-enfant" id="persos-zone">
+        <summary>🎭 Personnages précédents <small id="persos-resume">· aucun choisi</small></summary>
+        <div class="dedans">
+          <p class="hint" style="margin-top:0">Touche ceux que tu veux ramener dans la prochaine histoire. Ils reviennent avec le même nom, la même allure et le même caractère.</p>
+          <div id="persos-liste" class="persos"></div>
+          <div class="actions"><button type="button" class="sec" id="btn-persos-chercher">🔎 Chercher dans mes anciennes histoires</button></div>
+          <div class="status" id="persos-status"></div>
+        </div>
+      </details>
     </div>
 
     <p class="bloc-titre" style="margin:18px 2px 8px">L'histoire</p>
@@ -1408,6 +1425,7 @@ function consignes(opts = {}) {
   const souci = chipVal('souci'), souciTxt = souci === 'autre' ? $('souci-autre').value.trim() : SOUCIS[souci];
   return [
     ...enf.lignes,
+    ...consignesPersos(),
     friends ? `Autres héros de l'histoire, aussi importants que le héros principal (chacun a son rôle, ses répliques et un moment où il aide) : ${friends}.` : '',
     opts.sansIdee ? '' : (idea ? `Idée de départ : ${idea}` : `Surprends-moi avec une idée originale et inattendue.`),
     souciTxt ? `Petit défi de la vraie vie à apprivoiser : ${souciTxt}. Le héros vit une situation semblable, ressent la même émotion (nommée simplement, sans en faire un drame), découvre un ou deux trucs concrets qu'un enfant peut vraiment utiliser, et réussit. Ton rassurant, jamais moralisateur ; l'enfant doit se reconnaître et se sentir capable.` : '',
@@ -1555,6 +1573,17 @@ async function reduireImage(blob) {           // ≤ 900 px de large, en JPEG : 
     return await new Promise(ok => c.toBlob(b => ok(b || blob), 'image/jpeg', .85));
   } catch { return blob; }
 }
+/* Modèle de la couverture : le dessin de l'enfant, sinon l'image des histoires d'où reviennent les personnages (2 au plus) */
+async function refsCouverture(s) {
+  if (s.dessin && s.image) return [s.image];
+  const refs = [];
+  for (const x of s.persoRepris || []) {
+    const src = await DB.get(x.source).catch(() => null);
+    if (src?.image && !refs.includes(src.image)) refs.push(src.image);
+    if (refs.length >= 2) break;
+  }
+  return refs;
+}
 function imageEnFond(s) {
   if (!s.illusNb || !cleGemini()) return;
   illustrer(s);
@@ -1604,6 +1633,7 @@ async function planifierImages(s) {
     'Tu prépares les illustrations d\'un livre d\'histoire pour enfants. Écris EN ANGLAIS (pour le dessinateur).',
     `- « fiche » : la description visuelle FIXE de chaque personnage qui revient (2 à 3 personnages au plus), comme des personnages de DESSIN ANIMÉ : nom, espèce, cheveux ou pelage, vêtements avec leurs COULEURS exactes. JAMAIS d'âge, de corps ni de peau : seulement coiffure, vêtements, accessoires et couleurs. Une courte phrase par personnage (20 mots au plus), très concrète. Exemple : "Abby: cartoon kid with curly red hair, yellow raincoat, red boots. Biscuit: small light brown cartoon puppy with a blue collar."`,
     ficheAvant ? `- Ces personnages ont déjà été dessinés dans les chapitres précédents : reprends EXACTEMENT cette fiche, en ajoutant seulement les nouveaux : ${ficheAvant}` : '',
+    s.persoRepris?.length ? `- Ces personnages reviennent d'histoires déjà illustrées : mets-les dans la fiche avec EXACTEMENT cette description : ${s.persoRepris.map(x => x.nom + ': ' + x.visuel).join(' ')}` : '',
     s.dessin ? '- L\'enfant a fait un dessin pour cette histoire : décris les personnages comme dans son dessin.' : '',
     `- « scenes » : ${combien}. Chaque « description » est une seule phrase visuelle et courte : qui (par leur nom, et ce qu'ils sont : « Abby and her puppy Biscuit »), fait quoi, où, l'heure. Les objets importants sont nommés avec leur couleur. Rien d'effrayant.`,
     '---', morceaux
@@ -1729,7 +1759,7 @@ function illustrer(s, forcer) {
           const premier = restants.find(o => o.i === 0);
           if (premier) {
             etat(`<span class="spin"></span>🎨 Couverture (Gemini)…`);
-            await ranger(premier.sc, 0, await dessinerGemini(s, premier.sc, s.dessin && s.image ? [s.image] : []));
+            await ranger(premier.sc, 0, await dessinerGemini(s, premier.sc, await refsCouverture(s)));
           }
           let k = 0;
           const autres = restants.filter(o => o.i !== 0);
@@ -2030,6 +2060,99 @@ $('lecons').addEventListener('click', e => {
 });
 $('moral').addEventListener('input', majLecons);
 majLecons();
+
+/* ==================== PERSONNAGES PRÉCÉDENTS ====================
+   Après chaque histoire, Gemini note ses personnages marquants (pas les enfants héros, pas la vraie famille) :
+   nom, type, allure, caractère, et une description de dessin en anglais. Ils sont rangés DANS l'histoire
+   (s.personnages), donc ils suivent la sauvegarde Drive. Le parent choisit lui-même ceux qui reviennent. */
+const SCHEMA_PERSOS = { type: 'OBJECT', properties: { personnages: { type: 'ARRAY', items: { type: 'OBJECT', properties: {
+  nom: { type: 'STRING' }, type: { type: 'STRING' }, allure: { type: 'STRING' }, caractere: { type: 'STRING' }, visuel: { type: 'STRING' } },
+  required: ['nom', 'type', 'allure', 'caractere', 'visuel'] } } }, required: ['personnages'] };
+async function extrairePersonnages(s) {
+  if (!s || Array.isArray(s.personnages) || !cleGemini()) return;
+  const heros = String(s.meta?.name || '').split(/\s+et\s+|,/).map(x => x.trim()).filter(Boolean);
+  const texte = s.arbre ? Object.values(s.arbre).map(n => stripTags(n.texte)).join('\n\n') : stripTags(s.histoire || '');
+  const user = [
+    'Voici une histoire pour enfants. Liste ses personnages marquants qu\'on pourrait faire revenir dans une autre histoire (4 au plus) : animaux, créatures, personnages inventés, méchants, qui ont un nom ou un rôle bien à eux. Pas de foule, pas de personnage à peine nommé.',
+    heros.length ? `N'inclus PAS les enfants héros : ${heros.join(', ')}.` : '',
+    s.meta?.friends ? `N'inclus pas non plus la vraie famille ou les vrais animaux de la maison : ${s.meta.friends}.` : '',
+    '- nom : son nom dans l\'histoire (s\'il n\'en a pas, un nom court comme « le dragon bleu »)',
+    '- type : ce qu\'il est (chat, dragon, fée, robot…)',
+    '- allure : une phrase en français : couleurs, vêtements, accessoires',
+    '- caractere : quelques mots en français (ex. curieux et gourmand)',
+    '- visuel : en anglais, 20 mots au plus, description de personnage de dessin animé (pelage ou cheveux, vêtements, couleurs exactes), jamais d\'âge ni de corps',
+    s.illus?.fiche ? `Descriptions déjà utilisées pour les images, à respecter : ${s.illus.fiche}` : '',
+    '---', texte.slice(0, 12000)
+  ].filter(Boolean).join('\n');
+  const j = await appelGemini(user, SCHEMA_PERSOS, () => {}, { system: 'Tu catalogues les personnages d\'histoires pour enfants. Tu réponds en JSON.', temperature: 0.2 });
+  s.personnages = (j.personnages || []).slice(0, 4).filter(x => x.nom && !heros.some(h => h.toLowerCase() === String(x.nom).toLowerCase()))
+    .map((x, k) => ({ id: s.id + '-' + k, nom: String(x.nom).slice(0, 60), type: String(x.type || '').slice(0, 40), allure: String(x.allure || '').slice(0, 220),
+      caractere: String(x.caractere || '').slice(0, 100), visuel: String(x.visuel || '').slice(0, 220) }));
+  await DB.put(s); driveSauver(s);
+  majPersonnages();
+}
+let persosCache = [];
+const persosChoisis = new Set((() => { try { return JSON.parse(store.get('set:persos', '[]')); } catch { return []; } })());
+const urlsPersos = new Map();
+async function majPersonnages() {
+  const histoires = (await DB.liste()).filter(s => Array.isArray(s.personnages)).sort((a, b) => b.createdAt - a.createdAt);
+  const vus = new Set(); persosCache = [];
+  for (const s of histoires) for (const x of s.personnages) {
+    if (x.cache) continue;
+    const cle = x.nom.toLowerCase().replace(/^(le|la|les|l')\s*/, '').trim();
+    if (vus.has(cle)) continue;                       // le même personnage dans plusieurs histoires : la plus récente
+    vus.add(cle); persosCache.push({ ...x, source: s.id, titre: s.titre, image: s.image || null });
+  }
+  for (const id of [...persosChoisis]) if (!persosCache.some(x => x.id === id)) persosChoisis.delete(id);
+  store.set('set:persos', JSON.stringify([...persosChoisis]));
+  const n = persosChoisis.size;
+  $('persos-resume').textContent = '· ' + (n ? n + ' choisi' + (n > 1 ? 's' : '') : persosCache.length ? persosCache.length + ' disponible' + (persosCache.length > 1 ? 's' : '') + ', aucun choisi' : 'aucun pour l’instant');
+  $('persos-liste').innerHTML = persosCache.length ? persosCache.map(x => {
+    let u = ''; if (x.image) { if (!urlsPersos.has(x.image)) urlsPersos.set(x.image, URL.createObjectURL(x.image)); u = urlsPersos.get(x.image); }
+    return `<button type="button" class="perso ${persosChoisis.has(x.id) ? 'on' : ''}" data-perso="${esc(x.id)}" role="checkbox" aria-checked="${persosChoisis.has(x.id)}">
+      ${u ? `<img src="${u}" alt="">` : '<span class="sans-image">🎭</span>'}
+      <b>${esc(x.nom)}</b><small>${esc([x.type, x.caractere].filter(Boolean).join(' · '))}</small><small>de « ${esc(x.titre || '')} »</small>
+      <span class="oublier" data-oublier="${esc(x.id)}" role="button" title="Retirer de la liste">✖</span></button>`;
+  }).join('') : '<p class="hint">Les personnages de tes prochaines histoires apparaîtront ici. Pour tes anciennes histoires, touche « Chercher dans mes anciennes histoires ».</p>';
+}
+$('persos-liste').addEventListener('click', async e => {
+  const o = e.target.closest('[data-oublier]');
+  if (o) {
+    e.stopPropagation();
+    const x = persosCache.find(y => y.id === o.dataset.oublier); if (!x) return;
+    if (!confirm(`Retirer « ${x.nom} » de la liste ? L'histoire elle-même ne change pas.`)) return;
+    const s = await DB.get(x.source); const q = s?.personnages?.find(y => y.id === x.id);
+    if (q) { q.cache = true; await DB.put(s); driveSauver(s); }
+    persosChoisis.delete(x.id); return majPersonnages();
+  }
+  const b = e.target.closest('[data-perso]'); if (!b) return;
+  persosChoisis.has(b.dataset.perso) ? persosChoisis.delete(b.dataset.perso) : persosChoisis.add(b.dataset.perso);
+  store.set('set:persos', JSON.stringify([...persosChoisis]));
+  majPersonnages();
+});
+$('btn-persos-chercher').onclick = async () => {
+  const st = (m, c) => status($('persos-status'), m, c);
+  if (!cleGemini()) return st('Il faut Gemini (clé du serveur ou clé Gemini) pour trouver les personnages.', 'err');
+  const a = (await DB.all()).filter(s => !Array.isArray(s.personnages) && (s.histoire || s.arbre));
+  if (!a.length) return st('✔ Toutes tes histoires ont déjà leurs personnages.', 'ok');
+  $('btn-persos-chercher').disabled = true;
+  let n = 0;
+  for (const s of a) {
+    st(`<span class="spin"></span>Lecture des histoires… ${++n}/${a.length} · ${esc(s.titre || '')}`);
+    try { await extrairePersonnages(await DB.get(s.id)); } catch (e) { if (/clé|key/i.test(e.message)) { st(esc(e.message), 'err'); break; } }
+  }
+  $('btn-persos-chercher').disabled = false;
+  if (!/err/.test($('persos-status').className)) st(`✔ ${a.length} histoire(s) lue(s).`, 'ok');
+};
+/* Pour l'histoire qu'on écrit : les personnages choisis, avec tout ce qu'il faut pour les reconnaître */
+const persosPourHistoire = () => persosCache.filter(x => persosChoisis.has(x.id)).map(({ image, ...x }) => x);
+function consignesPersos() {
+  const l = persosPourHistoire();
+  if (!l.length) return [];
+  return [`PERSONNAGES QUI REVIENNENT d'histoires précédentes (choisis par le parent) : fais-les revenir avec EXACTEMENT le même nom, la même allure et le même caractère, et donne à chacun un vrai rôle. Les enfants les connaissent déjà : un petit clin d'œil à leur première aventure est bienvenu.`,
+    ...l.map(x => `- ${x.nom} (${x.type}) : ${x.allure} ; caractère : ${x.caractere}.`)];
+}
+majPersonnages();
 
 /* ==================== PLUSIEURS ENFANTS, CHACUN SES CHOIX ====================
    L'enfant 1 garde les champs Prénom / Âge du haut ; les autres s'ajoutent avec « Ajouter un enfant ».
@@ -2792,6 +2915,7 @@ async function creer(fn, extra = {}) {
       id: Date.now().toString(36), createdAt: Date.now(), titre: j.titre, histoire: j.histoire,
       meta: { name: consignesEnfants().noms.join(' et ') || $('name').value.trim(), friends: $('friends').value.trim(), mood: chipVal('mood') }, illusNb: imagesVoulues(), ...extra
     };
+    const repris = persosPourHistoire(); if (repris.length) s.persoRepris = repris;
     if (extra.interactive) { s.parts = [{ texte: j.histoire, choixA: j.choixA, choixB: j.choixB }]; s.partAudio = []; }
     if (j.arbre) { s.arbre = j.arbre; s.chemin = ''; s.audioNoeuds = {}; }
     s.ecriture = voixGoogle ? 'google' : voixSimple ? 'simple' : 'eleven';
@@ -2803,6 +2927,7 @@ async function creer(fn, extra = {}) {
     st('✔ Histoire prête !');
     $('gen-status').className = 'status ok';
     imageEnFond(s);
+    extrairePersonnages(s).catch(() => {});                  // ses personnages, pour pouvoir les ramener plus tard
     $('story-card').scrollIntoView({ behavior: 'smooth' });
   } catch (e) { status($('gen-status'), esc(e.message), 'err'); }
   btn.disabled = $('btn-regen').disabled = $('btn-suite').disabled = false;
