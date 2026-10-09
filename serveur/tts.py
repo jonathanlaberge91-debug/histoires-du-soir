@@ -18,13 +18,15 @@ import base64
 import html
 import json
 import os
+import re
+from urllib.parse import urlsplit
 import secrets
 import shutil
 import time
 from collections import defaultdict, deque
 
 import edge_tts
-from aiohttp import web
+from aiohttp import ClientSession, ClientTimeout, web
 
 PORT = 8120
 VOIX = {
@@ -35,7 +37,7 @@ VOIX = {
 }
 ORIGINES = {"https://95.groupelaberge.ca"}
 # Clé du relais : sans elle, ni voix ni partage (les pages d'écoute restent publiques, c'est leur but).
-# Donnée par l'environnement du service (/etc/systemd/system/histoires-tts.service.d/cle.conf, root seulement),
+# Donnée par l'environnement du service (/etc/secrets/histoires-tts.env, root 600, lu par EnvironmentFile=),
 # et à l'app par le lien du document « ⚙️ Configurer l'app » du Drive. Jamais dans le dépôt.
 CLE = os.environ.get("RELAIS_CLE", "")
 PUBLIC = "https://95.groupelaberge.ca"
@@ -50,6 +52,21 @@ AUDIO_MAX = 40 * 1024 * 1024
 IMAGE_MAX = 4 * 1024 * 1024
 TYPES_AUDIO = {"audio/mpeg": "mp3", "audio/wav": "wav"}
 TYPES_IMAGE = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}
+
+# Clés Google (Gemini : texte, images, voix Gemini ; Cloud Text-to-Speech : voix Google), gardées SEULEMENT ici :
+# /etc/secrets/histoires-tts.env (root 600, EnvironmentFile=), jamais envoyées aux appareils.
+GOOGLE_CLES = {
+    "generativelanguage.googleapis.com": os.environ.get("GOOGLE_GEMINI_KEY", ""),
+    "texttospeech.googleapis.com": os.environ.get("GOOGLE_TTS_KEY", ""),
+}
+# Seules les adresses dont l'app a besoin
+GOOGLE_CHEMINS = re.compile(
+    r"^(/v1beta/models(\?pageSize=\d+)?"
+    r"|/v1beta/models/[\w.\-]+:generateContent"
+    r"|/v1/voices(\?languageCode=[\w-]+)?"
+    r"|/v1/text:synthesize)$")
+GOOGLE_PAR_IP = 900          # appels par 10 minutes (une voix par personnage = beaucoup de petits morceaux)
+file_google = defaultdict(deque)
 
 os.makedirs(PARTAGES, exist_ok=True)
 file_ip = defaultdict(deque)
@@ -97,6 +114,39 @@ def trop(files, ip, limite, fenetre):
 
 async def options(req):
     return cors(req, web.Response(status=204))
+
+
+async def google(req):
+    """Passe un appel à Google pour l'app, avec la clé gardée sur le serveur."""
+    o = req.headers.get("Origin")
+    if o and o not in ORIGINES:
+        return refuse(req, 403, "origine refusée")
+    if not cle_ok(req):
+        return refuse(req, 401, "clé du relais absente ou invalide (touche le lien du document « Configurer l'app » du Drive)")
+    if trop(file_google, ip_de(req), GOOGLE_PAR_IP, FENETRE):
+        return refuse(req, 429, "trop de demandes, réessaie dans quelques minutes")
+    try:
+        b = await req.json()
+    except Exception:
+        return refuse(req, 400, "requête illisible")
+    u = urlsplit(str(b.get("u", "")))
+    chemin = u.path + ("?" + u.query if u.query else "")
+    if u.scheme != "https" or u.netloc not in GOOGLE_CLES or not GOOGLE_CHEMINS.match(chemin):
+        return refuse(req, 400, "adresse Google non permise")
+    cle = GOOGLE_CLES[u.netloc]
+    if not cle:
+        return refuse(req, 503, "clé Google absente du serveur")
+    methode = "POST" if b.get("m") == "POST" else "GET"
+    try:
+        async with ClientSession(timeout=ClientTimeout(total=300)) as s:
+            async with s.request(methode, f"https://{u.netloc}{chemin}", headers={"x-goog-api-key": cle},
+                                 json=b.get("b") if methode == "POST" else None) as r:
+                corps = await r.read()
+                return cors(req, web.Response(body=corps, status=r.status, content_type="application/json"))
+    except asyncio.TimeoutError:
+        return refuse(req, 504, "Google n'a pas répondu à temps")
+    except Exception as e:
+        return refuse(req, 502, f"Google injoignable ({type(e).__name__})")
 
 
 async def voix(req):
@@ -330,6 +380,8 @@ app.router.add_route("OPTIONS", "/histoires/tts", options)
 app.router.add_route("OPTIONS", "/histoires/tts/voix", options)
 app.router.add_route("OPTIONS", "/histoires/partage", options)
 app.router.add_post("/histoires/tts", tts)
+app.router.add_route("OPTIONS", "/histoires/tts/google", options)
+app.router.add_post("/histoires/tts/google", google)
 app.router.add_get("/histoires/tts/voix", voix)
 app.router.add_post("/histoires/partage", partager)
 app.router.add_route("OPTIONS", "/histoires/partage/{id}/retirer", options)
