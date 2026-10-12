@@ -201,9 +201,19 @@
   .perso .oublier { position: absolute; top: 4px; right: 4px; width: 28px; height: 28px; border-radius: 50%; border: 0; background: rgba(0,0,0,.45); color: #fff; font-size: .8rem; cursor: pointer; }
   .cover { width: 100%; border-radius: var(--r); margin: 2px 0 12px; display: block; }
   .story figure.illus { margin: 6px 0 16px; }
-  .story figure.illus img { width: 100%; aspect-ratio: 768 / 526; object-fit: cover; border-radius: var(--r); display: block; background: var(--surface2); }
+  /* La dernière image reste à l'écran et le texte défile dessous, jusqu'à ce
+     que la suivante vienne prendre sa place (demandé le 2026-10-12).
+     Seulement quand l'image EST là : un cadre « le dessin arrive… » collé en
+     haut de l'écran n'aurait aucun sens, et son fond est translucide.
+     Fond OPAQUE obligatoire (--surface-pleine) : en thème Veilleuse,
+     --surface est translucide et le texte passerait derrière l'image. */
+  .story figure.illus:not(.attente) { position: sticky; top: 0; z-index: 1; margin: 6px 0 0; padding: 6px 0 12px; background: var(--surface-pleine); }
+  .story figure.illus img { width: 100%; aspect-ratio: 768 / 526; max-height: 40vh; object-fit: cover; border-radius: var(--r); display: block; background: var(--surface2); }
   .story figure.illus.attente { aspect-ratio: 768 / 526; border-radius: var(--r); background: var(--surface2); display: grid; place-items: center; color: var(--doux); font-size: .85rem; }
-  body.nuit .story figure.illus { opacity: .3; }
+  /* Mode nuit : on estompe l'IMAGE, jamais le cadre — sinon le fond opaque
+     devient transparent et le texte réapparaît derrière l'image collée. */
+  body.nuit .story figure.illus.attente { opacity: .3; }
+  body.nuit .story figure.illus img { opacity: .3; }
 
   /* ───── l'histoire ───── */
   #story-card { padding: 14px; }
@@ -367,7 +377,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v38</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v39</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -2736,8 +2746,36 @@ function plagesParties(s) {
   for (const p of s.parts) { const n = paras(p.texte).length; out.push([d, d + n]); d += n; }
   return out;
 }
+/* Remet d'aplomb une histoire à choix dont l'état ne se tient plus : chemin
+   avancé mais parties manquantes, parties perdues en route. On reconstruit les
+   parties en suivant le chemin dans l'arbre — l'arbre, lui, contient tout.
+   Renvoie vrai si quelque chose a été réparé.
+
+   Sans ça, une histoire abîmée rouvrait au début à chaque fois, et l'enfant
+   avait l'impression de tout recommencer (signalé le 2026-10-12). */
+function reparerArbre(s) {
+  if (!s?.arbre) return false;
+  const chemin = typeof s.chemin === 'string' ? s.chemin : '';
+  const parts = [];
+  for (let i = 0; i <= chemin.length; i++) {
+    const n = s.arbre[chemin.slice(0, i)];
+    if (!n || !n.texte) break;                       // branche absente : on s'arrête là
+    parts.push({ texte: n.texte, choixA: n.choixA, choixB: n.choixB, choisi: s.parts?.[i]?.choisi });
+  }
+  if (!parts.length) return false;                   // arbre vide : ne rien casser
+  const intact = s.parts?.length === parts.length &&
+    parts.every((p, i) => s.parts[i]?.texte === p.texte);
+  if (intact) return false;
+  s.chemin = chemin.slice(0, parts.length - 1);      // le chemin ne va pas plus loin que les parties
+  s.parts = parts;
+  s.histoire = parts.map(p => p.texte).join('\n\n');
+  s.partAudio = audioChemin(s);
+  return true;
+}
+
 function showStory(s) {
   arreterParole();
+  if (reparerArbre(s)) DB.put(s).catch(() => {});
   current = s;
   $('story-card').style.display = 'block';
   afficherCouverture(s);
@@ -2748,7 +2786,7 @@ function showStory(s) {
   placerIllustrations(s);
   majBoutonIllustrer(s);
   if (illustrationsEnCours.has(s.id)) $('illus-status').innerHTML = '<span class="spin"></span>🎨 Illustrations en cours…';
-  const enCours = s.interactive && s.parts.length < NB_PARTIES;
+  const enCours = s.interactive && (s.parts?.length ?? 0) < NB_PARTIES;
   $('btn-suite').style.display = enCours ? 'none' : '';
   majChoix();
   setAudio(s);
@@ -2844,14 +2882,17 @@ function jouerFile(f) {
 /* ==================== CHOIX (histoire interactive) ==================== */
 function majChoix() {
   const s = current, zone = $('choix-zone');
-  if (s?.arbre && s.parts.length >= NB_PARTIES) {
+  if (s?.arbre && (s.parts?.length ?? 0) >= NB_PARTIES) {
     zone.style.display = 'block';
     $('choix-btns').innerHTML = '<button class="choix" data-recommencer>🔀 Recommencer et choisir autrement</button>';
     status($('choix-status'), 'Fin ! Il y a quatre fins possibles : essaie les autres chemins.');
     return;
   }
-  if (!s?.interactive || s.parts.length >= NB_PARTIES) { zone.style.display = 'none'; return; }
+  if (!s?.interactive || !s.parts?.length || s.parts.length >= NB_PARTIES) { zone.style.display = 'none'; return; }
   const p = s.parts[s.parts.length - 1];
+  // Un noeud final n'a pas de choix : sans ce garde-fou, on affichait deux
+  // boutons vides sur lesquels rien ne se passait.
+  if (!p?.choixA || !p?.choixB) { zone.style.display = 'none'; return; }
   zone.style.display = 'block';
   $('choix-btns').innerHTML = `<button class="choix" data-c="A">🅰️ ${esc(p.choixA)}</button><button class="choix" data-c="B">🅱️ ${esc(p.choixB)}</button>`;
   status($('choix-status'), `Partie ${s.parts.length} sur ${NB_PARTIES} — à toi de choisir !`);
@@ -2874,21 +2915,46 @@ $('choix-btns').addEventListener('click', async e => {
   arreterParole(); $('player').pause();
   if (s.arbre) {                                              // tout est déjà écrit : aucune attente de Gemini
     const chemin = (s.chemin || '') + b.dataset.c, n = s.arbre[chemin];
-    s.chemin = chemin;
-    s.parts.push({ texte: n.texte, choixA: n.choixA, choixB: n.choixB });
-    s.histoire = s.parts.map(x => x.texte).join('\n\n');
-    if (!s.audioNoeuds?.[chemin] && enregistrementsArbre[s.id]?.[chemin]) {
-      status($('choix-status'), '<span class="spin"></span>Encore un instant, cette suite finit de s\'enregistrer…');
-      try { await enregistrementsArbre[s.id][chemin]; } catch {}
+    // La suite manque dans l'arbre (histoire écrite à moitié, restaurée
+    // partiellement) : on le DIT au lieu de planter sur `n.texte`.
+    if (!n || !n.texte) {
+      status($('choix-status'), 'Cette suite manque dans l\'histoire. Touche « Recommencer et choisir autrement » pour repartir du début.', 'err');
+      document.querySelectorAll('#choix-btns button').forEach(x => x.disabled = false);
+      return;
     }
-    s.partAudio = audioChemin(s);
-    if (s.parts.length === NB_PARTIES && s.partAudio.every(Boolean)) s.audio = await concatAudio(s.partAudio);
-    await DB.put(s);
-    driveSauver(s);
-    showStory(s);
-    const debutP = plagesParties(s)[s.parts.length - 1][0];
-    document.querySelector(`#s-text p[data-i="${debutP}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    $('btn-read').click();
+    // Photo de l'état AVANT le choix. Tout ce qui suit peut échouer (audio,
+    // enregistrement, écriture dans la base) et il faut alors pouvoir revenir
+    // en arrière — voir le catch.
+    const cheminAvant = s.chemin, partsAvant = s.parts.slice(), histoireAvant = s.histoire;
+    try {
+      s.chemin = chemin;
+      s.parts.push({ texte: n.texte, choixA: n.choixA, choixB: n.choixB });
+      s.histoire = s.parts.map(x => x.texte).join('\n\n');
+      if (!s.audioNoeuds?.[chemin] && enregistrementsArbre[s.id]?.[chemin]) {
+        status($('choix-status'), '<span class="spin"></span>Encore un instant, cette suite finit de s\'enregistrer…');
+        try { await enregistrementsArbre[s.id][chemin]; } catch {}
+      }
+      s.partAudio = audioChemin(s);
+      // Le son n'est qu'un bonus : s'il refuse de se recoller, l'histoire doit
+      // quand même avancer.
+      if (s.parts.length === NB_PARTIES && s.partAudio.every(Boolean)) {
+        try { s.audio = await concatAudio(s.partAudio); } catch { s.audio = null; }
+      }
+      await DB.put(s);
+      driveSauver(s);
+      showStory(s);
+      const debutP = plagesParties(s)[s.parts.length - 1]?.[0];
+      if (debutP != null) document.querySelector(`#s-text p[data-i="${debutP}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      $('btn-read').click();
+    } catch (err) {
+      // SANS ce retour en arrière, le chemin avançait alors que la partie
+      // n'était ni ajoutée ni enregistrée : les boutons restaient éteints
+      // (plus moyen de choisir) et, en rouvrant l'histoire, elle repartait du
+      // début. Signalé par Jonathan le 2026-10-12.
+      s.chemin = cheminAvant; s.parts = partsAvant; s.histoire = histoireAvant;
+      status($('choix-status'), 'Impossible d\'ouvrir cette suite : ' + esc(err.message), 'err');
+      document.querySelectorAll('#choix-btns button').forEach(x => x.disabled = false);
+    }
     return;
   }
   status($('choix-status'), `<span class="spin"></span>Tu as choisi « ${esc(choix)} » ! Gemini écrit la suite…`);
