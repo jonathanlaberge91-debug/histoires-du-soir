@@ -36,7 +36,20 @@ Astuce : `…/#gemini=CLÉ&eleven=CLÉ&voice=VOICE_ID` enregistre les clés en u
 - **Image de couverture** : modèles d'images Gemini (`IMAGE_MODELS`), réduite à 900 px JPEG ; facultative (pas dispo avec toutes les clés gratuites).
 - **Bibliothèque** : recherche, favoris ⭐, filtre « avec audio », vignettes.
 
-## Sauvegarde Google Drive (v8)
+## Sauvegarde sur le serveur (v41, 2026-10-13) — remplace Google Drive
+
+- Collection `histoires` (id `pbc_1791700100`) du PocketBase de l'app **Maison** (port 8094, même adresse
+  95.groupelaberge.ca) : `hid` (id de l'histoire dans l'app), `titre`, `enfant`, `fav`, `creeLe`, `donnees`
+  (l'histoire sans ses fichiers), fichiers protégés `audio`, `image`, `illus`, `noeuds`, et `cles` (numéro de
+  fichier → clé d'illustration / de morceau : PocketBase met les noms en minuscules). Migrations dans `maison-pb`.
+- Accès : la session de l'app Maison (`localStorage.pocketbase_auth`), renouvelée par l'app au plus 1×/h.
+  Le relais `serveur/tts.py` accepte ce jeton (vérifié auprès de PocketBase Maison, 10 min en cache) ; l'ancienne
+  clé `X-Relais` reste acceptée.
+- Sauvegarde : le texte part dans la copie quotidienne chiffrée de Maison ; sons et images ont une copie miroir
+  sur le VPS (`/opt/maison-backups/histoires-fichiers`), exclue de la copie hors site (GitHub refuse > 100 Mo).
+- Les anciennes histoires restent dans le Drive ; le service Apps Script (`drive/`) n'est plus appelé.
+
+## Sauvegarde Google Drive (v8) — PLUS UTILISÉE depuis v41
 - Service Google Apps Script dans `drive/` (projet `1YSy2ygl…`, déployé en application web « exécuter en tant que moi,
   accès : tout le monde »). Mise à jour : `cd drive && clasp push -f && clasp update-deployment <id du déploiement>`.
 - Rangement : Drive → `Histoires du soir/<prénom>/<AAAA-MM-JJ> — <titre>/` (Google Doc, audio, `couverture.jpg`, `infos.json`)

@@ -15,6 +15,7 @@ espace total des partages plafonné.
 """
 import asyncio
 import base64
+import hashlib
 import html
 import json
 import os
@@ -36,10 +37,14 @@ VOIX = {
     "fr-CA-ThierryNeural": "Thierry — homme",
 }
 ORIGINES = {"https://95.groupelaberge.ca"}
-# Clé du relais : sans elle, ni voix ni partage (les pages d'écoute restent publiques, c'est leur but).
-# Donnée par l'environnement du service (/etc/secrets/histoires-tts.env, root 600, lu par EnvironmentFile=),
-# et à l'app par le lien du document « ⚙️ Configurer l'app » du Drive. Jamais dans le dépôt.
+# Qui a droit aux voix et au partage (les pages d'écoute restent publiques, c'est leur but) :
+#  - depuis le 2026-10-13 : quiconque est connecté à l'app Maison (même adresse, même session
+#    PocketBase). L'app envoie son jeton ; on demande à PocketBase Maison s'il est valide.
+#  - encore accepté : l'ancienne clé du relais (X-Relais), pour les appareils pas encore passés.
+#    Elle vient de l'environnement du service (/etc/secrets/histoires-tts.env, root 600).
 CLE = os.environ.get("RELAIS_CLE", "")
+MAISON = "http://127.0.0.1:8094"
+jetons_ok = {}               # empreinte du jeton -> valide jusqu'à (on ne redemande pas à chaque morceau)
 PUBLIC = "https://95.groupelaberge.ca"
 TEXTE_MAX = 6000
 PAR_IP = 400                 # voix : requêtes par 10 minutes (une voix par personnage = beaucoup de petits morceaux)
@@ -79,15 +84,38 @@ def cors(req, rep):
     if o in ORIGINES:
         rep.headers["Access-Control-Allow-Origin"] = o
         rep.headers["Access-Control-Allow-Methods"] = "POST, GET, OPTIONS"
-        rep.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Relais"
+        rep.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Relais, Authorization"
         rep.headers["Access-Control-Max-Age"] = "86400"
         rep.headers["Vary"] = "Origin"
     return rep
 
 
-def cle_ok(req):
+async def cle_ok(req):
     k = req.headers.get("X-Relais", "")
-    return bool(CLE) and len(k) == len(CLE) and secrets.compare_digest(k, CLE)
+    if CLE and len(k) == len(CLE) and secrets.compare_digest(k, CLE):
+        return True
+    jeton = req.headers.get("Authorization", "").strip()
+    if not jeton or len(jeton) > 2000:
+        return False
+    cle = hashlib.sha256(jeton.encode()).hexdigest()
+    now = time.time()
+    if jetons_ok.get(cle, 0) > now:
+        return True
+    try:
+        async with ClientSession(timeout=ClientTimeout(total=8)) as s:
+            async with s.get(f"{MAISON}/api/collections/users/records?perPage=1&fields=id",
+                             headers={"Authorization": jeton}) as r:
+                # Liste des comptes : refusée (403/401) sans session valide. Une session valide
+                # voit au moins son propre compte.
+                ok = r.status == 200 and (await r.json()).get("totalItems", 0) >= 1
+    except Exception:
+        return False
+    if ok:
+        if len(jetons_ok) > 500:
+            for c in [c for c, t in jetons_ok.items() if t < now]:
+                del jetons_ok[c]
+        jetons_ok[cle] = now + 600
+    return ok
 
 
 def refuse(req, code, msg):
@@ -121,8 +149,8 @@ async def google(req):
     o = req.headers.get("Origin")
     if o and o not in ORIGINES:
         return refuse(req, 403, "origine refusée")
-    if not cle_ok(req):
-        return refuse(req, 401, "clé du relais absente ou invalide (touche le lien du document « Configurer l'app » du Drive)")
+    if not await cle_ok(req):
+        return refuse(req, 401, "connecte-toi à l'app Maison (95.groupelaberge.ca) puis reviens dans Histoires")
     if trop(file_google, ip_de(req), GOOGLE_PAR_IP, FENETRE):
         return refuse(req, 429, "trop de demandes, réessaie dans quelques minutes")
     try:
@@ -157,8 +185,8 @@ async def tts(req):
     o = req.headers.get("Origin")
     if o and o not in ORIGINES:
         return refuse(req, 403, "origine refusée")
-    if not cle_ok(req):
-        return refuse(req, 401, "clé du relais absente ou invalide (touche le lien du document « Configurer l'app » du Drive)")
+    if not await cle_ok(req):
+        return refuse(req, 401, "connecte-toi à l'app Maison (95.groupelaberge.ca) puis reviens dans Histoires")
     if trop(file_ip, ip_de(req), PAR_IP, FENETRE):
         return refuse(req, 429, "trop de demandes, réessaie dans quelques minutes")
     try:
@@ -236,8 +264,8 @@ async def partager(req):
     o = req.headers.get("Origin")
     if o not in ORIGINES:
         return refuse(req, 403, "origine refusée")
-    if not cle_ok(req):
-        return refuse(req, 401, "clé du relais absente ou invalide (touche le lien du document « Configurer l'app » du Drive)")
+    if not await cle_ok(req):
+        return refuse(req, 401, "connecte-toi à l'app Maison (95.groupelaberge.ca) puis reviens dans Histoires")
     if trop(file_partage, ip_de(req), PARTAGES_PAR_JOUR, 86400):
         return refuse(req, 429, "trop de partages aujourd'hui")
     try:
@@ -359,7 +387,7 @@ async def ecouter(req):
 
 
 async def retirer(req):
-    if req.headers.get("Origin") not in ORIGINES or not cle_ok(req):
+    if req.headers.get("Origin") not in ORIGINES or not await cle_ok(req):
         return refuse(req, 403, "refusé")
     d, infos = lire_partage(req.match_info["id"])
     if not infos:

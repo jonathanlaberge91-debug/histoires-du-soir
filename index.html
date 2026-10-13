@@ -378,7 +378,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v40</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v41</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -567,7 +567,7 @@
   <div class="card">
     <div class="recherche">
       <input id="lib-q" placeholder="🔎 Titre, prénom, un mot…" autocomplete="off">
-      <button class="sec" id="btn-drive-recup" title="Récupérer mes histoires du Drive">☁️</button>
+      <button class="sec" id="btn-drive-recup" title="Récupérer mes histoires du serveur">☁️</button>
     </div>
     <div class="chips" data-group="libf" style="display:flex; margin-top:10px">
       <div class="chip on" data-v="tout">Toutes</div>
@@ -744,14 +744,11 @@
     </details>
 
     <details class="reglage">
-      <summary><span class="r-ic">☁️</span><span class="r-txt"><b>Sauvegarde Google Drive</b><small id="res-drive">—</small></span></summary>
+      <summary><span class="r-ic">☁️</span><span class="r-txt"><b>Sauvegarde sur ton serveur</b><small id="res-drive">—</small></span></summary>
       <div class="dedans">
         <label class="check"><input type="checkbox" id="opt-drive" checked>Sauvegarder chaque histoire</label>
-        <p class="hint">Drive → « Histoires du soir » → un dossier par enfant → un dossier par histoire (texte, voix, image).</p>
-        <label for="drive-url">Adresse du service</label>
-        <input id="drive-url" placeholder="https://script.google.com/macros/s/…/exec">
-        <label for="drive-key">Clé de sauvegarde</label>
-        <input id="drive-key" type="password" placeholder="se remplit avec le lien du Drive">
+        <p class="hint">Chaque histoire (texte, voix, images) est rangée sur ton serveur avec ton compte de l'app Maison. Tes autres appareils connectés à Maison la retrouvent (bouton ☁️ de la bibliothèque). Les anciennes histoires restent dans ton Google Drive.</p>
+        <p class="hint" id="srv-compte">—</p>
         <div class="actions"><button class="sec" id="btn-drive-tout">☁️ Tout envoyer maintenant</button></div>
         <div class="status" id="drive-status"></div>
       </div>
@@ -774,12 +771,6 @@
       </div>
     </details>
 
-    <div class="card" id="transfert-box" style="display:none">
-      <p class="bloc-titre">📲 Version de ton serveur</p>
-      <p class="hint" style="margin-top:0">L'app est aussi sur 95.groupelaberge.ca/histoires (bouton « Histoires » de l'app Maison). Ce bouton y copie tes réglages, puis récupère tes histoires du Drive.</p>
-      <div class="actions"><button class="sec" id="btn-transfert">📲 Ouvrir la version du serveur</button></div>
-      <div class="status" id="transfert-status"></div>
-    </div>
 
     <button class="big" id="btn-save" style="display:none">💾 Enregistrer</button>
     <div class="status" id="set-status"></div>
@@ -1126,56 +1117,17 @@ const chipVal = g => document.querySelector(`.chips[data-group="${g}"] .chip.on`
 
 /* ==================== RÉGLAGES ==================== */
 const SETTINGS = ['k-gemini', 'm-gemini', 'k-eleven', 'voice-id', 'm-eleven', 'stability', 'lang', 'name', 'age', 'friends',
-  'engine', 'g-voice', 'p-voice', 'p-rate', 'musique-vol', 'drive-url', 'drive-key', 'img-style', 'k-gcloud', 'gc-voice', 'gc-voice-studio', 'gc-voice-neural', 'gc-rate', 'gc-plafond', 'ms-voice', 'ms-rate', 'vit-mode'];
+  'engine', 'g-voice', 'p-voice', 'p-rate', 'musique-vol', 'img-style', 'k-gcloud', 'gc-voice', 'gc-voice-studio', 'gc-voice-neural', 'gc-rate', 'gc-plafond', 'ms-voice', 'ms-rate', 'vit-mode'];
 const CHECKS = ['opt-musique', 'opt-suivre', 'opt-drive', 'opt-multivoix'];
 SETTINGS.forEach(id => { const v = store.get('set:' + id); if (v) $(id).value = v; });
 CHECKS.forEach(id => { const v = store.get('set:' + id); if (v) $(id).checked = v === '1'; });
-/* Import de clés par lien : …/#gemini=CLÉ&eleven=CLÉ (enregistrées puis retirées de l'adresse) */
-/* Une adresse de sauvegarde Drive doit être un service Apps Script ; si elle change, on demande */
-const driveUrlOk = u => /^https:\/\/script\.google\.com\/macros\/s\/[\w-]{20,}\/exec$/.test(u || '');
-function accepterDriveUrl(u) {
-  if (!driveUrlOk(u)) { setTimeout(() => alert('Lien refusé : l’adresse de sauvegarde n’est pas un service Google Apps Script.'), 300); return false; }
-  const avant = store.get('set:drive-url');
-  return !avant || avant === u || confirm('Ce lien change l’adresse de sauvegarde de tes histoires. Continue SEULEMENT si tu viens de toucher le lien de TON document « ⚙️ Configurer l’app » dans ton Google Drive.');
-}
+/* Import de clés par lien : …/#gemini=CLÉ&eleven=CLÉ (enregistrées puis retirées de l'adresse).
+   Plus de configuration par le Drive (2026-10-13) : la connexion de l'app Maison suffit. */
 if (location.hash.length > 1) {
   const h = new URLSearchParams(location.hash.slice(1));
-  if (h.get('cfg')) {                                   // transfert depuis l'autre adresse de l'app
-    try {
-      const c = JSON.parse(decodeURIComponent(escape(atob(h.get('cfg').replace(/-/g, '+').replace(/_/g, '/')))));
-      for (const [k, v] of Object.entries(c)) {
-        if (k === 'drive-url' && !accepterDriveUrl(v)) continue;
-        if (SETTINGS.includes(k)) { store.set('set:' + k, v); $(k).value = v; }
-        if (CHECKS.includes(k)) { store.set('set:' + k, v ? '1' : '0'); $(k).checked = !!v; }
-        if (k === 'relais-key' || k === 'theme') store.set('set:' + k, v);
-      }
-      setTimeout(async () => {
-        alert('📲 Réglages copiés ! Tes histoires vont être récupérées depuis le Drive.');
-        document.querySelector('nav button[data-v="v-lib"]').click();
-        if (driveActif()) $('btn-drive-recup').click();
-      }, 600);
-    } catch (e) { setTimeout(() => alert('Le transfert des réglages a échoué : ' + e.message), 300); }
-  }
   if (h.get('gemini')) store.set('set:k-gemini', $('k-gemini').value = h.get('gemini'));
   if (h.get('eleven')) store.set('set:k-eleven', $('k-eleven').value = h.get('eleven'));
   if (h.get('voice')) store.set('set:voice-id', $('voice-id').value = h.get('voice'));
-  if (h.get('relais')) store.set('set:relais-key', h.get('relais'));
-  if (h.get('gcloud') && !h.get('relais') && !store.get('set:relais-key')) {   // ancienne façon : clé des voix sur l'appareil (seulement sans serveur)
-    store.set('set:k-gcloud', $('k-gcloud').value = h.get('gcloud'));
-    // charge la liste des voix tout de suite, sinon aucune voix n'est choisie et l'app saute la voix Google
-    setTimeout(() => { if (!GC_PALIERS.some(gcVoixDe)) gcChargerVoix(); }, 500);
-  }
-  if (h.get('drive') && h.get('driveKey') && accepterDriveUrl(h.get('drive'))) {   // lien du document « ⚙️ Configurer l'app » du Drive
-    store.set('set:drive-url', $('drive-url').value = h.get('drive'));
-    store.set('set:drive-key', $('drive-key').value = h.get('driveKey'));
-    $('opt-drive').checked = true; store.set('set:opt-drive', '1');
-    setTimeout(async () => {
-      alert('☁️ App configurée : sauvegarde Google Drive et voix québécoises activées. Tes histoires du Drive arrivent.');
-      await driveToutEnvoyer();
-      document.querySelector('nav button[data-v="v-lib"]').click();
-      $('btn-drive-recup').click();
-    }, 500);
-  }
   history.replaceState(null, '', location.pathname);
 }
 if (['gemini-2.5-flash', 'gemini-3.8-flash'].includes($('m-gemini').value)) $('m-gemini').value = 'gemini-flash-latest';
@@ -1802,7 +1754,7 @@ function illustrer(s, forcer) {
         }
       }
       etat(`🎨 ${total} illustration${total > 1 ? 's' : ''}`);
-      driveSauver(s);
+      srvSauver(s);
     } catch (e) {
       etat(`🎨 Illustrations interrompues : ${esc(e.message)}`);
     } finally { illustrationsEnCours.delete(s.id); if (current?.id === s.id) majBoutonIllustrer(s); }
@@ -1881,28 +1833,64 @@ async function tts(text) {
 const URL_TTS_EDGE = location.hostname === '95.groupelaberge.ca' ? '/histoires/tts' : 'https://95.groupelaberge.ca/histoires/tts';
 let edgeEnPanne = false;
 /* Un morceau de texte → MP3 (voix, vitesse en %, hauteur en Hz) */
-const cleRelais = () => store.get('set:relais-key');
-const entetesRelais = () => ({ 'Content-Type': 'application/json', 'X-Relais': cleRelais() });
-/* La clé du serveur peut changer : si le serveur la refuse (401), l'app reprend la clé actuelle dans le Drive
-   (gardée par le script de sauvegarde, que seul ton compte Google peut lire) et réessaie. Rien à toucher. */
-let relaisEnCours = null;
-function relaisDepuisDrive() {
-  if (!driveActif()) return Promise.resolve(false);
-  return relaisEnCours = relaisEnCours || drivePost({ a: 'relais' }).then(j => {
-    const k = String(j?.relais || '');
-    if (!/^[\w-]{20,100}$/.test(k) || k === cleRelais()) return false;
-    store.set('set:relais-key', k); return true;
-  }).catch(() => false).finally(() => { setTimeout(() => { relaisEnCours = null; }, 5000); });
+/* Session de l'app Maison (même adresse) : sert au relais ET à la sauvegarde des histoires. */
+const URL_MAISON = location.hostname === '95.groupelaberge.ca' ? '' : 'https://95.groupelaberge.ca';
+const COL_HIST = 'histoires';
+function sessionMaison() {
+  try { const j = JSON.parse(localStorage.getItem('pocketbase_auth') || 'null'); return j?.token ? j : null; } catch { return null; }
 }
+const jetonMaison = () => sessionMaison()?.token || '';
+const compteMaison = () => sessionMaison()?.record || null;
+function jetonExpire(t) {
+  try { return JSON.parse(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).exp * 1000 < Date.now() + 60000; } catch { return true; }
+}
+/* La session de Maison dure quelques jours : on la renouvelle (au plus une fois l'heure) pour qu'elle
+   ne meure pas si on n'ouvre que Histoires. Même format que l'app Maison ({ token, record }). */
+let sessionRafraichieLe = 0, sessionEnCours = null;
+function rafraichirSession() {
+  const j = sessionMaison();
+  if (!j) return Promise.resolve(false);
+  if (Date.now() - sessionRafraichieLe < 3600e3 && !jetonExpire(j.token)) return Promise.resolve(true);
+  return sessionEnCours = sessionEnCours || (async () => {
+    try {
+      const r = await fetch(`${URL_MAISON}/api/collections/users/auth-refresh`, { method: 'POST', headers: { Authorization: j.token } });
+      if (!r.ok) return !jetonExpire(j.token) && r.status >= 500;
+      const d = await r.json();
+      localStorage.setItem('pocketbase_auth', JSON.stringify({ ...j, token: d.token, record: d.record }));
+      sessionRafraichieLe = Date.now();
+      return true;
+    } catch { return !jetonExpire(j.token); }
+    finally { setTimeout(() => { sessionEnCours = null; }, 1000); }
+  })();
+}
+const MSG_CONNEXION = 'connecte-toi à l\'app Maison (95.groupelaberge.ca, bouton Google), puis reviens dans Histoires';
+async function apiMaison(chemin, init = {}) {
+  await rafraichirSession();
+  const t = jetonMaison();
+  if (!t) throw new Error(MSG_CONNEXION);
+  const r = await fetch(URL_MAISON + chemin, { ...init, headers: { ...(init.headers || {}), Authorization: t } });
+  if (r.status === 401) throw new Error('ta session Maison a expiré : ' + MSG_CONNEXION);
+  if (!r.ok) throw new Error('serveur : ' + await errText(r));
+  return r;
+}
+const cleRelais = () => store.get('set:relais-key');          // ancienne clé (encore acceptée par le serveur)
+/* Le relais reconnaît la session de l'app Maison (même adresse) ; l'ancienne clé reste acceptée. */
+const entetesRelais = () => {
+  const h = { 'Content-Type': 'application/json' };
+  if (jetonMaison()) h.Authorization = jetonMaison();
+  if (cleRelais()) h['X-Relais'] = cleRelais();
+  return h;
+};
 async function fetchRelais(url, init = {}) {
-  let r = await fetch(url, { ...init, headers: entetesRelais() });
-  if (r.status === 401 && await relaisDepuisDrive()) r = await fetch(url, { ...init, headers: entetesRelais() });
+  await rafraichirSession();
+  const r = await fetch(url, { ...init, headers: entetesRelais() });
+  if (r.status === 401 && !jetonMaison() && !cleRelais()) throw new Error(MSG_CONNEXION);
   return r;
 }
 /* Tous les appels à Google (Gemini, voix Google) passent par le serveur, qui garde les clés.
-   Un appareil n'a donc plus besoin d'aucune clé Google : seulement la clé du relais (lien du document du Drive).
-   Sans relais (rare), l'appareil utilise sa propre clé, s'il en a une. */
-function parServeur() { return !!store.get('set:relais-key'); }      // fonctions « hissées » : utilisables partout dans la page
+   Un appareil n'a donc besoin d'aucune clé Google : seulement d'être connecté à l'app Maison.
+   Sans connexion (rare), l'appareil utilise sa propre clé, s'il en a une. */
+function parServeur() { return !!(jetonMaison() || store.get('set:relais-key')); }      // fonctions « hissées » : utilisables partout dans la page
 function cleGemini() { return parServeur() ? 'serveur' : $('k-gemini').value.trim(); }
 async function gFetch(url, init = {}) {
   if (!parServeur()) return fetch(url, init);
@@ -2086,7 +2074,7 @@ majLecons();
 /* ==================== PERSONNAGES PRÉCÉDENTS ====================
    Après chaque histoire, Gemini note ses personnages marquants (pas les enfants héros, pas la vraie famille) :
    nom, type, allure, caractère, et une description de dessin en anglais. Ils sont rangés DANS l'histoire
-   (s.personnages), donc ils suivent la sauvegarde Drive. Le parent choisit lui-même ceux qui reviennent. */
+   (s.personnages), donc ils suivent la sauvegarde sur le serveur. Le parent choisit lui-même ceux qui reviennent. */
 const SCHEMA_PERSOS = { type: 'OBJECT', properties: { personnages: { type: 'ARRAY', items: { type: 'OBJECT', properties: {
   nom: { type: 'STRING' }, type: { type: 'STRING' }, allure: { type: 'STRING' }, caractere: { type: 'STRING' }, visuel: { type: 'STRING' } },
   required: ['nom', 'type', 'allure', 'caractere', 'visuel'] } } }, required: ['personnages'] };
@@ -2110,7 +2098,7 @@ async function extrairePersonnages(s) {
   s.personnages = (j.personnages || []).slice(0, 4).filter(x => x.nom && !heros.some(h => h.toLowerCase() === String(x.nom).toLowerCase()))
     .map((x, k) => ({ id: s.id + '-' + k, nom: String(x.nom).slice(0, 60), type: String(x.type || '').slice(0, 40), allure: String(x.allure || '').slice(0, 220),
       caractere: String(x.caractere || '').slice(0, 100), visuel: String(x.visuel || '').slice(0, 220) }));
-  await DB.put(s); driveSauver(s);
+  await DB.put(s); srvSauver(s);
   majPersonnages();
 }
 let persosCache = [];
@@ -2150,7 +2138,7 @@ $('persos-liste').addEventListener('click', async e => {
       if (!s0.personnages?.some(y => !y.cache && cleNomPerso(y.nom) === cle)) continue;
       const s = await DB.get(s0.id);
       s.personnages.forEach(y => { if (cleNomPerso(y.nom) === cle) y.cache = true; });
-      await DB.put(s); driveSauver(s);
+      await DB.put(s); srvSauver(s);
     }
     persosChoisis.delete(x.id); return majPersonnages();
   }
@@ -2419,7 +2407,7 @@ async function gcChargerVoix() {
     const r = await gFetch('https://texttospeech.googleapis.com/v1/voices?languageCode=fr', { headers: { 'x-goog-api-key': key } });
     if (!r.ok) {
       const m = await errText(r);
-      throw new Error(/API keys are not supported|OAuth2/i.test(m) ? 'la clé des voix Google manque sur cet appareil : dans ton Google Drive, ouvre le document « ⚙️ Configurer l’app » et touche son lien'
+      throw new Error(/API keys are not supported|OAuth2/i.test(m) ? 'la clé des voix Google manque sur cet appareil : ' + MSG_CONNEXION
         : /SERVICE_DISABLED|has not been used|disabled/i.test(m) ? 'active l\'API « Cloud Text-to-Speech » sur ton projet (lien plus bas), puis réessaie dans 2 minutes'
         : /API_KEY_SERVICE_BLOCKED|blocked/i.test(m) ? 'ta clé est limitée à Gemini : dans console.cloud.google.com → Identifiants → ta clé, ajoute « Cloud Text-to-Speech API »' : m);
     }
@@ -2526,7 +2514,7 @@ async function gcMorceau(texte, pl, voix, vitesse, base) {
     const m = await errText(r);
     if (r.status === 400 && rate && /rate|speaking/i.test(m)) { rate = 0; continue; }          // voix qui refuse la vitesse
     if (r.status === 400 && !entree.text) { entree = { text: stripTags(texte) }; continue; }   // direction de jeu refusée : texte simple
-    const e = new Error('Google : ' + (/API keys are not supported|OAuth2/i.test(m) ? 'la clé des voix Google manque sur cet appareil : dans ton Google Drive, ouvre le document « ⚙️ Configurer l’app » et touche son lien' : /SERVICE_DISABLED|has not been used/i.test(m) ? 'active l\'API « Cloud Text-to-Speech » sur ton projet (Réglages → Qui raconte → lien)' : m));
+    const e = new Error('Google : ' + (/API keys are not supported|OAuth2/i.test(m) ? 'la clé des voix Google manque sur cet appareil : ' + MSG_CONNEXION : /SERVICE_DISABLED|has not been used/i.test(m) ? 'active l\'API « Cloud Text-to-Speech » sur ton projet (Réglages → Qui raconte → lien)' : m));
     e.quota = r.status === 429 || /quota/i.test(m);
     throw e;
   }
@@ -2812,7 +2800,7 @@ function showStory(s) {
   majChoix();
   setAudio(s);
   infoCredits();
-  majDriveInfo();
+  majSrvInfo();
   majPartage();
 }
 async function infoCredits() {
@@ -3095,7 +3083,7 @@ $('choix-btns').addEventListener('click', async e => {
         try { s.audio = await concatAudio(s.partAudio); } catch { s.audio = null; }
       }
       await DB.put(s);
-      driveSauver(s);
+      srvSauver(s);
       showStory(s);
       const debutP = plagesParties(s)[s.parts.length - 1]?.[0];
       if (debutP != null) document.querySelector(`#s-text p[data-i="${debutP}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -3150,7 +3138,7 @@ async function creer(fn, extra = {}) {
     delete s.avecDessin;
     await DB.put(s);
     showStory(s);
-    driveSauver(s);
+    srvSauver(s);
     st('✔ Histoire prête !');
     $('gen-status').className = 'status ok';
     imageEnFond(s);
@@ -3316,14 +3304,14 @@ $('btn-read').onclick = async () => {
       s.partAudio[iPart] = r.blob; s.vitMoteur = r.moteur; s.vitNeutre = r.neutre;
       if (s.parts.length === NB_PARTIES && s.partAudio.length === NB_PARTIES && s.partAudio.every(Boolean)) s.audio = await concatAudio(s.partAudio);
       await DB.put(s);
-      driveSauver(s);
+      srvSauver(s);
       if (ailleurs) return;
       setAudio(s);
       jouerFile([{ url: URL.createObjectURL(r.blob), blob: r.blob, debut: plages[iPart][0], fin: plages[iPart][1], texte }]);
     } else {
       s.audio = r.blob; s.vitMoteur = r.moteur; s.vitNeutre = r.neutre;
       await DB.put(s);
-      driveSauver(s);
+      srvSauver(s);
       if (ailleurs) return;
       setAudio(s);
       $('player').play().catch(() => {});
@@ -3341,9 +3329,12 @@ $('btn-dl').onclick = () => {
   a.click();
 };
 
-/* ==================== SAUVEGARDE GOOGLE DRIVE ==================== */
-/* Le service (Google Apps Script, dossier drive/ du dépôt) tourne avec le compte de Jonathan et range
-   chaque histoire dans son Drive. L'app lui envoie le texte, et l'audio / l'image seulement s'ils ont changé. */
+/* ==================== SAUVEGARDE SUR LE SERVEUR ==================== */
+/* Depuis le 2026-10-13, plus de Google Drive : chaque histoire est rangée sur le serveur de Jonathan,
+   dans la collection « histoires » de l'app Maison (pbc_1791700100). L'app est à la même adresse (95.groupelaberge.ca) :
+   la session de l'app Maison (connexion Google) sert telle quelle, rien à configurer.
+   Le téléphone garde sa propre copie (IndexedDB) ; le serveur est la sauvegarde et le lien entre appareils.
+   On n'envoie le son et les images que s'ils ont changé. Les anciennes histoires restent dans le Drive. */
 const b64 = blob => new Promise((ok, ko) => {
   const r = new FileReader();
   r.onload = () => ok(String(r.result).split(',')[1]);
@@ -3351,117 +3342,150 @@ const b64 = blob => new Promise((ok, ko) => {
   r.readAsDataURL(blob);
 });
 const deB64 = (s, type) => new Blob([Uint8Array.from(atob(s), c => c.charCodeAt(0))], { type });
-const driveActif = () => $('opt-drive').checked && $('drive-url').value.trim() && $('drive-key').value.trim();
-async function driveRep(r) {
-  let j; try { j = await r.json(); } catch { throw new Error('réponse illisible du service Drive (HTTP ' + r.status + ')'); }
-  if (!j.ok) throw new Error(j.erreur || 'erreur du service Drive');
-  return j;
+const srvActif = () => $('opt-drive').checked && !!jetonMaison();
+async function srvIdDe(sid) {
+  const f = encodeURIComponent(`hid="${String(sid).replace(/"/g, '')}"`);
+  const j = await (await apiMaison(`/api/collections/${COL_HIST}/records?perPage=1&fields=id&filter=${f}`)).json();
+  return j.items?.[0]?.id || '';
 }
-async function drivePost(corps) {
-  // Requête « simple » (texte brut, sans en-tête) : Google Apps Script l'accepte depuis une autre adresse.
-  return driveRep(await fetch($('drive-url').value.trim(), { method: 'POST', body: JSON.stringify({ k: $('drive-key').value.trim(), ...corps }) }));
-}
-const driveGet = params => drivePost(params);   // liste et chargement aussi par POST : la clé ne va jamais dans une adresse
-let driveFile = Promise.resolve(), driveErreur = '';
-function driveSauver(s) {
-  if (!s || !driveActif()) return;
+/* Fichiers rangés : PocketBase met les noms en minuscules et y ajoute un suffixe (« i_3_x8k2j1abcd.jpg »).
+   Les clés des images (« nA », « nB ») tiennent compte des majuscules : on envoie donc un numéro
+   (i-3, k-0) et la table numéro → clé dans le champ « cles ». */
+const numFichier = nom => { const m = /^[ik][_-]?(\d+)/.exec(String(nom)); return m ? +m[1] : -1; };
+const extDe = b => b.type === 'audio/wav' ? 'wav' : b.type === 'image/png' ? 'png' : b.type === 'image/webp' ? 'webp' : b.type.startsWith('audio') ? 'mp3' : 'jpg';
+let srvFile = Promise.resolve(), srvErreur = '';
+function srvSauver(s) {
+  if (!s || !srvActif()) return;
   const id = s.id;
-  driveFile = driveFile.then(() => driveEnvoyer(id)).catch(() => {});
-  return driveFile;
+  srvFile = srvFile.then(() => srvEnvoyer(id)).catch(() => {});
+  return srvFile;
 }
-async function driveEnvoyer(id) {
+async function srvEnvoyer(id) {
   const s = await DB.get(id);
   if (!s || (s.interactive && !s.parts?.length)) return;
-  const { audio, image, partAudio, audioNoeuds, illusImages, driveIllus, drive, driveAudio, driveImage, driveAttente, driveNoeuds, ...story } = s;
-  const corps = { a: 'sauver', story };
+  const { audio, image, partAudio, audioNoeuds, illusImages, srv, srvId, srvAudio, srvImage, srvIllus, srvNoeuds, srvAttente,
+    drive, driveAudio, driveImage, driveIllus, driveNoeuds, driveAttente, ...story } = s;
+  const fd = new FormData();
+  fd.append('hid', s.id); fd.append('titre', s.titre || ''); fd.append('enfant', s.meta?.name || '');
+  fd.append('fav', s.fav ? 'true' : 'false'); fd.append('creeLe', String(s.createdAt || Date.now()));
+  fd.append('donnees', JSON.stringify(story));
+  const champs = {};
   const sigA = audio ? audio.size + ':' + audio.type : '', sigI = image ? String(image.size) : '';
-  if (audio && driveAudio !== sigA) corps.audio = { b64: await b64(audio), type: audio.type || 'audio/mpeg' };
-  if (image && driveImage !== sigI) corps.image = { b64: await b64(image), type: image.type || 'image/jpeg' };
-  // Toutes les illustrations (une histoire à choix en a hors du chemin lu) ; avant = -1 : pas dans le texte du Doc
-  const place = Object.fromEntries(Object.entries(clesParParagraphe(s)).map(([i, c]) => [c, parseInt(i, 10)]));
+  if (audio && srvAudio !== sigA) { fd.append('audio', new File([audio], 'histoire.' + extDe(audio), { type: audio.type || 'audio/mpeg' })); champs.srvAudio = sigA; }
+  if (image && srvImage !== sigI) { fd.append('image', new File([image], 'couverture.' + extDe(image), { type: image.type || 'image/jpeg' })); champs.srvImage = sigI; }
+  // Toutes les illustrations (une histoire à choix en a hors du chemin lu) : le nom du fichier = sa clé
   const clesIllus = Object.keys(illusImages || {}).filter(c => illusImages[c]).sort();
-  const sigIl = clesIllus.map(c => (place[c] ?? -1) + c + ':' + illusImages[c].size).join(',');
-  if (clesIllus.length && driveIllus !== sigIl) corps.images = await Promise.all(clesIllus.map(async c => ({ avant: place[c] ?? -1, cle: c, b64: await b64(illusImages[c]), type: 'image/jpeg' })));
-  // Sons des morceaux d'une histoire à choix : envoyés quand ils changent, pour ne jamais les repayer ailleurs
+  const sigIl = clesIllus.map(c => c + ':' + illusImages[c].size).join(',');
+  if (clesIllus.length && srvIllus !== sigIl) {
+    clesIllus.forEach((c, k) => fd.append('illus', new File([illusImages[c]], 'i-' + k + '.' + extDe(illusImages[c]), { type: illusImages[c].type || 'image/jpeg' })));
+    champs.srvIllus = sigIl;
+  }
+  // Sons des morceaux d'une histoire à choix : pour ne jamais les repayer sur un autre appareil
   const noeuds = Object.keys(audioNoeuds || {}).filter(c => audioNoeuds[c]).sort();
   const sigN = noeuds.map(c => c + ':' + audioNoeuds[c].size).join(',');
-  if (noeuds.length && s.driveNoeuds !== sigN) corps.noeuds = await Promise.all(noeuds.map(async c => ({ c, b64: await b64(audioNoeuds[c]), type: audioNoeuds[c].type || 'audio/mpeg' })));
-  const maj = async champs => {
+  if (noeuds.length && srvNoeuds !== sigN) {
+    noeuds.forEach((c, k) => fd.append('noeuds', new File([audioNoeuds[c]], 'k-' + k + '.' + extDe(audioNoeuds[c]), { type: audioNoeuds[c].type || 'audio/mpeg' })));
+    champs.srvNoeuds = sigN;
+  }
+  // Table numéro → clé, toujours celle des fichiers actuels (inchangés = mêmes clés, même ordre)
+  fd.append('cles', JSON.stringify({ illus: clesIllus, noeuds }));
+  const maj = async ch => {
     const s2 = await DB.get(id); if (!s2) return;
-    Object.assign(s2, champs);
-    if (!champs.driveAttente) delete s2.driveAttente;
+    Object.assign(s2, ch);
+    if (!ch.srvAttente) delete s2.srvAttente;
     await DB.put(s2);
-    if (current && current.id === id) { Object.assign(current, champs); if (!champs.driveAttente) delete current.driveAttente; majDriveInfo(); }
+    if (current && current.id === id) { Object.assign(current, ch); if (!ch.srvAttente) delete current.srvAttente; majSrvInfo(); }
   };
   try {
-    const j = await drivePost(corps);
-    driveErreur = '';
-    const champs = { drive: { at: Date.now(), dossier: j.dossier } };
-    if (corps.audio) champs.driveAudio = sigA;
-    if (corps.image) champs.driveImage = sigI;
-    if (corps.images) champs.driveIllus = sigIl;
-    if (corps.noeuds) champs.driveNoeuds = sigN;
-    await maj(champs);
+    let rid = srvId || await srvIdDe(s.id);
+    let r;
+    if (rid) {
+      r = await fetch(`${URL_MAISON}/api/collections/${COL_HIST}/records/${rid}`, { method: 'PATCH', headers: { Authorization: jetonMaison() }, body: fd });
+      if (r.status === 404) rid = '';                      // effacée sur le serveur entre-temps : on la recrée
+    }
+    if (!rid) r = await fetch(`${URL_MAISON}/api/collections/${COL_HIST}/records`, { method: 'POST', headers: { Authorization: jetonMaison() }, body: fd });
+    if (r.status === 401) throw new Error('ta session Maison a expiré : ' + MSG_CONNEXION);
+    if (!r.ok) throw new Error('serveur : ' + await errText(r));
+    const rec = await r.json();
+    srvErreur = '';
+    await maj({ ...champs, srv: { at: Date.now() }, srvId: rec.id });
   } catch (e) {
-    driveErreur = e.message;
-    await maj({ driveAttente: true });
+    srvErreur = e.message;
+    await maj({ srvAttente: true });
   }
 }
-function majDriveInfo() {
+function majSrvInfo() {
   const el = $('drive-info'), s = current;
-  if (!s || !driveActif()) { el.innerHTML = ''; return; }
-  if (s.drive && !s.driveAttente) {
-    el.innerHTML = `☁️ Sauvegardée dans Drive${/^https:\/\//.test(s.drive.dossier || '') ? ` · <a href="${esc(s.drive.dossier)}" target="_blank">ouvrir le dossier</a>` : ''}`;
-  } else if (s.driveAttente) {
-    el.innerHTML = `☁️ Pas encore sauvegardée${driveErreur ? ' (' + esc(driveErreur.slice(0, 100)) + ')' : ''} — nouvel essai à la prochaine ouverture`;
-  } else el.innerHTML = '☁️ Envoi vers Drive…';
+  if (!s || !$('opt-drive').checked) { el.innerHTML = ''; return; }
+  if (!jetonMaison()) { el.innerHTML = s.srv ? '☁️ Sauvegardée sur ton serveur' : ''; return; }
+  if (s.srv && !s.srvAttente) el.innerHTML = '☁️ Sauvegardée sur ton serveur';
+  else if (s.srvAttente) el.innerHTML = `☁️ Pas encore sauvegardée${srvErreur ? ' (' + esc(srvErreur.slice(0, 100)) + ')' : ''} — nouvel essai à la prochaine ouverture`;
+  else el.innerHTML = '';
 }
-async function driveToutEnvoyer() {
-  if (!driveActif()) return status($('drive-status'), 'Active la sauvegarde et remplis l\'adresse et la clé (ou touche le lien du document du Drive).', 'err');
+function majCompteServeur() {
+  const c = compteMaison();
+  $('srv-compte').innerHTML = c
+    ? `Connecté à l'app Maison : <b>${esc(c.name || c.email || 'ton compte')}</b>.`
+    : `<b>Pas connecté.</b> Ouvre <a href="/">l'app Maison</a>, connecte-toi avec Google, puis reviens ici : la sauvegarde et les voix du serveur se mettent en marche toutes seules.`;
+}
+async function srvToutEnvoyer() {
+  if (!srvActif()) return status($('drive-status'), $('opt-drive').checked ? 'Pas connecté : ' + MSG_CONNEXION + '.' : 'Coche d\'abord « Sauvegarder chaque histoire ».', 'err');
   const list = await DB.all();
   if (!list.length) return status($('drive-status'), 'Aucune histoire à envoyer pour l\'instant.', 'ok');
   let n = 0;
   for (const s of list) {
-    status($('drive-status'), `<span class="spin"></span>Envoi vers Drive… (${++n}/${list.length}) ${esc(s.titre)}`);
-    await driveSauver(s);
+    status($('drive-status'), `<span class="spin"></span>Envoi vers ton serveur… (${++n}/${list.length}) ${esc(s.titre)}`);
+    await srvSauver(s);
   }
-  status($('drive-status'), driveErreur ? 'Erreur : ' + esc(driveErreur) : `✔ ${list.length} histoire(s) dans ton Drive → « Histoires du soir »`, driveErreur ? 'err' : 'ok');
+  status($('drive-status'), srvErreur ? 'Erreur : ' + esc(srvErreur) : `✔ ${list.length} histoire(s) sur ton serveur`, srvErreur ? 'err' : 'ok');
 }
-$('btn-drive-tout').onclick = () => { saveSettings(); driveToutEnvoyer(); };
+$('btn-drive-tout').onclick = () => { saveSettings(); srvToutEnvoyer(); };
+/* Fichier protégé : il faut un petit jeton de fichier (valable quelques minutes) */
+async function fichierServeur(rec, nom, jf) {
+  const r = await fetch(`${URL_MAISON}/api/files/${COL_HIST}/${rec.id}/${encodeURIComponent(nom)}?token=${encodeURIComponent(jf)}`);
+  if (!r.ok) throw new Error('fichier illisible sur le serveur (' + r.status + ')');
+  return r.blob();
+}
 $('btn-drive-recup').onclick = async () => {
-  if (!driveActif()) return status($('recup-status'), 'Active d\'abord la sauvegarde Drive dans ⚙️ Réglages (lien du document « ⚙️ Configurer l\'app »).', 'err');
   const st = (m, c) => status($('recup-status'), m, c);
+  if (!jetonMaison()) return st('Pas connecté : ' + MSG_CONNEXION + '.', 'err');
   try {
-    st('<span class="spin"></span>Lecture de ton Drive…');
-    const { histoires } = await driveGet({ a: 'liste' });
+    st('<span class="spin"></span>Lecture de ton serveur…');
+    const { items } = await (await apiMaison(`/api/collections/${COL_HIST}/records?perPage=500&fields=id,hid,titre&sort=-creeLe`)).json();
     const ici = new Set((await DB.all()).map(s => s.id));
-    const manquent = histoires.filter(h => /^[\w-]{1,40}$/.test(String(h.id || '')) && !ici.has(h.id));
-    if (!manquent.length) return st(`✔ Rien à récupérer : les ${histoires.length} histoire(s) du Drive sont déjà ici.`, 'ok');
+    const manquent = items.filter(h => /^[\w-]{1,40}$/.test(String(h.hid || '')) && !ici.has(h.hid));
+    if (!manquent.length) return st(`✔ Rien à récupérer : les ${items.length} histoire(s) du serveur sont déjà ici.`, 'ok');
     let n = 0;
     for (const h of manquent) {
       st(`<span class="spin"></span>Récupération… (${++n}/${manquent.length}) ${esc(h.titre || '')}`);
-      const j = await driveGet({ a: 'charger', id: h.id });
-      const s = j.story;
-      if (!s || !/^[\w-]{1,40}$/.test(String(s.id || ''))) continue;      // identifiant inattendu : ignoré
-      if (j.audio) { s.audio = deB64(j.audio.b64, j.audio.type); s.driveAudio = s.audio.size + ':' + s.audio.type; }
-      if (j.image) { s.image = deB64(j.image.b64, j.image.type); s.driveImage = String(s.image.size); }
-      if (j.images?.length) {
+      const rec = await (await apiMaison(`/api/collections/${COL_HIST}/records/${h.id}`)).json();
+      const s = rec.donnees;
+      if (!s || s.id !== h.hid) continue;                        // contenu inattendu : ignoré
+      const { token: jf } = await (await apiMaison('/api/files/token', { method: 'POST' })).json();
+      if (rec.audio) { s.audio = await fichierServeur(rec, rec.audio, jf); s.srvAudio = s.audio.size + ':' + s.audio.type; }
+      if (rec.image) { s.image = await fichierServeur(rec, rec.image, jf); s.srvImage = String(s.image.size); }
+      if (rec.illus?.length) {
         s.illusImages = {};
-        for (const im of j.images) if (im.cle) s.illusImages[im.cle] = deB64(im.b64, im.type || 'image/jpeg');
-        s.driveIllus = 'recupere';
+        for (const f of rec.illus) { const c = rec.cles?.illus?.[numFichier(f)]; if (c) s.illusImages[c] = await fichierServeur(rec, f, jf); }
+        s.srvIllus = Object.keys(s.illusImages).sort().map(c => c + ':' + s.illusImages[c].size).join(',');
       }
-      if (j.noeuds?.length) {
+      if (rec.noeuds?.length) {
         s.audioNoeuds = {};
-        for (const x of j.noeuds) if (/^[AB]{0,2}$/.test(x.c)) s.audioNoeuds[x.c] = deB64(x.b64, x.type || 'audio/mpeg');
-        s.driveNoeuds = 'recupere';
+        for (const f of rec.noeuds) { const c = rec.cles?.noeuds?.[numFichier(f)]; if (typeof c === 'string' && /^[AB]{0,2}$/.test(c)) s.audioNoeuds[c] = await fichierServeur(rec, f, jf); }
+        s.srvNoeuds = Object.keys(s.audioNoeuds).sort().map(c => c + ':' + s.audioNoeuds[c].size).join(',');
       }
-      s.drive = { at: Date.now() };
+      s.srv = { at: Date.now() }; s.srvId = rec.id;
       await DB.put(s);
       renderLib();
     }
-    st(`✔ ${manquent.length} histoire(s) récupérée(s) du Drive.`, 'ok');
+    st(`✔ ${manquent.length} histoire(s) récupérée(s) de ton serveur.`, 'ok');
   } catch (e) { st('Erreur : ' + esc(e.message), 'err'); }
 };
+async function srvSupprimer(sid) {
+  if (!jetonMaison()) return;
+  const rid = await srvIdDe(sid);
+  if (rid) await apiMaison(`/api/collections/${COL_HIST}/records/${rid}`, { method: 'DELETE' });
+}
 
 /* ==================== BIBLIOTHÈQUE ==================== */
 let vignettes = [];
@@ -3496,12 +3520,12 @@ $('lib-list').addEventListener('click', async e => {
   const del = e.target.closest('[data-del]');
   if (del) {
     e.stopPropagation();
-    if (confirm('Supprimer cette histoire ?' + (driveActif() ? ' Elle ira aussi à la corbeille de ton Google Drive (récupérable 30 jours).' : ''))) {
+    if (confirm('Supprimer cette histoire ?' + (srvActif() ? ' Elle sera aussi effacée de ton serveur.' : ''))) {
       const s = await DB.get(del.dataset.del);
       if (s?.partage?.jeton) fetchRelais(`${URL_RELAIS}/histoires/partage/${encodeURIComponent(s.partage.id)}/retirer`,
         { method: 'POST', headers: entetesRelais(), body: JSON.stringify({ jeton: s.partage.jeton }) }).catch(() => {});
       await DB.del(del.dataset.del);
-      if (driveActif()) drivePost({ a: 'supprimer', id: del.dataset.del }).catch(() => {});   // aussi à la corbeille du Drive
+      if (srvActif()) srvSupprimer(del.dataset.del).catch(() => {});                        // aussi sur le serveur
       if (current?.id === del.dataset.del) { current = null; $('story-card').style.display = 'none'; try { $('player').pause(); } catch {} }
       renderLib();
     }
@@ -3511,7 +3535,7 @@ $('lib-list').addEventListener('click', async e => {
   if (fav) {
     e.stopPropagation();
     const s = await DB.get(fav.dataset.fav); s.fav = !s.fav; await DB.put(s);
-    driveSauver(s);
+    srvSauver(s);
     fav.classList.toggle('on', s.fav);
     if (chipVal('libf') === 'fav') renderLib();
     return;
@@ -3543,42 +3567,19 @@ $('btn-preview-ms').onclick = async () => {
   } catch (e) { status($('set-status'), 'Erreur : ' + esc(e.message), 'err'); }
 };
 
-/* Version du serveur : on y copie tous les réglages (dans l'adresse, après le #, jamais envoyés au serveur) */
-/* L'app vit sur ton serveur (95.groupelaberge.ca/histoires). Ouverte à l'ancienne adresse (GitHub), elle
-   envoie d'abord ses histoires au Drive, puis déménage avec tous ses réglages ; la nouvelle adresse
-   récupère les histoires du Drive. L'adresse (#cfg=…) est effacée de l'historique dès l'arrivée. */
+/* L'app vit sur ton serveur (95.groupelaberge.ca/histoires). Ouverte à l'ancienne adresse (GitHub), elle y renvoie. */
 const SUR_SERVEUR = location.hostname === '95.groupelaberge.ca';
-async function demenager(forcer) {
-  const voile = document.createElement('div');
-  voile.style.cssText = 'position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:24px;background:var(--fond);color:var(--texte);text-align:center;font:600 1.05rem var(--f-texte)';
-  voile.innerHTML = '<div><div style="font-size:3rem">🌙</div><p id="dem-txt">L\'app déménage sur ton serveur…</p><div id="dem-btn"></div></div>';
-  document.body.appendChild(voile);
-  const txt = m => { document.getElementById('dem-txt').innerHTML = m; };
-  const n = (await DB.all()).length;
-  if (n && !driveActif() && !forcer) {
-    txt(`Tes ${n} histoire(s) sont seulement ici, et la sauvegarde Drive n'est pas activée.<br><br>Active-la d'abord (Drive → « Histoires du soir » → « ⚙️ Configurer l'app » → le lien), sinon elles resteront à l'ancienne adresse.`);
-    document.getElementById('dem-btn').innerHTML = '<button class="sec" id="dem-ok" style="margin-top:14px">Déménager quand même</button>';
-    document.getElementById('dem-ok').onclick = () => { voile.remove(); demenager(true); };
-    return;
-  }
-  if (n && driveActif()) { txt(`Envoi de tes ${n} histoire(s) vers le Drive avant le déménagement…`); await driveToutEnvoyer(); }
-  saveSettings();
-  const c = {};
-  SETTINGS.forEach(k => { if ($(k).value.trim()) c[k] = $(k).value.trim(); });
-  CHECKS.forEach(k => c[k] = $(k).checked);
-  if (cleRelais()) c['relais-key'] = cleRelais();
-  c.theme = store.get('set:theme', 'veilleuse');
-  const cfg = btoa(unescape(encodeURIComponent(JSON.stringify(c)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  location.replace('https://95.groupelaberge.ca/histoires/' + (Object.keys(c).length > 2 ? '#cfg=' + cfg : ''));
-}
-if (!SUR_SERVEUR && location.protocol === 'https:') demenager();
+if (!SUR_SERVEUR && location.protocol === 'https:') location.replace('https://95.groupelaberge.ca/histoires/');
 
 /* Voix québécoise Google : voix et compteur du mois ; coller la clé suffit (les voix se chargent seules) */
 gcAfficher();
 if (gcCle() && !gcVoix()) gcChargerVoix().then(() => { if (!$('set-status').classList.contains('err')) status($('set-status'), ''); });
 $('k-gcloud').addEventListener('change', () => { saveSettings(); if ($('k-gcloud').value.trim()) gcChargerVoix(); });
-/* Histoires pas encore sauvegardées dans le Drive (hors ligne, erreur) : on réessaie à l'ouverture */
-if (driveActif()) setTimeout(async () => { for (const s of await DB.all()) if (s.driveAttente || !s.drive) await driveSauver(s); }, 3000);
+/* Histoires pas encore sauvegardées sur le serveur (hors ligne, erreur) : on réessaie à l'ouverture.
+   Les histoires d'avant le serveur n'y vont que si on le demande (« Tout envoyer maintenant »). */
+majCompteServeur();
+rafraichirSession().then(() => { majCompteServeur(); majResumes?.(); });
+if (srvActif()) setTimeout(async () => { for (const s of await DB.all()) if (s.srvAttente) await srvSauver(s); }, 3000);
 
 /* ==================== INTERFACE : thèmes, choix qui s'ouvrent, réglages ==================== */
 const THEMES = { veilleuse: ['#0d1030', 'Veilleuse'], livre: ['#e8f1fb', 'Livre d\'images'], doudou: ['#efe7ff', 'Doudou'] };
@@ -3663,7 +3664,7 @@ function majResumes() {
   majMoteur(); majCurseurs();
   const p = [$('opt-suivre').checked && 'texte qui suit', 'images ' + $('img-style').selectedOptions[0].text.toLowerCase(), $('opt-musique').checked && 'musique'].filter(Boolean);
   $('res-pendant').textContent = (p.join(' · ') || 'rien de plus') + ' · ' + $('lang').selectedOptions[0].text;
-  $('res-drive').textContent = driveActif() ? 'Activée' : $('opt-drive').checked ? 'À configurer (lien du document du Drive)' : 'Désactivée';
+  $('res-drive').textContent = !$('opt-drive').checked ? 'Désactivée' : jetonMaison() ? 'Activée' : 'Connecte-toi à l\'app Maison';
   const cles = ['k-gemini', 'k-eleven', 'k-gcloud'];
   cles.forEach(k => { const e = document.querySelector(`.etat[data-cle="${k}"]`); if (e) e.textContent = $(k).value.trim() ? '✓' : ''; });
   const n = { 'k-gemini': 'Gemini', 'k-eleven': 'ElevenLabs', 'k-gcloud': 'Google' };
