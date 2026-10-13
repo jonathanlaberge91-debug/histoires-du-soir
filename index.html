@@ -378,7 +378,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v41</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v43</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -1301,6 +1301,8 @@ $('btn-quota').onclick = () => afficherQuota(true);
 async function choisirMoteur(nb) {
   const m = $('engine').value;
   if (m !== 'auto') return { moteur: m };
+  // Appareil neuf : la liste des voix Google n'est peut-être pas encore là — on l'attend, sinon on sauterait Google
+  if (gcCle() && !gcVoix()) await gcChargerVoix().catch(() => {});
   if (gcCle() && gcVoix() && gcPalier(Math.round(nb * 1.3))) return { moteur: 'gcloud' };   // les voix Google d'abord
   return apresGoogle(nb);
 }
@@ -1591,9 +1593,12 @@ async function planifierImages(s) {
   let morceaux;
   if (s.arbre) morceaux = Object.entries(s.arbre).map(([c, n]) => `[${c || 'debut'}] ${stripTags(n.texte)}`).join('\n\n');
   else morceaux = paras(stripTags(s.histoire)).map((t, i) => `[${i}] ${t}`).join('\n\n');
+  // Paragraphes visés : étalés régulièrement (0 = couverture). Gemini prend la scène près de chacun.
+  const nbParas = s.arbre ? 0 : paras(s.histoire).length;
+  const cibles = Array.from({ length: Math.max(1, Math.min(nb, nbParas || 1)) }, (_, k) => Math.round(k * nbParas / Math.max(1, Math.min(nb, nbParas || 1))));
   const morceauxImg = ['debut', 'A', 'B', 'AA', 'BB', 'AB', 'BA'].slice(0, Math.min(7, nb));
   const combien = s.arbre ? (nb === 1 ? 'UNE seule scène, pour [debut]' : `UNE scène pour CHACUN de ces morceaux, et seulement eux : ${morceauxImg.map(m => '[' + m + ']').join(', ')} ; « ou » = l'étiquette du morceau sans crochets`)
-    : (nb === 1 ? 'UNE seule scène, pour la couverture, avec « ou » = "0"' : `EXACTEMENT ${nb} scènes réparties du début à la fin (la première à « ou » = "0", c'est la couverture) ; « ou » = le numéro du paragraphe où la scène commence ; jamais deux scènes au même paragraphe`);
+    : (nb === 1 ? 'UNE seule scène, pour la couverture, avec « ou » = "0"' : `EXACTEMENT ${cibles.length} scènes, une près de CHACUN de ces paragraphes : ${cibles.map(c => '[' + c + ']').join(', ')} (la première, « ou » = "0", c'est la couverture) ; « ou » = le numéro du paragraphe choisi, à 1 ou 2 paragraphes près de sa cible au plus ; jamais deux scènes au même paragraphe`);
   const user = [
     'Tu prépares les illustrations d\'un livre d\'histoire pour enfants. Écris EN ANGLAIS (pour le dessinateur).',
     `- « fiche » : la description visuelle FIXE de chaque personnage qui revient (2 à 3 personnages au plus), comme des personnages de DESSIN ANIMÉ : nom, espèce, cheveux ou pelage, vêtements avec leurs COULEURS exactes. JAMAIS d'âge, de corps ni de peau : seulement coiffure, vêtements, accessoires et couleurs. Une courte phrase par personnage (20 mots au plus), très concrète. Exemple : "Abby: cartoon kid with curly red hair, yellow raincoat, red boots. Biscuit: small light brown cartoon puppy with a blue collar."`,
@@ -1620,6 +1625,12 @@ async function planifierImages(s) {
   const rang = c => s.arbre ? (c === 'n' ? -1 : c.length) : parseInt(c.slice(1), 10);
   scenes.sort((x, y) => rang(x.cle) - rang(y.cle));
   if (!s.arbre && scenes[0].cle !== 'p0') scenes[0].cle = 'p0';
+  // Garde-fou : une scène trop loin de sa cible y est ramenée (sinon des images s'entassent au même endroit)
+  if (!s.arbre && nbParas) {
+    const ecart = Math.max(2, Math.floor(nbParas / Math.max(2, cibles.length) / 2));
+    scenes.forEach((sc, k) => { if (k > 0 && k < cibles.length && Math.abs(parseInt(sc.cle.slice(1), 10) - cibles[k]) > ecart) sc.cle = 'p' + cibles[k]; });
+    scenes.splice(0, scenes.length, ...scenes.filter((sc, k, t) => t.findIndex(x => x.cle === sc.cle) === k));
+  }
   if (s.arbre && scenes[0].cle !== 'n') scenes[0].cle = 'n';
   return { fiche: String(j.fiche || ''), style: $('img-style').value, scenes };
 }
@@ -1706,9 +1717,10 @@ function illustrer(s, forcer) {
       const fait = () => Object.keys(s.illusImages).length;
       const ranger = async (sc, i, blob) => {
         s.illusImages[sc.cle] = blob;
-        if (!s.image && i === 0) { s.image = blob; if (current?.id === s.id) afficherCouverture(s); }
+        const couverture = !s.image && i === 0;
+        if (couverture) { s.image = blob; if (current?.id === s.id) afficherCouverture(s); }
         await DB.put(s);
-        if (current?.id === s.id) majIllustrations(s);
+        if (current?.id === s.id) couverture ? placerIllustrations(s) : majIllustrations(s);
       };
       // Le chemin que l'enfant suit est dessiné en premier
       const ordre = s.illus.scenes.map((sc, i) => ({ sc, i }))
@@ -2291,6 +2303,7 @@ function sigPartage(s, audio) {
 async function publier(s, st) {
   const audio = await audioComplet(s);
   const cles = clesParParagraphe(s);
+  const illus = Object.entries(cles).filter(([, c]) => s.illusImages?.[c]);   // [paragraphe, clé] des images placées
   const sig = sigPartage(s, audio);
   if (s.partage?.sig === sig) return s.partage;
   st?.('<span class="spin"></span>Préparation du lien…');
@@ -2394,7 +2407,9 @@ const gcPlafond = () => parseInt($('gc-plafond').value, 10) || 995000;
 const gcVoixDe = pl => $(pl.champ).value || store.get('set:' + pl.champ) || '';
 const gcVoix = () => GC_PALIERS.map(gcVoixDe).find(Boolean) || '';
 /* Le palier qui peut lire ce texte maintenant (ou null si tous sont pleins) */
-function gcPalier(nb = 0) { return GC_PALIERS.find(pl => gcVoixDe(pl) && gcUtilise(pl.id) + nb <= gcPlafond()) || null; }
+/* Palier qui a échoué pendant cet enregistrement (autre chose que le quota) : on passe au suivant */
+const gcPaliersEnPanne = new Set();
+function gcPalier(nb = 0) { return GC_PALIERS.find(pl => gcVoixDe(pl) && !gcPaliersEnPanne.has(pl.id) && gcUtilise(pl.id) + nb <= gcPlafond()) || null; }
 function gcAfficher() {
   const pc = gcPalier();
   $('gc-quota').innerHTML = GC_PALIERS.map(pl => `${pl === pc ? '▶ ' : ''}<b>${pl.nom}</b> : ${fmt(gcUtilise(pl.id))} / ${fmt(gcPlafond())}${gcVoixDe(pl) ? '' : ' (aucune voix)'}`).join('<br>') +
@@ -2684,6 +2699,7 @@ function voixTelephone() {
 if ('speechSynthesis' in window) { voixTelephone(); speechSynthesis.onvoiceschanged = voixTelephone; }
 let parole = null;   // { actif, pause }
 function parler(listeParas, surPara, surFin) {
+  if (parole) parole.actif = false;                   // l'ancienne lecture s'arrête pour de bon
   speechSynthesis.cancel();
   const voix = speechSynthesis.getVoices().find(v => v.name === $('p-voice').value);
   const lang = $('lang').value === 'en' ? 'en-US' : $('lang').value === 'fr-fr' ? 'fr-FR' : 'fr-CA';
@@ -2993,7 +3009,17 @@ async function lireDepuis(i) {
     return;
   }
   if (!file.length && s.audio) setAudio(s);
-  const idx = file.findIndex(f => i >= f.debut && i < f.fin);
+  let idx = file.findIndex(f => i >= f.debut && i < f.fin);
+  if (idx < 0 && s.interactive && s.partAudio?.some(Boolean)) {
+    // Histoire à choix : la file ne contient que la partie en cours ; on la refait avec toutes les parties qui ont un son
+    const plages = plagesParties(s);
+    const f = s.parts.map((p, k) => s.partAudio[k] ? { url: URL.createObjectURL(s.partAudio[k]), blob: s.partAudio[k], debut: plages[k][0], fin: plages[k][1], texte: p.texte, noeud: s.arbre ? (s.chemin || '').slice(0, k) : null } : null).filter(Boolean);
+    if (f.some(x => i >= x.debut && i < x.fin)) {
+      file = f; fileIdx = -1; lectureEnFile = true; f.forEach(preparerReperes);
+      $('player').style.display = 'block';
+      idx = file.findIndex(x => i >= x.debut && i < x.fin);
+    }
+  }
   if (idx < 0) { status($('tts-status'), 'Touche d\'abord « 🔊 Raconter » : ce bout de l\'histoire n\'a pas encore de son.'); return; }
   const pl = $('player'), seg = file[idx];
   if (idx !== fileIdx || !pl.getAttribute('src')) { fileIdx = idx; preparerReperes(seg); pl.src = seg.url; }
@@ -3200,11 +3226,24 @@ async function fabriquerAvec(moteur, texte, onStatus, prog, neutre) {
     return ttsEdge(texte, onStatus, prog, neutre);
   }
   if (moteur === 'gcloud') {
-    if ($('opt-multivoix').checked && cleGemini()) {
-      try { return await ttsGcloudMulti(texte, onStatus, prog, neutre); }
-      catch (e) { if (e.quota) throw e; onStatus(`<span class="spin"></span>Une voix par personnage impossible (${esc(e.message)}) → une seule voix`); }
+    // Les trois voix Google dans l'ordre (Chirp 3 HD → Neural2 → Studio) AVANT de quitter Google :
+    // un palier qui échoue (autre chose que le quota du mois) laisse sa place au suivant.
+    for (;;) {
+      const pl = gcPalier(gcEstime(texte));
+      try {
+        if ($('opt-multivoix').checked && cleGemini()) {
+          try { return await ttsGcloudMulti(texte, onStatus, prog, neutre); }
+          catch (e) { if (e.quota) throw e; onStatus(`<span class="spin"></span>Une voix par personnage impossible (${esc(e.message)}) → une seule voix`); }
+        }
+        return await ttsGcloud(texte, onStatus, prog, neutre);
+      } catch (e) {
+        if (!pl || /injoignable|Failed to fetch|NetworkError/i.test(e.message)) throw e;
+        gcPaliersEnPanne.add(pl.id);
+        const suivant = gcPalier(gcEstime(texte));
+        if (!suivant) throw e;
+        onStatus(`<span class="spin"></span>Voix Google ${pl.nom} : ${esc(e.message)} → Google ${suivant.nom}`);
+      }
     }
-    return ttsGcloud(texte, onStatus, prog, neutre);
   }
   if (moteur === 'gemini') {
     prog(.05);
@@ -3217,6 +3256,7 @@ async function enregistrer(texte, onStatus, prog, moteurImpose) {
   let { moteur, raison } = moteurImpose ? { moteur: moteurImpose } : await choisirMoteur(texte.length);
   if (raison) onStatus(`<span class="spin"></span>${esc(raison)} → ${NOMS_VOIX[moteur]}`);
   const neutre = vitesseALaLecture();                       // décidé une fois pour tout l'enregistrement
+  gcPaliersEnPanne.clear();                                 // chaque enregistrement redonne sa chance à Chirp 3 HD
   const essayes = new Set();
   while (moteur !== 'phone' && !essayes.has(moteur)) {
     essayes.add(moteur);
@@ -3355,7 +3395,11 @@ const numFichier = nom => { const m = /^[ik][_-]?(\d+)/.exec(String(nom)); retur
 const extDe = b => b.type === 'audio/wav' ? 'wav' : b.type === 'image/png' ? 'png' : b.type === 'image/webp' ? 'webp' : b.type.startsWith('audio') ? 'mp3' : 'jpg';
 let srvFile = Promise.resolve(), srvErreur = '';
 function srvSauver(s) {
-  if (!s || !srvActif()) return;
+  if (!s) return;
+  if (!srvActif()) {                                   // pas connecté : on la garde « à envoyer » pour plus tard
+    if ($('opt-drive').checked && !s.srvAttente) DB.get(s.id).then(x => { if (x) { x.srvAttente = true; return DB.put(x); } }).catch(() => {});
+    return;
+  }
   const id = s.id;
   srvFile = srvFile.then(() => srvEnvoyer(id)).catch(() => {});
   return srvFile;
@@ -3506,7 +3550,7 @@ async function renderLib() {
     if (s.image) { const u = URL.createObjectURL(s.image); vignettes.push(u); vign = `<img class="vign" src="${u}" alt="">`; }
     const quand = new Date(s.createdAt).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long' });
     const det = [quand, s.chap > 1 ? `chapitre ${s.chap}` : '', s.interactive ? (s.parts?.length < NB_PARTIES ? 'à choix (pas finie)' : 'à choix') : '',
-      s.meta?.name ? esc(s.meta.name) : '', s.audio ? '🎧 sans crédit' : '', s.drive && !s.driveAttente ? '☁️' : ''].filter(Boolean).join(' · ');
+      s.meta?.name ? esc(s.meta.name) : '', s.audio ? '🎧 sans crédit' : '', s.srv && !s.srvAttente ? '☁️' : ''].filter(Boolean).join(' · ');
     return `<div class="lib-item" data-id="${esc(s.id)}">${vign}
       <div class="t">${esc(s.titre)}<small>${det}</small></div>
       <button class="star ${s.fav ? 'on' : ''}" data-fav="${esc(s.id)}" title="Favori">⭐</button>

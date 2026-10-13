@@ -210,14 +210,25 @@ async def tts(req):
     except Exception:
         hauteur = 0
     async with en_cours:
-        try:
-            com = edge_tts.Communicate(texte, v, rate=f"{vit:+d}%", pitch=f"{hauteur:+d}Hz")
-            morceaux = []
-            async for m in com.stream():
-                if m["type"] == "audio":
-                    morceaux.append(m["data"])
-        except Exception as e:
-            return refuse(req, 502, f"service de voix Microsoft indisponible ({type(e).__name__})")
+        # Microsoft refuse parfois une connexion quand plusieurs voix partent en même temps
+        # (vu à l'audit du 2026-10-13 : 6 refus pour une histoire à plusieurs voix). On
+        # réessaie ici, avec une petite pause, avant de répondre une erreur à l'app.
+        morceaux, erreur = [], None
+        for essai in range(3):
+            try:
+                com = edge_tts.Communicate(texte, v, rate=f"{vit:+d}%", pitch=f"{hauteur:+d}Hz")
+                morceaux = []
+                async for m in com.stream():
+                    if m["type"] == "audio":
+                        morceaux.append(m["data"])
+                if morceaux:
+                    break
+            except Exception as e:
+                erreur = e
+            await asyncio.sleep(0.8 * (essai + 1))
+        if not morceaux and erreur:
+            print(f"voix Microsoft : échec après 3 essais ({type(erreur).__name__})", flush=True)
+            return refuse(req, 502, f"service de voix Microsoft indisponible ({type(erreur).__name__})")
     if not morceaux:
         return refuse(req, 502, "aucun son reçu du service Microsoft")
     rep = web.Response(body=b"".join(morceaux), content_type="audio/mpeg")
