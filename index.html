@@ -200,6 +200,7 @@
   .perso.on::after { content: "✓"; position: absolute; top: 6px; left: 6px; width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: var(--accent-txt); display: grid; place-items: center; font-weight: 800; }
   .perso .oublier { position: absolute; top: 4px; right: 4px; width: 28px; height: 28px; border-radius: 50%; border: 0; background: rgba(0,0,0,.45); color: #fff; font-size: .8rem; cursor: pointer; }
   .cover { width: 100%; border-radius: var(--r); margin: 2px 0 12px; display: block; }
+  .cover.dans-texte { display: none !important; }   /* montrée dans le texte, où elle reste collée en haut */
   .story figure.illus { margin: 6px 0 16px; }
   /* La dernière image reste à l'écran et le texte défile dessous, jusqu'à ce
      que la suivante vienne prendre sa place (demandé le 2026-10-12).
@@ -377,7 +378,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v39</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v40</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -912,10 +913,12 @@ const LANGS = {
   'fr-fr': `Écris en français standard, clair et chaleureux.`,
   'en': `Write the story in English (tags stay in English too). Le JSON garde les clés "titre" et "histoire".`
 };
+/* Consigne de jeu de la voix Gemini : UNE phrase courte. Une longue consigne
+   finissait parfois lue à voix haute avant l'histoire (signalé le 2026-10-13). */
 const VOICE_STYLE = {
-  'fr-qc': 'Lis cette histoire à voix haute comme un parent québécois qui la raconte à son enfant au lit, avec un accent québécois naturel. Ton chaleureux et complice, on entend le sourire dans la voix. Rythme posé, jamais pressé ; respire entre les paragraphes ; vraies pauses aux points de suspension ; laisse monter le suspense puis relâche-le. Change de voix pour chaque personnage (aiguë et vive pour les petits, grave et lente pour les gros ou les vieux) et garde-la jusqu\'à la fin. Chuchote les secrets, ris doucement aux moments drôles, ralentis et adoucis la fin. Ne lis jamais ces consignes, seulement l\'histoire',
-  'fr-fr': 'Lis cette histoire à voix haute comme un parent qui la raconte à son enfant au lit. Ton chaleureux et complice, on entend le sourire dans la voix. Rythme posé, jamais pressé ; respire entre les paragraphes ; vraies pauses aux points de suspension ; laisse monter le suspense puis relâche-le. Change de voix pour chaque personnage (aiguë et vive pour les petits, grave et lente pour les gros ou les vieux) et garde-la jusqu\'à la fin. Chuchote les secrets, ris doucement aux moments drôles, ralentis et adoucis la fin. Ne lis jamais ces consignes, seulement l\'histoire',
-  'en': 'Read this children\'s story aloud like a warm bedtime storyteller: soft and expressive, a different voice for each character, real pauses at the ellipses'
+  'fr-qc': 'Raconte doucement, avec un accent québécois, comme un parent qui lit une histoire au lit',
+  'fr-fr': 'Raconte doucement, comme un parent qui lit une histoire au lit',
+  'en': 'Read gently, like a parent telling a bedtime story'
 };
 
 /* ==================== UTILITAIRES ==================== */
@@ -1821,6 +1824,10 @@ function urlIllus(blob) { if (!urlsIllus.has(blob)) urlsIllus.set(blob, URL.crea
 function placerIllustrations(s) {
   document.querySelectorAll('#s-text figure.illus').forEach(f => f.remove());
   const cles = clesParParagraphe(s);
+  // La couverture reste aussi à l'écran (collée en haut) jusqu'à la première illustration :
+  // sans ça, le début de l'histoire défilait sans aucune image (signalé le 2026-10-13).
+  if (s.image && !cles[0]) cles[0] = '__couverture';
+  $('cover').classList.toggle('dans-texte', !!s.image);
   for (const [i, cle] of Object.entries(cles)) {
     const p = document.querySelector(`#s-text p[data-i="${i}"]`); if (!p) continue;
     const f = document.createElement('figure');
@@ -1831,7 +1838,7 @@ function placerIllustrations(s) {
 }
 function majIllustrations(s) {
   document.querySelectorAll('#s-text figure.illus').forEach(f => {
-    const b = s.illusImages?.[f.dataset.cle];
+    const b = f.dataset.cle === '__couverture' ? s.image : s.illusImages?.[f.dataset.cle];
     if (b) { f.classList.remove('attente'); f.innerHTML = `<img src="${urlIllus(b)}" alt="">`; }
     else { f.classList.add('attente'); f.textContent = '🎨 Le dessin arrive…'; }
   });
@@ -1949,6 +1956,11 @@ async function distribuerRoles(texte, onStatus) {
     '---', propre
   ].join('\n');
   const j = await appelGemini(user, SCHEMA_VOIX, onStatus, { system: SYS_VOIX, temperature: 0.2 });
+  // Un morceau qui ne se retrouve pas dans l'histoire (la consigne recopiée par Gemini, par
+  // exemple) serait lu à voix haute : on le jette.
+  const norme = t => String(t || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+  const dansTexte = norme(propre);
+  if (Array.isArray(j.segments)) j.segments = j.segments.filter(x => { const n = norme(x.texte); return !n || dansTexte.includes(n.slice(0, 60)); });
   const total = (j.segments || []).reduce((n, x) => n + (x.texte || '').length, 0);
   const attendu = propre.replace(/[«»]/g, '').length;
   if (!j.segments?.length || total < attendu * 0.85 || total > attendu * 1.15) throw new Error('découpage des voix incomplet');
@@ -2604,12 +2616,17 @@ async function ttsGemini(text, onStatus) {
   const morceaux = chunk(pourVoixSimple(text), 1400);
   const pcm = [];
   let model = TTS_MODELS[0];
+  const style = VOICE_STYLE[$('lang').value] || VOICE_STYLE['fr-qc'];
   for (let i = 0; i < morceaux.length; i++) {
+    // Garde-fou : si le son sort beaucoup plus long que le texte ne le demande, la voix a
+    // sans doute lu la consigne avec l'histoire. On refait ce morceau SANS consigne et on
+    // garde le plus court des deux (≈ 12 caractères par seconde en lecture posée).
+    let sansStyle = false, meilleur = null;
     for (let essai = 1; ; essai++) {
       const r = await gFetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: `${VOICE_STYLE[$('lang').value]} :\n\n${morceaux[i]}` }] }],
+          contents: [{ parts: [{ text: sansStyle ? morceaux[i] : `${style} : ${morceaux[i]}` }] }],
           generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: $('g-voice').value } } } }
         })
       });
@@ -2617,7 +2634,11 @@ async function ttsGemini(text, onStatus) {
         const d = await r.json();
         const p = (d.candidates?.[0]?.content?.parts || []).find(x => x.inlineData?.data);
         if (!p) throw new Error('Voix Gemini : pas d\'audio renvoyé');
-        pcm.push(Uint8Array.from(atob(p.inlineData.data), c => c.charCodeAt(0)));
+        const son = Uint8Array.from(atob(p.inlineData.data), c => c.charCodeAt(0));
+        if (!meilleur || son.length < meilleur.length) meilleur = son;
+        const secondes = son.length / 2 / 24000, attendu = morceaux[i].length / 12;
+        if (!sansStyle && secondes > attendu * 1.3 + 4) { sansStyle = true; continue; }
+        pcm.push(meilleur);
         onStatus?.(`Voix Gemini… (${i + 1}/${morceaux.length})`);
         break;
       }
@@ -2838,7 +2859,8 @@ function setAudio(s) {
   $('btn-read').textContent = pret ? '▶️ Réécouter' : '🔊 Raconter';
   file = []; fileIdx = 0;
   if (blob) {
-    file = [{ url: audioUrl, debut: 0, fin: paras(s.histoire).length, texte: s.histoire }];
+    file = [{ url: audioUrl, blob, debut: 0, fin: paras(s.histoire).length, texte: s.histoire }];
+    preparerReperes(file[0]);
     $('player').src = audioUrl;
     if ('mediaSession' in navigator) navigator.mediaSession.metadata = new MediaMetadata({ title: s.titre, artist: 'Histoires du soir' });
   } else $('player').removeAttribute('src');
@@ -2859,6 +2881,10 @@ function eclairer(i) {
 $('player').addEventListener('timeupdate', () => {
   const pl = $('player'), seg = file[fileIdx];
   if (!seg || !pl.duration || !isFinite(pl.duration)) return;
+  if (seg.reperes) {                                          // repères calés sur les pauses du son
+    let k = 0; while (k < seg.reperes.length - 1 && pl.currentTime >= seg.reperes[k + 1]) k++;
+    return eclairer(seg.debut + k);
+  }
   const ps = paras(seg.texte).map(p => stripTags(p).length + 20);   // + un peu pour la respiration entre paragraphes
   const total = ps.reduce((a, b) => a + b, 0);
   let cible = pl.currentTime / pl.duration * total, k = 0;
@@ -2868,16 +2894,144 @@ $('player').addEventListener('timeupdate', () => {
 $('player').addEventListener('play', musiqueJouer);
 $('player').addEventListener('pause', () => { if (!$('player').ended) musiquePause(); });
 $('player').addEventListener('ended', () => {
-  if (fileIdx + 1 < file.length) { fileIdx++; $('player').src = file[fileIdx].url; $('player').play().catch(() => {}); return; }
+  if (fileIdx + 1 < file.length) { fileIdx++; preparerReperes(file[fileIdx]); $('player').src = file[fileIdx].url; $('player').play().catch(() => {}); return; }
   eclairer(-1);
   if (!(current?.interactive && current.parts.length < NB_PARTIES)) finDeLecture(); else musiquePause();
 });
 function jouerFile(f) {
   file = f; fileIdx = 0; lectureEnFile = true;
+  f.forEach(preparerReperes);
   $('player').style.display = 'block';
   $('player').src = f[0].url;
   $('player').play().catch(() => {});
 }
+
+/* ==================== REPÈRES DE LECTURE ==================== */
+/* Le texte suivait la lecture au prorata du nombre de lettres : la moindre chose en trop
+   dans le son (une consigne lue au début, une voix plus lente) décalait TOUT le reste
+   (signalé le 2026-10-13). On écoute maintenant le son lui-même : on repère ses pauses
+   et on y cale le début de chaque paragraphe, en gardant les durées les plus proches de
+   la longueur de chaque paragraphe. Un écart reste donc local au lieu de s'accumuler.
+   Marche aussi pour les histoires déjà enregistrées. Échec = on garde le prorata. */
+const reperesCache = new WeakMap();
+async function calculerReperes(blob, texte) {
+  const longueurs = paras(texte).map(p => stripTags(p).length + 8);
+  const N = longueurs.length;
+  if (N < 2) return [0];
+  const ctx = new OfflineAudioContext(1, 1, 8000);
+  const ab = await ctx.decodeAudioData(await blob.arrayBuffer());
+  const d = ab.getChannelData(0), pas = Math.round(ab.sampleRate * 0.02);
+  const rms = [];
+  for (let o = 0; o + pas <= d.length; o += pas) { let e = 0; for (let k = o; k < o + pas; k++) e += d[k] * d[k]; rms.push(Math.sqrt(e / pas)); }
+  if (rms.length < 50) return null;
+  const tri = rms.slice().sort((a, b) => a - b);
+  const bruit = tri[Math.floor(tri.length * 0.1)], voix = tri[Math.floor(tri.length * 0.9)];
+  const seuil = Math.max(bruit * 2, bruit + (voix - bruit) * 0.08);
+  const debut = rms.findIndex(v => v > seuil);
+  let fin = rms.length - 1;
+  while (fin > 0 && rms[fin] <= seuil) fin--;
+  if (debut < 0 || fin <= debut) return null;
+  const pauses = [];                                     // { t: milieu (s), l: longueur (s) }
+  for (let k = debut, run = 0; k <= fin; k++) {
+    if (rms[k] <= seuil) run++;
+    else { if (run >= 12) pauses.push({ t: (k - run / 2) * 0.02, l: run * 0.02 }); run = 0; }
+  }
+  if (pauses.length < N - 1) return null;
+  const t0 = debut * 0.02, t1 = (fin + 1) * 0.02;
+  const vitesse = (t1 - t0) / longueurs.reduce((a, b) => a + b, 0);   // secondes par caractère
+  const cout = (duree, i) => { const e = longueurs[i] * vitesse; return (duree - e) * (duree - e) / (e + 2); };
+  const bonus = j => Math.min(pauses[j].l, 1.2);         // une longue pause = plus probablement un changement de paragraphe
+  // Programmation dynamique : prec[j] = coût minimal si le paragraphe suivant commence à la pause j.
+  const K = pauses.length, INF = 1e18, choix = [null];
+  let prec = new Float64Array(K).fill(INF);
+  // Le 1er paragraphe peut commencer après une pause du début : c'est ce qui arrive quand la
+  // voix a lu autre chose avant l'histoire (une consigne). Sauter coûte un peu, pour ne
+  // jamais avaler une vraie phrase sans raison.
+  const departs = [{ t: t0, q: -1, c: 0 }];
+  for (let q = 0; q < K && pauses[q].t - t0 < Math.min(30, (t1 - t0) * 0.25); q++) departs.push({ t: pauses[q].t, q, c: 0.1 * (pauses[q].t - t0) });
+  const depart = new Int32Array(K).fill(0);
+  for (let j = 0; j < K; j++) for (let a = 0; a < departs.length; a++) {
+    if (departs[a].q >= j) break;
+    const c = departs[a].c + cout(pauses[j].t - departs[a].t, 0) - bonus(j);
+    if (c < prec[j]) { prec[j] = c; depart[j] = a; }
+  }
+  for (let i = 1; i < N - 1; i++) {
+    const cur = new Float64Array(K).fill(INF), arg = new Int32Array(K).fill(-1);
+    const e = longueurs[i] * vitesse;
+    for (let j = i; j < K; j++) {
+      for (let m = j - 1; m >= i - 1; m--) {
+        const duree = pauses[j].t - pauses[m].t;
+        if (duree > e * 3 + 6) break;                    // trop long : les pauses d'avant le sont aussi
+        if (prec[m] === INF) continue;
+        const c = prec[m] + cout(duree, i) - bonus(j);
+        if (c < cur[j]) { cur[j] = c; arg[j] = m; }
+      }
+    }
+    choix.push(arg); prec = cur;
+  }
+  let meilleur = INF, j = -1;
+  for (let m = N - 2; m < K; m++) {
+    if (prec[m] === INF) continue;
+    const c = prec[m] + cout(t1 - pauses[m].t, N - 1);
+    if (c < meilleur) { meilleur = c; j = m; }
+  }
+  if (j < 0) return null;
+  const debuts = new Array(N);
+  for (let i = N - 2; i >= 0; i--) { debuts[i + 1] = Math.max(0, pauses[j].t - 0.1); if (i > 0) j = choix[i][j]; }
+  debuts[0] = departs[depart[j]].q < 0 ? 0 : Math.max(0, departs[depart[j]].t - 0.1);
+  return debuts;
+}
+function reperesAudio(blob, texte) {
+  let m = reperesCache.get(blob);
+  if (!m) reperesCache.set(blob, m = new Map());
+  if (!m.has(texte)) m.set(texte, calculerReperes(blob, texte).catch(() => null));
+  return m.get(texte);
+}
+function preparerReperes(seg) {
+  if (!seg?.blob || seg.reperes !== undefined) return;
+  seg.reperes = null;
+  reperesAudio(seg.blob, seg.texte).then(r => { if (r && r.length === seg.fin - seg.debut) seg.reperes = r; });
+}
+
+/* Double-toucher un paragraphe : la lecture repart de là (demandé le 2026-10-13). */
+let lectureTel = null;                                   // voix du téléphone : { liste, d, surFin }
+async function lireDepuis(i) {
+  const s = current; if (!s) return;
+  if (lectureTel && $('phone-ctrl').style.display !== 'none') {
+    const { liste, d, surFin } = lectureTel, k = i - d;
+    if (k < 0 || k >= liste.length) return;
+    parler(liste.slice(k), x => eclairer(i + x), surFin);
+    $('btn-ph-pause').textContent = '⏸️ Pause'; musiqueJouer();
+    return;
+  }
+  if (!file.length && s.audio) setAudio(s);
+  const idx = file.findIndex(f => i >= f.debut && i < f.fin);
+  if (idx < 0) { status($('tts-status'), 'Touche d\'abord « 🔊 Raconter » : ce bout de l\'histoire n\'a pas encore de son.'); return; }
+  const pl = $('player'), seg = file[idx];
+  if (idx !== fileIdx || !pl.getAttribute('src')) { fileIdx = idx; preparerReperes(seg); pl.src = seg.url; }
+  if (!pl.duration || !isFinite(pl.duration)) await new Promise(ok => pl.addEventListener('loadedmetadata', ok, { once: true }));
+  const rep = seg.reperes || (seg.blob ? await reperesAudio(seg.blob, seg.texte) : null);
+  let t;
+  if (rep && rep.length === seg.fin - seg.debut) t = rep[i - seg.debut];
+  else {                                                 // repli : prorata du texte
+    const ps = paras(seg.texte).map(p => stripTags(p).length + 20), tot = ps.reduce((a, b) => a + b, 0);
+    t = ps.slice(0, i - seg.debut).reduce((a, b) => a + b, 0) / tot * pl.duration;
+  }
+  pl.currentTime = Math.max(0, t);
+  eclairer(i);
+  pl.play().catch(() => {});
+}
+// Deux touches en moins de 0,4 s sur le même paragraphe. Fait à la main parce que sur
+// téléphone, le « dblclick » du navigateur n'arrive pas toujours.
+let derniereTouche = { i: -1, t: 0 };
+$('s-text').addEventListener('click', e => {
+  const p = e.target.closest('p[data-i]'); if (!p) return;
+  const i = +p.dataset.i, t = Date.now();
+  if (derniereTouche.i === i && t - derniereTouche.t < 400) { derniereTouche = { i: -1, t: 0 }; lireDepuis(i); }
+  else derniereTouche = { i, t };
+});
+// Pas de mot surligné par le double-clic de la souris.
+$('s-text').addEventListener('dblclick', e => { if (e.target.closest('p[data-i]')) window.getSelection()?.removeAllRanges(); });
 
 /* ==================== CHOIX (histoire interactive) ==================== */
 function majChoix() {
@@ -3098,7 +3252,7 @@ $('btn-read').onclick = async () => {
   if (!s) return;
   const plages = plagesParties(s);
   const interactifEnCours = s.interactive && s.parts.length < NB_PARTIES;
-  const segPart = k => ({ url: URL.createObjectURL(s.partAudio[k]), debut: plages[k][0], fin: plages[k][1], texte: s.parts[k].texte, noeud: s.arbre ? (s.chemin || '').slice(0, k) : null });
+  const segPart = k => ({ url: URL.createObjectURL(s.partAudio[k]), blob: s.partAudio[k], debut: plages[k][0], fin: plages[k][1], texte: s.parts[k].texte, noeud: s.arbre ? (s.chemin || '').slice(0, k) : null });
   if (s.arbre) {
     const cur = s.chemin || '';
     const manque = Object.keys(s.arbre).some(c => !s.audioNoeuds?.[c]);
@@ -3149,10 +3303,12 @@ $('btn-read').onclick = async () => {
       st('🔊 Voix du téléphone (rien n\'est enregistré : elle lit en direct)');
       $('phone-ctrl').style.display = 'flex'; $('btn-ph-pause').textContent = '⏸️ Pause';
       musiqueJouer();
-      parler(paras(texte).map(pourVoixSimple), k => eclairer(d + k), () => {
+      const surFin = () => {
         $('phone-ctrl').style.display = 'none'; eclairer(-1);
         if (!interactifEnCours) finDeLecture(); else musiquePause();
-      });
+      };
+      lectureTel = { liste: paras(texte).map(pourVoixSimple), d, surFin };
+      parler(lectureTel.liste, k => eclairer(d + k), surFin);
       return;
     }
     const ailleurs = current !== s;                          // on a ouvert une autre histoire entre-temps
@@ -3163,7 +3319,7 @@ $('btn-read').onclick = async () => {
       driveSauver(s);
       if (ailleurs) return;
       setAudio(s);
-      jouerFile([{ url: URL.createObjectURL(r.blob), debut: plages[iPart][0], fin: plages[iPart][1], texte }]);
+      jouerFile([{ url: URL.createObjectURL(r.blob), blob: r.blob, debut: plages[iPart][0], fin: plages[iPart][1], texte }]);
     } else {
       s.audio = r.blob; s.vitMoteur = r.moteur; s.vitNeutre = r.neutre;
       await DB.put(s);
