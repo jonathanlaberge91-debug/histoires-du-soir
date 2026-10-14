@@ -370,6 +370,182 @@
   body.nuit #nuit-sortie { display: block; position: fixed; top: calc(10px + env(safe-area-inset-top)); right: 12px; z-index: 20;
     background: #111; color: #6b5435; border: 1px solid #222; border-radius: 12px; padding: 8px 12px; font-size: 1rem; }
   body.nuit #choix-zone .choix { background: #111; border-color: #6b5435; color: #e0b878; }
+
+  /* ═══════════════ v44 : la bibliothèque de nuit (Créer, Histoires, Réglages, l'histoire) ═══════════════
+     Bois, plaques dorées, livres qu'on allume. Les thèmes clairs ont leur bois clair. */
+  :root, html[data-look="veilleuse"] {
+    --bois1: #5a3f2c; --bois2: #3a2717; --bois-txt: #f2c46d; --bois-lueur: 0 0 8px rgba(242,196,109,.6);
+    --meuble1: #3e2a1c; --meuble2: #2a1c12; --meuble-bord: rgba(255,220,160,.14); --meuble-txt: #f1e8d8; --meuble-creux: rgba(0,0,0,.24);
+    --poignee: #a07c4c; --livre-mix: 55%; --livre-fond: #11132b; --livre-off: saturate(.8);
+    --livre-on: inset -5px 0 0 rgba(0,0,0,.15), 0 0 18px 4px rgba(242,196,109,.5), 0 0 0 2px #f2c46d; --fondu: rgba(13,16,48,.96);
+  }
+  html[data-look="livre"] {
+    --bois1: #e2c391; --bois2: #c49a64; --bois-txt: #5a3a14; --bois-lueur: none;
+    --meuble1: #f6e7cc; --meuble2: #ead3aa; --meuble-bord: #dcc396; --meuble-txt: #3d2a14; --meuble-creux: rgba(255,255,255,.55);
+    --poignee: #b8915a; --livre-mix: 100%; --livre-fond: #fff; --livre-off: none;
+    --livre-on: 0 0 0 3px #fff, 0 0 0 6px var(--accent), 0 10px 16px rgba(24,48,91,.22); --fondu: rgba(232,241,251,.96);
+  }
+  html[data-look="doudou"] {
+    --bois1: #f1c6a6; --bois2: #e2a57c; --bois-txt: #5a3a5e; --bois-lueur: none;
+    --meuble1: #fbe9de; --meuble2: #f3d6c4; --meuble-bord: #ecc8b2; --meuble-txt: #4a3150; --meuble-creux: rgba(255,255,255,.6);
+    --poignee: #d9a07c; --livre-mix: 100%; --livre-fond: #fff; --livre-off: none;
+    --livre-on: 0 0 0 3px #fff, 0 0 0 6px var(--accent), 0 10px 16px rgba(108,85,201,.25); --fondu: rgba(251,247,255,.96);
+  }
+  html[data-look="veilleuse"] header { position: relative; }
+  html[data-look="veilleuse"] header::after { content: "🪔"; position: absolute; right: 4px; top: 20px; font-size: 1.8rem; filter: drop-shadow(0 0 14px rgba(255,200,110,.8)); }
+  html[data-look="veilleuse"] { --fond-img: radial-gradient(120% 40% at 85% 0%, rgba(255,200,110,.16), transparent 60%), radial-gradient(120% 60% at 50% -10%, #2a2f78 0%, #0d1030 62%); }
+
+  /* ───── une tablette de livres ───── */
+  .etg-intro { color: var(--doux); font-size: .9rem; margin: 2px 0 6px; }
+  .tablette { position: relative; margin: 0 -16px 16px; }
+  .tablette .rang { position: relative; }
+  .tablette .livres { display: flex; align-items: flex-end; gap: 5px; overflow-x: auto; padding: 24px 18px 0; scroll-snap-type: x proximity; scrollbar-width: none; }
+  .tablette .livres::-webkit-scrollbar { display: none; }
+  .livre { flex: none; position: relative; min-width: 44px; max-width: 120px; height: var(--h, 124px); padding: 10px 6px 14px; margin: 0; border: 0; border-radius: 5px 5px 2px 2px;
+    display: flex; flex-direction: column; align-items: center; cursor: pointer; scroll-snap-align: start; font: inherit;
+    background: var(--c); background: color-mix(in srgb, var(--c) var(--livre-mix), var(--livre-fond)); color: #fff; filter: var(--livre-off);
+    box-shadow: inset -5px 0 0 rgba(0,0,0,.2), inset 2px 0 0 rgba(255,255,255,.1); transition: transform .25s, box-shadow .25s, filter .25s, background .25s; }
+  html[data-look="veilleuse"] .livre { color: #e9e2d4; }
+  .livre .e { font-size: 1.3rem; line-height: 1.2; }
+  .livre .medaille { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,.7); flex: none; }
+  .livre em { font-style: normal; writing-mode: vertical-rl; transform: rotate(180deg); max-height: 76px; overflow: hidden; font: 800 .72rem/1.1 var(--f-texte); margin-top: 6px; text-align: left; text-shadow: 0 1px 1px rgba(0,0,0,.25); }
+  .livre small { position: absolute; bottom: 3px; left: 0; right: 0; text-align: center; font: 800 .6rem var(--f-texte); opacity: .85; }
+  .livre.on { background: var(--c); color: #fff; filter: none; transform: translateY(-14px); box-shadow: var(--livre-on); }
+  .livre.libre { background: transparent; color: var(--doux); border: 2px dashed var(--meuble-bord); box-shadow: none; filter: none; --h: 124px; }
+  .livre.libre em { text-shadow: none; }
+  .livre.libre.on { border: 2px solid var(--accent); color: var(--accent); background: var(--lu); }
+  .livre:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .tablette .fleche { position: absolute; right: 0; top: 0; bottom: 0; width: 46px; border: 0; padding: 0; display: grid; place-items: center; font: 800 1.8rem var(--f-texte); color: var(--texte);
+    background: linear-gradient(90deg, transparent, var(--fondu) 70%); opacity: 0; pointer-events: none; transition: opacity .2s; cursor: pointer; }
+  .tablette.deborde .fleche { opacity: 1; pointer-events: auto; }
+  .planche, .lib-rayon .planche { position: relative; height: 16px; margin: 0 10px; border-radius: 3px; background: linear-gradient(var(--bois1), var(--bois2));
+    box-shadow: 0 8px 12px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,220,160,.25); }
+  .plaque { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); white-space: nowrap; color: var(--bois-txt); font: 800 .76rem var(--f-texte);
+    letter-spacing: .06em; text-transform: uppercase; text-shadow: var(--bois-lueur); }
+  .plaque small { text-transform: none; letter-spacing: 0; opacity: .75; font-size: .9em; }
+  .etg-aide { color: var(--doux); font-size: .78rem; margin: -8px 2px 12px; min-height: 0; }
+  .etg-aide:empty { display: none; }
+  #persos-status { margin: -6px 2px 12px; }
+  #persos-status:empty { display: none; }
+  .etg-choix { display: flex; flex-direction: column; gap: 6px; margin: -4px 0 18px; }
+  .etg-choix:empty { display: none; }
+  .ses-choix { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 14px; border-radius: var(--r-petit); border: 1px solid var(--meuble-bord);
+    background: linear-gradient(var(--meuble1), var(--meuble2)); color: var(--meuble-txt); font: inherit; text-align: left; cursor: pointer; }
+  .ses-choix b { flex: 1; } .ses-choix small { color: var(--doux); font-weight: 700; }
+  .ses-choix::after { content: "›"; color: var(--bois-txt); font-size: 1.2rem; }
+
+  /* ───── le carnet de l'idée ───── */
+  .carnet { margin: 8px 0 26px; }
+  .carnet .papier { position: relative; background: repeating-linear-gradient(#fbf3df 0 29px, #d8cbb0 29px 30px); background-color: #fbf3df; color: #3a2c1e;
+    border-radius: 4px 14px 14px 4px; padding: 12px 12px 12px 34px; box-shadow: 0 0 30px rgba(242,196,109,.2), 0 10px 18px rgba(0,0,0,.35); }
+  .carnet .papier::before { content: ""; position: absolute; left: 20px; top: 0; bottom: 0; width: 2px; background: #e8a3a3; }
+  .carnet .spirale { position: absolute; left: 6px; top: 12px; bottom: 12px; width: 10px; background: radial-gradient(circle, #555 0 3px, transparent 3.5px) 0 0 / 10px 22px repeat-y; }
+  .carnet h3 { margin: 0; font: 800 1.05rem var(--f-titre); color: #3a2c1e; display: flex; justify-content: space-between; align-items: center; }
+  .carnet h3 small { font: 700 .72rem var(--f-texte); color: #8a7660; }
+  .carnet .avec-micro { align-items: flex-end; }
+  .carnet textarea { min-height: 60px; border: 0; background: transparent; padding: 0; font: 600 1.1rem/30px var(--f-texte); color: #2c3e66; resize: none; border-radius: 0; }
+  .carnet textarea:focus { outline: none; }
+  .carnet textarea::placeholder { color: #a99b80; opacity: 1; }
+  .carnet button.micro { width: 42px; height: 42px; border-radius: 50%; background: #2c3e66; border: 0; color: #fff; }
+  .carnet button.micro.rec { background: var(--err); }
+  .carnet .suggestions { display: flex; gap: 7px; overflow-x: auto; padding: 10px 2px 0; scrollbar-width: none; }
+  .carnet .suggestions::-webkit-scrollbar { display: none; }
+  .sugg { flex: none; border: 1px solid var(--ligne); background: var(--surface); color: var(--texte); border-radius: 999px; padding: 8px 12px; font: 700 .82rem var(--f-texte); cursor: pointer; }
+
+  /* ───── la table de chevet ───── */
+  .chevet { margin: 6px -6px 0; }
+  .chevet .dessus { height: 18px; border-radius: 6px 6px 2px 2px; background: linear-gradient(var(--bois1), var(--bois2)); box-shadow: inset 0 1px 0 rgba(255,220,160,.3); }
+  .chevet .meuble { margin: 0 8px; border-radius: 0 0 12px 12px; padding: 14px 12px 16px; color: var(--meuble-txt); box-shadow: 0 14px 24px rgba(0,0,0,.35);
+    background: radial-gradient(120% 60% at 50% 0%, rgba(242,196,109,.12), transparent 60%), linear-gradient(var(--meuble1), var(--meuble2)); }
+  .chevet h2 { margin: 0 0 12px; text-align: center; color: var(--bois-txt); font: 800 .76rem var(--f-texte); letter-spacing: .1em; text-transform: uppercase; text-shadow: var(--bois-lueur); }
+  .tiroir { position: relative; display: block; width: 100%; background: var(--meuble-creux); border: 1px solid var(--meuble-bord); border-radius: 12px; padding: 12px;
+    margin: 0 0 12px; color: var(--meuble-txt); font: inherit; text-align: left; }
+  .tiroir::after { content: ""; position: absolute; left: 50%; bottom: -6px; width: 34px; height: 6px; margin-left: -17px; border-radius: 0 0 6px 6px; background: var(--poignee); }
+  .tiroir .lbl { display: flex; justify-content: space-between; font-weight: 800; margin-bottom: 10px; }
+  .tiroir .lbl em { font-style: normal; color: var(--accent); }
+  .couches { display: flex; gap: 6px; align-items: flex-end; justify-content: space-around; }
+  .couche { flex: 1; border: 0; background: none; color: var(--meuble-txt); font: inherit; cursor: pointer; text-align: center; padding: 4px 0 0; }
+  .couche svg { display: block; margin: 0 auto 6px; overflow: visible; opacity: .75; filter: saturate(.7) brightness(.85); transition: .25s; }
+  .couche b { display: block; font-size: .85rem; color: var(--doux); }
+  .couche small { color: var(--doux); font-weight: 700; font-size: .72rem; }
+  .couche.on svg { opacity: 1; filter: drop-shadow(0 0 10px rgba(242,196,109,.55)); transform: translateY(-4px); }
+  .couche.on b { color: var(--meuble-txt); } .couche.on small { color: var(--accent); }
+  .cadres { display: flex; gap: 6px; align-items: center; }
+  .cadres button { flex: 1; aspect-ratio: 1; padding: 0; border-radius: 5px; border: 2px solid var(--poignee); background: var(--meuble-creux); color: var(--doux);
+    font: 800 .72rem var(--f-texte); cursor: pointer; position: relative; display: grid; place-items: center; }
+  .cadres button.on { border-color: var(--accent); background: radial-gradient(#f9dc94, #d9a74a); color: #4a3510; box-shadow: 0 0 8px rgba(242,196,109,.5); }
+  .cadres button.reco::after { content: "⭐"; position: absolute; top: -11px; right: -6px; font-size: .7rem; }
+  .cadres .aucune { flex: none; width: 34px; aspect-ratio: auto; height: 34px; }
+  .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .duo .tiroir { margin: 0; text-align: center; cursor: pointer; }
+  .duo .tiroir .ic { font-size: 1.9rem; display: block; margin: 2px 0 4px; filter: grayscale(.6) brightness(.85); transition: .2s; }
+  .duo .tiroir b { display: block; font-size: .88rem; line-height: 1.2; }
+  .duo .tiroir small { display: block; color: var(--doux); font-weight: 700; font-size: .76rem; margin-top: 2px; }
+  .duo .tiroir.on { border-color: var(--accent); background: var(--lu); }
+  .duo .tiroir.on .ic { filter: none; } .duo .tiroir.on small { color: var(--accent); }
+  .polaroid { display: grid; place-items: center; width: 56px; height: 56px; margin: 0 auto 4px; background: #f3ece0; padding: 4px 4px 12px; transform: rotate(-4deg);
+    box-shadow: 0 3px 6px rgba(0,0,0,.35); font-size: 1.4rem; }
+  .polaroid img { width: 100%; height: 100%; object-fit: cover; display: none; }
+  #ch-dessin.a .polaroid img { display: block; } #ch-dessin.a .polaroid > span { display: none; }
+  .ch-retirer { display: none; position: absolute; top: 6px; right: 6px; width: 28px; height: 28px; border-radius: 50%; border: 0; background: rgba(0,0,0,.45); color: #fff; cursor: pointer; }
+  #ch-dessin.a .ch-retirer { display: block; }
+  .raconte { position: sticky; bottom: calc(74px + env(safe-area-inset-bottom)); z-index: 5; margin-top: 20px; padding-top: 6px; }
+  .raconte .big { margin-top: 0; }
+  .raconte .status:empty { display: none; }
+  .raconte .status { background: var(--fondu); border-radius: var(--r-petit); padding: 6px 10px; }
+
+  /* ───── les feuilles qui montent du bas ───── */
+  #etg-voile { position: fixed; inset: 0; background: rgba(0,0,0,.5); opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 50; }
+  body.etg-ouvert #etg-voile, body.etg-mini #etg-voile { opacity: 1; pointer-events: auto; }
+  .etg-feuille { position: fixed; left: 0; right: 0; bottom: 0; z-index: 51; max-height: 88vh; overflow-y: auto; overscroll-behavior: contain;
+    background: var(--surface-pleine); color: var(--texte); border-radius: 26px 26px 0 0; padding: 8px 18px calc(22px + env(safe-area-inset-bottom));
+    transform: translateY(105%); transition: transform .3s ease; box-shadow: 0 -12px 36px rgba(0,0,0,.35); }
+  .etg-feuille.mini { z-index: 53; }
+  body.etg-mini #etg-voile { z-index: 52; }
+  body.etg-ouvert #etg-feuille, body.etg-mini #etg-mini { transform: none; }
+  .etg-feuille .poignee { width: 44px; height: 5px; border-radius: 3px; background: var(--ligne); margin: 0 auto 12px; }
+  .etg-feuille h3 { margin: 0 0 8px; }
+  .etg-feuille .tablette { margin-left: -18px; margin-right: -18px; }
+  .etg-sous { font-weight: 800; margin: 16px 0 0; } .etg-sous small { color: var(--doux); font-weight: 600; }
+  .etg-retirer { width: 100%; justify-content: center; margin-top: 10px !important; }
+
+  /* ───── Histoires : les tablettes de la bibliothèque ───── */
+  #lib-list.rayons { display: block !important; margin-top: 4px; }
+  .lib-rayon { margin: 0 -16px 22px; }
+  .lib-livres { display: flex; align-items: flex-end; gap: 10px; overflow-x: auto; padding: 20px 18px 0; scrollbar-width: none; scroll-snap-type: x proximity; }
+  .lib-livres::-webkit-scrollbar { display: none; }
+  #lib-list.rayons .lib-item { position: relative; flex: none; width: 104px; display: block; padding: 0; border: 0; background: none; box-shadow: none; border-radius: 0; scroll-snap-align: start; }
+  #lib-list.rayons .lib-item .vign { display: grid; place-items: center; width: 104px; height: 132px; border-radius: 4px 10px 10px 4px; object-fit: cover; font-size: 2.2rem;
+    background: linear-gradient(160deg, var(--c, #6f82c9), color-mix(in srgb, var(--c, #6f82c9) 65%, #000)); box-shadow: inset 6px 0 0 rgba(0,0,0,.18), 0 6px 10px rgba(0,0,0,.3); }
+  #lib-list.rayons .lib-item .t { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; padding: 6px 2px 8px; font-size: .8rem; line-height: 1.2; }
+  #lib-list.rayons .lib-item .t small { font-size: .66rem; }
+  #lib-list.rayons .lib-item .star { position: absolute; top: 4px; right: 4px; width: 30px; height: 30px; padding: 0; border-radius: 50%; background: rgba(0,0,0,.4); font-size: .95rem; }
+  #lib-list.rayons .lib-item .star.on { background: rgba(0,0,0,.55); }
+  #lib-list.rayons .lib-item [data-del] { position: absolute; top: 4px; left: 6px; width: 30px; height: 30px; padding: 0; justify-content: center; border-radius: 50%;
+    background: rgba(0,0,0,.4); border: 0; color: #fff; font-size: .78rem; box-shadow: none; }
+  .lib-rayon .planche { margin-top: -6px; }
+  #v-lib > .card { background: linear-gradient(var(--meuble1), var(--meuble2)); border-color: var(--meuble-bord); }
+
+  /* ───── Réglages : les tiroirs de la commode ───── */
+  details.reglage { position: relative; background: linear-gradient(var(--meuble1), var(--meuble2)) !important; border: 1px solid var(--meuble-bord) !important; color: var(--meuble-txt); }
+  details.reglage::after { content: ""; position: absolute; left: 50%; bottom: -6px; width: 34px; height: 6px; margin-left: -17px; border-radius: 0 0 6px 6px; background: var(--poignee); }
+  details.reglage .r-ic { background: var(--meuble-creux); }
+  details.reglage .r-txt b { color: var(--bois-txt); }
+  details.reglage .dedans { background: var(--meuble-creux); border-top-color: var(--meuble-bord); border-radius: 0 0 var(--r) var(--r); }
+  details.reglage .theme-carte, details.reglage .moteur { background: var(--meuble-creux); }
+  .reglages { gap: 14px; }
+
+  /* ───── l'histoire ouverte : posée sous une tablette ───── */
+  #story-card { position: relative; margin-top: 34px; background: var(--surface-pleine); border-color: var(--meuble-bord); border-top: 0; border-radius: 0 0 var(--r) var(--r); }
+  #story-card::before { content: ""; position: absolute; left: -6px; right: -6px; top: -16px; height: 16px; border-radius: 6px 6px 2px 2px; background: linear-gradient(var(--bois1), var(--bois2)); }
+  #story-card .chap { display: inline-block; color: var(--bois-txt); text-shadow: var(--bois-lueur); }
+  body.nuit #story-card::before { display: none; }
+
+  /* ───── la barre du bas : une planche ───── */
+  nav { background: linear-gradient(var(--bois1), var(--bois2)); border-top: 0; box-shadow: 0 -6px 18px rgba(0,0,0,.3); }
+  nav button { color: var(--bois-txt); opacity: .6; }
+  nav button.on { color: var(--bois-txt); opacity: 1; text-shadow: var(--bois-lueur); }
+  html[data-look="doudou"] nav { background: linear-gradient(var(--bois1), var(--bois2)); }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 </head>
@@ -378,12 +554,55 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v43</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v44</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
 <section id="v-create" class="view on">
   <div id="form-card">
+    <p class="etg-intro">Allume les livres de ton histoire. Une tablette déborde ? Glisse-la vers la droite.</p>
+    <div id="etageres">
+      <section id="etg-qui"></section>
+      <p class="etg-aide" id="etg-qui-aide"></p>
+      <div class="etg-choix" id="etg-choix"></div>
+      <section id="etg-genre"></section>
+      <section id="etg-avec"></section>
+      <section id="etg-persos"></section>
+      <p class="etg-aide" id="etg-persos-aide"></p>
+      <section id="etg-journee"></section>
+      <section id="etg-souci"></section>
+      <section id="etg-lecon"></section>
+    </div>
+
+    <section class="carnet" id="carnet">
+      <div class="papier"><span class="spirale"></span>
+        <h3>💡 Ton idée <small>facultatif</small></h3>
+        <div id="carnet-champ"></div>
+      </div>
+      <div class="suggestions" id="idee-sugg"></div>
+    </section>
+
+    <section class="chevet">
+      <div class="dessus"></div>
+      <div class="meuble">
+        <h2>Sur la table de chevet</h2>
+        <div class="tiroir"><div class="lbl">📏 Longueur <em id="ch-dur"></em></div><div class="couches" id="couches"></div></div>
+        <div class="tiroir"><div class="lbl">🎨 Images <em id="ch-img"></em></div><div class="cadres" id="cadres"></div></div>
+        <div class="duo">
+          <button type="button" class="tiroir" id="ch-format"><span class="ic">🔀</span><b>L'enfant choisit la suite</b><small id="ch-format-v">Non</small></button>
+          <div class="tiroir" id="ch-dessin" role="button" tabindex="0"><span class="polaroid"><span>🖍️</span><img id="ch-dessin-img" alt=""></span><b>D'après un dessin</b><small id="ch-dessin-v">Ajouter une photo</small>
+            <button type="button" class="ch-retirer" id="ch-dessin-x" title="Retirer le dessin">✕</button></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="raconte">
+      <button class="big" id="btn-gen">🌙 Raconte-moi</button>
+      <div class="status" id="gen-status"></div>
+    </div>
+
+    <!-- Les champs d'avant : cachés, mais toujours la source de vérité (la bibliothèque les remplit) -->
+    <div id="ancien-form" hidden>
     <div class="card">
       <p class="bloc-titre">Pour qui ?</p>
       <div class="row age">
@@ -423,6 +642,7 @@
           <div class="chip" data-v="heros">🦸 Superhéros</div>
           <div class="chip" data-v="hiver">⛄ Hiver et Noël</div>
           <div class="chip" data-v="halloween">🎃 Halloween tout doux</div>
+          <div class="chip" data-v="autre">✏️ Autre</div>
         </div>
       </div>
       <div class="picker" data-titre="Un petit souci ?">
@@ -469,6 +689,7 @@
             </div>
           </div>
     </div>
+    <input id="mood-autre" placeholder="Ton ambiance" style="display:none">
     <input id="souci-autre" placeholder="Décris le souci (ex. il ne veut pas se brosser les dents)" style="display:none">
 
     <details class="plus">
@@ -491,8 +712,7 @@
       </div>
     </details>
 
-    <button class="big" id="btn-gen">✨ Créer l'histoire</button>
-    <div class="status" id="gen-status"></div>
+    </div>
   </div>
 
   <div class="card" id="story-card" style="display:none">
@@ -776,6 +996,10 @@
     <div class="status" id="set-status"></div>
   </div>
 </section>
+
+<div id="etg-voile"></div>
+<div class="etg-feuille" id="etg-feuille" role="dialog" aria-modal="true"></div>
+<div class="etg-feuille mini" id="etg-mini" role="dialog" aria-modal="true"></div>
 
 <nav>
   <button data-v="v-create" class="on"><span>✨</span>Créer</button>
@@ -1399,7 +1623,7 @@ function consignes(opts = {}) {
     moral ? `Valeur à transmettre subtilement : ${moral}.` : '',
     !opts.sansIdee && $('journee').value.trim() ? `Ce qui s'est VRAIMENT passé aujourd'hui dans la vie de l'enfant : ${$('journee').value.trim()}. Transforme ces vrais moments en aventure : l'enfant doit les reconnaître (mêmes lieux, mêmes objets, mêmes personnes), mais tout devient extraordinaire et se termine bien.` : '',
     !opts.sansIdee && dessin ? `L'enfant a fait le DESSIN joint en image. L'histoire raconte CE dessin : ses personnages, ses couleurs, ses détails (même un gribouillis devient quelque chose de magique). Décris-les pour que l'enfant reconnaisse son dessin et soit fier.` : '',
-    `Ambiance : ${MOODS[mood]}`,
+    `Ambiance : ${mood === 'autre' ? ($('mood-autre').value.trim() || MOODS.dodo) : MOODS[mood]}`,
     LANGS[lang],
     voixGoogle ? CONSIGNE_VOIX_GOOGLE : voixSimple ? CONSIGNE_VOIX_SIMPLE : ''
   ].filter(Boolean);
@@ -2137,6 +2361,7 @@ async function majPersonnages() {
       <b>${esc(x.nom)}</b><small>${esc([x.type, x.caractere].filter(Boolean).join(' · '))}</small><small>de « ${esc(x.titre || '')} »</small>
       <span class="oublier" data-oublier="${esc(x.id)}" role="button" title="Retirer de la liste">✖</span></button>`;
   }).join('') : '<p class="hint">Les personnages de tes prochaines histoires apparaîtront ici. Pour tes anciennes histoires, touche « Chercher dans mes anciennes histoires ».</p>';
+  window.etgPersos?.();
 }
 $('persos-liste').addEventListener('click', async e => {
   const o = e.target.closest('[data-oublier]');
@@ -2234,7 +2459,7 @@ function lireEnfants() {
     const n = CHOIX.filter(c => (enfants[+d.dataset.i]?.choix || {})[c.k]).length;
     d.querySelector('summary small').textContent = '· ' + (n ? n + ' choisi' + (n > 1 ? 's' : '') : 'objet, animal, méchant…');
   });
-  return enfants.map(e => ({ nom: e.nom || '', age: e.age || '5', choix: Object.fromEntries(Object.entries(e.choix || {}).filter(([, v]) => v)) }));
+  return enfants.map(e => ({ nom: e.nom || '', age: e.age || '5', absent: !!e.absent, choix: Object.fromEntries(Object.entries(e.choix || {}).filter(([, v]) => v)) }));
 }
 $('btn-ajout-enfant').onclick = () => {
   lireEnfants();
@@ -2258,7 +2483,9 @@ setTimeout(() => { try { if (parServeur() && !GC_PALIERS.some(gcVoixDe)) gcCharg
 /* Les enfants et leurs choix → consignes pour Gemini */
 const NOMS_CHOIX = { objet: 'son objet', animal: 'son animal', personnage: 'son personnage', couleur: 'sa couleur', mechant: 'son méchant', lieu: 'son lieu', pouvoir: 'son pouvoir magique' };
 function consignesEnfants() {
-  const l = lireEnfants();
+  const tousLus = lireEnfants();
+  const l = tousLus.filter(e => !e.absent);      // seulement ceux qui écoutent ce soir
+  if (!l.length) l.push(tousLus[0]);
   const autres = l.slice(1).filter(e => e.nom || Object.keys(e.choix).length);
   const tous = [l[0], ...autres];
   const plusieurs = tous.length > 1;
@@ -3545,18 +3772,36 @@ async function renderLib() {
     el.innerHTML = `<p class="hint">${q || f !== 'tout' ? 'Aucune histoire ne correspond.' : 'Aucune histoire pour l\'instant. Crée la première ! ✨'}</p>`;
     return;
   }
-  el.innerHTML = list.map(s => {
-    let vign = `<div class="vign">${s.audio ? '🎧' : s.interactive ? '🔀' : '📖'}</div>`;
-    if (s.image) { const u = URL.createObjectURL(s.image); vignettes.push(u); vign = `<img class="vign" src="${u}" alt="">`; }
+  /* Rangées comme dans une bibliothèque : une tablette par période (et une pour les favoris) */
+  const auj = new Date(), jours = t => (Date.now() - t) / 86400000;
+  const periode = t => {
+    const d = new Date(t);
+    if (jours(t) < 7) return 'Cette semaine';
+    if (d.getMonth() === auj.getMonth() && d.getFullYear() === auj.getFullYear()) return 'Ce mois-ci';
+    const m = d.toLocaleDateString('fr-CA', { month: 'long', year: 'numeric' });
+    return m.charAt(0).toUpperCase() + m.slice(1);
+  };
+  const rayons = [];
+  if (f === 'tout' && !q && list.some(s => s.fav)) rayons.push({ nom: '⭐ Mes favoris', l: list.filter(s => s.fav) });
+  for (const s of list) {
+    const nom = periode(s.createdAt), r = rayons.find(x => x.nom === nom);
+    r ? r.l.push(s) : rayons.push({ nom, l: [s] });
+  }
+  const livre = s => {
+    let couv = `<div class="vign" style="--c:${['#6f82c9', '#4f9a72', '#d0628f', '#8a63c9', '#d07a3a', '#3b7ea3', '#c2474c'][s.createdAt % 7]}">${s.audio ? '🎧' : s.interactive ? '🔀' : '📖'}</div>`;
+    if (s.image) { const u = URL.createObjectURL(s.image); vignettes.push(u); couv = `<img class="vign" src="${u}" alt="">`; }
     const quand = new Date(s.createdAt).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long' });
-    const det = [quand, s.chap > 1 ? `chapitre ${s.chap}` : '', s.interactive ? (s.parts?.length < NB_PARTIES ? 'à choix (pas finie)' : 'à choix') : '',
-      s.meta?.name ? esc(s.meta.name) : '', s.audio ? '🎧 sans crédit' : '', s.srv && !s.srvAttente ? '☁️' : ''].filter(Boolean).join(' · ');
-    return `<div class="lib-item" data-id="${esc(s.id)}">${vign}
+    const det = [quand, s.chap > 1 ? `chap. ${s.chap}` : '', s.interactive ? (s.parts?.length < NB_PARTIES ? 'à choix (pas finie)' : 'à choix') : '',
+      s.meta?.name ? esc(s.meta.name) : '', s.audio ? '🎧' : '', s.srv && !s.srvAttente ? '☁️' : ''].filter(Boolean).join(' · ');
+    return `<div class="lib-item" data-id="${esc(s.id)}" role="button" tabindex="0">${couv}
       <div class="t">${esc(s.titre)}<small>${det}</small></div>
       <button class="star ${s.fav ? 'on' : ''}" data-fav="${esc(s.id)}" title="Favori">⭐</button>
-      <button class="sec" data-del="${esc(s.id)}">🗑️</button>
+      <button class="sec" data-del="${esc(s.id)}" title="Supprimer">🗑️</button>
     </div>`;
-  }).join('');
+  };
+  el.classList.add('rayons');
+  el.innerHTML = rayons.map(r => `<section class="lib-rayon"><div class="lib-livres">${r.l.map(livre).join('')}</div>
+    <div class="planche"><span class="plaque">${esc(r.nom)} <small>${r.l.length}</small></span></div></section>`).join('');
 }
 let minuterieRecherche = null;
 $('lib-q').addEventListener('input', () => { clearTimeout(minuterieRecherche); minuterieRecherche = setTimeout(renderLib, 200); });
@@ -3728,6 +3973,307 @@ $('v-set').addEventListener('input', e => { if (e.target.type === 'range') majCu
 majResumes();
 /* Première ouverture sans clé Gemini : la section Clés s'ouvre */
 if (!cleGemini()) document.querySelector('#res-cles').closest('details').open = true;
+
+/* ==================== CRÉER : LA BIBLIOTHÈQUE DE NUIT (v44) ====================
+   L'écran de création est une bibliothèque : une tablette de livres par question (qui glisse vers la droite
+   quand elle déborde), et le dernier livre de chaque tablette, « ✏️ Choisir », sert à écrire son propre choix.
+   Les champs d'avant restent dans #ancien-form (cachés) et gardent leur rôle : la bibliothèque ne fait que
+   les remplir ; Gemini, les voix, la sauvegarde et « La suite » les lisent comme avant.
+   Choisi par Jonathan le 2026-10-14 (maquette « Veilleuse A »). */
+(() => {
+  const COULEURS = ['#6f82c9', '#4f9a72', '#d0628f', '#8a63c9', '#d07a3a', '#3b7ea3', '#a05a82', '#3a4c94', '#6f9440', '#c2474c', '#4b93bf', '#d48a28', '#5aa37c', '#b07a4a'];
+  const COUL_ENF = ['#e8705a', '#5aa37c', '#5b84c4', '#c27ab8', '#d48a28', '#3b8ec4'];
+  const EMO_ENF = ['🦄', '🦖', '🐻', '🦊', '🐰', '🐯', '🐼', '🦁'];
+  const HAUTEURS = [120, 134, 112, 128, 116];
+  const AVEC = ['👨 papa', '👩 maman', '👵 grand-maman', '👴 grand-papa', '👦 son frère', '👧 sa sœur', '🐶 son chien', '🐱 son chat', '🧒 son ami'];
+  const JOURNEE = ['🛝 le parc', '🎒 la garderie', '🏫 l\'école', '🏊 la piscine', '🎂 une fête', '❄️ jouer dans la neige', '👵 la visite chez grand-maman',
+    '🛒 l\'épicerie', '🤒 un peu malade', '🚗 une longue route'];
+  const IDEES = ['🐉 un dragon qui a peur du noir', '🌙 un voyage sur la lune', '🧸 le toutou perdu', '🌈 l\'arc-en-ciel disparu', '🐢 la grande course',
+    '🎂 une fête surprise', '🦄 une licorne qui ne sait pas voler', '🏠 une cabane dans les arbres'];
+  const emo = x => (EMOJI.exec(x) || ['', '📖'])[1];
+  const txt = x => sansEmoji(x);
+  const cap = x => x.charAt(0).toUpperCase() + x.slice(1);
+  const egal = (a, b) => String(a).trim().toLowerCase() === String(b).trim().toLowerCase();
+  const chips = g => [...document.querySelectorAll(`.chips[data-group="${g}"] .chip`)];
+  const chip = (g, v) => document.querySelector(`.chips[data-group="${g}"] .chip[data-v="${v}"]`);
+  const chipTxt = c => ({ e: c.querySelector('.ico')?.textContent || '', t: (c.querySelector('.ico') ? c.lastElementChild.textContent : c.textContent).trim() });
+
+  /* ---------- une tablette ---------- */
+  function etagere(el, { nom, opt, livres, dernier, onLivre, onDernier, onLong }) {
+    if (!el.querySelector('.livres')) {
+      el.className = 'tablette' + (opt ? ' opt' : '');
+      el.innerHTML = `<div class="rang"><div class="livres" role="group" aria-label="${esc(nom)}"></div><button type="button" class="fleche" aria-label="Voir les autres livres" tabindex="-1">›</button></div>
+        <div class="planche"><span class="plaque">${esc(nom)}${opt ? ' <small>facultatif</small>' : ''}</span></div>`;
+      const r = el.querySelector('.livres');
+      r.addEventListener('scroll', () => fleche(el), { passive: true });
+      el.querySelector('.fleche').onclick = () => r.scrollBy({ left: r.clientWidth * .7, behavior: 'smooth' });
+    }
+    const r = el.querySelector('.livres'), x = r.scrollLeft;
+    r.replaceChildren(...livres.map((l, i) => unLivre(l, i, () => onLivre(i), onLong && (() => onLong(i)))),
+      ...(dernier ? [unLivre({ e: dernier.e || '✏️', t: dernier.t || 'Choisir', on: dernier.on, libre: true }, livres.length, onDernier)] : []));
+    r.scrollLeft = x;
+    requestAnimationFrame(() => fleche(el));
+  }
+  function unLivre(l, i, onTap, onLong) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'livre' + (l.libre ? ' libre' : '') + (l.on ? ' on' : '');
+    b.setAttribute('aria-pressed', l.on ? 'true' : 'false');
+    b.style.setProperty('--c', l.c || COULEURS[i % COULEURS.length]);
+    b.style.setProperty('--h', HAUTEURS[i % HAUTEURS.length] + 'px');
+    b.innerHTML = (l.img ? `<img class="medaille" src="${l.img}" alt="">` : `<span class="e">${l.e}</span>`) + `<em>${esc(l.t)}</em>` + (l.sous ? `<small>${esc(l.sous)}</small>` : '');
+    let minuterie = null, long = false;
+    if (onLong) {        // garder le doigt sur un livre = l'autre geste (modifier, retirer)
+      b.addEventListener('pointerdown', () => { long = false; minuterie = setTimeout(() => { long = true; onLong(); }, 600); });
+      ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => b.addEventListener(ev, () => clearTimeout(minuterie)));
+      b.addEventListener('contextmenu', e => e.preventDefault());
+    }
+    b.onclick = () => { if (long) { long = false; return; } onTap(); };
+    return b;
+  }
+  function fleche(el) { const r = el.querySelector('.livres'); el.classList.toggle('deborde', r.scrollLeft + r.clientWidth < r.scrollWidth - 8); }
+  addEventListener('resize', () => document.querySelectorAll('.tablette').forEach(fleche));
+
+  /* ---------- les feuilles qui montent du bas ---------- */
+  let aFermeture = null;
+  function ouvrir(html, fin) {
+    $('etg-feuille').innerHTML = '<div class="poignee"></div>' + html;
+    $('etg-feuille').scrollTop = 0;
+    aFermeture = fin || null;
+    document.body.classList.add('etg-ouvert');
+  }
+  function fermer() {
+    if (!document.body.classList.contains('etg-ouvert')) return;
+    document.body.classList.remove('etg-ouvert');
+    const f = aFermeture; aFermeture = null; f?.();
+  }
+  /* Petite feuille pour écrire son propre choix (par-dessus l'autre au besoin) */
+  function demander(titre, valeur, ph, fn) {
+    const m = $('etg-mini');
+    m.innerHTML = `<div class="poignee"></div><h3>${esc(titre)}</h3>
+      <div class="avec-micro"><input id="mini-txt" value="${esc(valeur || '')}" placeholder="${esc(ph || '')}" autocomplete="off"><button type="button" class="sec micro" id="mini-mic" title="Dicter au micro">🎤</button></div>
+      <div class="actions"><button type="button" class="big" id="mini-ok">C'est bon</button>${valeur ? '<button type="button" class="sec" id="mini-eff">Effacer</button>' : ''}</div>`;
+    document.body.classList.add('etg-mini');
+    const fin = v => { if (ecoute) ecoute.stop(); document.body.classList.remove('etg-mini'); fn(v); };
+    $('mini-ok').onclick = () => fin($('mini-txt').value.trim());
+    if ($('mini-eff')) $('mini-eff').onclick = () => fin('');
+    $('mini-txt').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); $('mini-ok').click(); } };
+    $('mini-mic').onclick = () => dicter('mini-txt', $('mini-mic'));
+    setTimeout(() => $('mini-txt').focus(), 250);
+  }
+  $('etg-voile').onclick = () => { if (document.body.classList.contains('etg-mini')) { if (ecoute) ecoute.stop(); document.body.classList.remove('etg-mini'); } else fermer(); };
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') $('etg-voile').click(); });
+
+  /* ---------- Pour qui ? (les enfants, et leurs choix) ---------- */
+  function sauverEnfants() {
+    $('name').value = enfants[0].nom || ''; $('age').value = enfants[0].age || '5';
+    rendreEnfants();                          // les champs cachés suivent (lireEnfants les relit)
+    store.set('set:enfants', JSON.stringify(enfants));
+    store.set('set:name', $('name').value); store.set('set:age', $('age').value);
+  }
+  let minuterieAide = null;
+  function aide(id, m) { $(id).textContent = m; clearTimeout(minuterieAide); minuterieAide = setTimeout(() => { $(id).textContent = ''; }, 3500); }
+  function etgQui() {
+    const presents = enfants.filter(e => !e.absent).length;
+    etagere($('etg-qui'), {
+      nom: 'Pour qui ?',
+      livres: enfants.map((e, i) => ({ e: EMO_ENF[i % EMO_ENF.length], t: e.nom || 'Son prénom ?', sous: (e.age || '5') + ' ans', on: !e.absent, c: COUL_ENF[i % COUL_ENF.length] })),
+      dernier: { t: 'Un enfant' },
+      onLivre: i => {
+        const e = enfants[i];
+        if (!e.nom) return feuilleEnfant(i);
+        if (!e.absent && presents <= 1) return aide('etg-qui-aide', 'Il faut au moins un enfant qui écoute. Garde le doigt sur un livre pour le modifier.');
+        e.absent = !e.absent; sauverEnfants(); tout();
+      },
+      onLong: i => feuilleEnfant(i),
+      onDernier: () => { enfants.push({ nom: '', age: enfants[0].age || '5', choix: {} }); feuilleEnfant(enfants.length - 1); }
+    });
+    $('etg-choix').innerHTML = enfants.map((e, i) => {
+      if (e.absent) return '';
+      const n = CHOIX.filter(c => (e.choix || {})[c.k]).length;
+      return `<button type="button" class="ses-choix" data-enfant="${i}"><span>🎨</span><b>${e.nom ? 'Les choix de ' + esc(e.nom) : 'Ses choix'}</b><small>${n ? n + ' choisi' + (n > 1 ? 's' : '') : 'objet, animal, méchant…'}</small></button>`;
+    }).join('');
+  }
+  $('etg-choix').onclick = e => { const b = e.target.closest('[data-enfant]'); if (b) feuilleEnfant(+b.dataset.enfant); };
+  /* La feuille d'un enfant : prénom, âge, et ses 7 tablettes de choix (objet, animal, personnage…) */
+  function feuilleEnfant(i) {
+    const e = enfants[i]; e.choix = e.choix || {};
+    const lire = () => { if ($('fe-nom')) { e.nom = $('fe-nom').value.trim(); e.age = $('fe-age').value || '5'; } };
+    ouvrir(`<h3>${e.nom ? esc(e.nom) : 'Un enfant'}</h3>
+      <div class="row age">
+        <div><label for="fe-nom">Prénom</label><input id="fe-nom" value="${esc(e.nom || '')}" placeholder="ex. Abby" autocomplete="off"></div>
+        <div><label for="fe-age">Âge</label><input id="fe-age" type="number" min="2" max="12" inputmode="numeric" value="${esc(e.age || '5')}"></div>
+      </div>
+      <p class="etg-sous">🎨 Ses choix <small>· facultatif : un livre par tablette, il les reconnaîtra dans l'histoire</small></p>
+      <div id="fe-tablettes"></div>
+      <button type="button" class="big" id="fe-ok">C'est bon</button>
+      ${i ? '<button type="button" class="sec etg-retirer" id="fe-retirer">✖ Retirer cet enfant</button>' : ''}`,
+      () => {           // feuille fermée (bouton, voile ou Échap) : on garde ce qui a été fait
+        lire();
+        if (i && !e.nom && !CHOIX.some(c => e.choix[c.k]) && enfants[i] === e) enfants.splice(i, 1);   // enfant ajouté puis laissé vide
+        sauverEnfants(); tout();
+      });
+    const dessiner = () => {
+      const zone = $('fe-tablettes'); zone.innerHTML = '';
+      CHOIX.forEach(c => {
+        const sec = document.createElement('section'); zone.appendChild(sec);
+        const v = e.choix[c.k] || '', libre = v && !c.idees.some(x => egal(txt(x), v));
+        etagere(sec, {
+          nom: txt(c.l),
+          livres: c.idees.map(x => ({ e: emo(x), t: cap(txt(x)), on: egal(txt(x), v) })),
+          dernier: { t: libre ? v : 'Choisir', on: !!libre },
+          onLivre: k => { e.choix[c.k] = egal(txt(c.idees[k]), v) ? '' : txt(c.idees[k]); dessiner(); },
+          onDernier: () => demander(txt(c.l) + ' : à toi de choisir', libre ? v : '', c.ph, w => { e.choix[c.k] = w; dessiner(); })
+        });
+      });
+    };
+    dessiner();
+    $('fe-nom').addEventListener('input', () => { lire(); document.querySelector('#etg-feuille h3').textContent = e.nom || 'Un enfant'; });
+    $('fe-ok').onclick = fermer;
+    if (i) $('fe-retirer').onclick = () => {
+      if (!confirm(`Retirer ${e.nom || 'cet enfant'} de la liste ?`)) return;
+      enfants.splice(enfants.indexOf(e), 1); aFermeture = null; document.body.classList.remove('etg-ouvert'); sauverEnfants(); tout();
+    };
+    if (!e.nom) setTimeout(() => $('fe-nom')?.focus(), 300);
+  }
+
+  /* ---------- tablettes faites d'une liste « a, b, c » dans un champ (avec qui, sa journée, la leçon) ---------- */
+  const morceaux = id => $(id).value.split(/\s*,\s*/).map(x => x.trim()).filter(Boolean);
+  function etgListe(el, id, nom, presets, ph, apres) {
+    const cur = morceaux(id), estPreset = x => presets.some(p => egal(txt(p), x));
+    const libres = cur.filter(x => !estPreset(x));
+    etagere(el, {
+      nom, opt: true,
+      livres: presets.map(p => ({ e: emo(p), t: cap(txt(p)), on: cur.some(x => egal(x, txt(p))) })),
+      dernier: { t: libres.length ? libres.join(', ') : 'Choisir', on: libres.length > 0 },
+      onLivre: i => {
+        const v = txt(presets[i]), l = morceaux(id), k = l.findIndex(x => egal(x, v));
+        if (k >= 0) l.splice(k, 1); else l.push(v);
+        $(id).value = l.join(', '); apres?.(); tout();
+      },
+      onDernier: () => demander(nom.replace(/\s*\?$/, '') + ' : à toi de choisir', libres.join(', '), ph, v => {
+        $(id).value = [...morceaux(id).filter(estPreset), ...(v ? [v] : [])].join(', '); apres?.(); tout();
+      })
+    });
+  }
+
+  /* ---------- tablettes faites des pastilles d'avant (ambiance, petit souci) ---------- */
+  function etgGenre() {
+    const l = chips('mood').filter(c => c.dataset.v !== 'autre'), autre = chipVal('mood') === 'autre';
+    etagere($('etg-genre'), {
+      nom: 'Quelle ambiance ?',
+      livres: l.map(c => ({ ...chipTxt(c), on: c.classList.contains('on') })),
+      dernier: { t: autre && $('mood-autre').value.trim() ? $('mood-autre').value.trim() : 'Choisir', on: autre },
+      onLivre: i => { l[i].click(); tout(); },
+      onDernier: () => demander('Ton ambiance', $('mood-autre').value, 'ex. une course de bateaux au bord de la mer', v => {
+        $('mood-autre').value = v; chip('mood', v ? 'autre' : 'dodo').click(); tout();
+      })
+    });
+  }
+  function etgSouci() {
+    const l = chips('souci').filter(c => c.dataset.v && c.dataset.v !== 'autre'), autre = chipVal('souci') === 'autre';
+    etagere($('etg-souci'), {
+      nom: 'Un petit souci ?', opt: true,
+      livres: l.map(c => ({ ...chipTxt(c), on: c.classList.contains('on') })),
+      dernier: { t: autre && $('souci-autre').value.trim() ? $('souci-autre').value.trim() : 'Choisir', on: autre },
+      onLivre: i => { (l[i].classList.contains('on') ? chip('souci', '') : l[i]).click(); tout(); },
+      onDernier: () => demander('Un petit souci : à toi de choisir', $('souci-autre').value, 'ex. il ne veut pas se brosser les dents', v => {
+        $('souci-autre').value = v; chip('souci', v ? 'autre' : '').click(); tout();
+      })
+    });
+  }
+
+  /* ---------- personnages d'avant ---------- */
+  function etgPersos() {
+    etagere($('etg-persos'), {
+      nom: 'Personnages d\'avant', opt: true,
+      livres: persosCache.map(x => ({ e: '🎭', img: x.image ? urlsPersos.get(x.image) : '', t: x.nom, sous: x.type, on: persosChoisis.has(x.id) })),
+      dernier: { e: '🔎', t: 'Chercher dans mes histoires' },
+      onLivre: i => {
+        const id = persosCache[i].id;
+        persosChoisis.has(id) ? persosChoisis.delete(id) : persosChoisis.add(id);
+        store.set('set:persos', JSON.stringify([...persosChoisis]));
+        majPersonnages();
+      },
+      onLong: i => document.querySelector(`#persos-liste [data-oublier="${CSS.escape(persosCache[i].id)}"]`)?.click(),
+      onDernier: () => $('btn-persos-chercher').click()
+    });
+    $('etg-persos-aide').textContent = persosCache.length ? 'Touche ceux qui reviennent. Garde le doigt sur un livre pour le retirer de la liste.'
+      : 'Les personnages de tes histoires viendront se ranger ici.';
+  }
+  window.etgPersos = etgPersos;
+
+  /* ---------- l'idée : le carnet ---------- */
+  $('carnet-champ').appendChild($('idea').parentNode);          // le vrai champ (et son micro) déménage dans le carnet
+  $('idea').placeholder = 'De quoi parle l\'histoire ?';
+  $('idee-sugg').innerHTML = IDEES.map(x => `<button type="button" class="sugg" data-sugg="${esc(txt(x))}">${esc(x)}</button>`).join('');
+  $('idee-sugg').onclick = e => {
+    const b = e.target.closest('[data-sugg]'); if (!b) return;
+    const z = $('idea'); z.value = z.value.trim() ? z.value.trim() + ', ' + b.dataset.sugg : b.dataset.sugg;
+  };
+
+  /* ---------- la table de chevet : longueur, images, à choix, dessin ---------- */
+  const DUREES = { court: [34, 46, 5, '#5b84c4', '🐣', 'Petit livre'], moyen: [44, 60, 11, '#5aa37c', '🦊', 'Moyen livre'], long: [54, 74, 20, '#c2474c', '🐉', 'Gros livre'] };
+  function livreSVG(w, h, d, c, e) {      // un vrai livre fermé : couverture, dos, tranche des pages (plus épais = plus long)
+    const W = w + d, H = h + d, lignes = [];
+    for (let y = d + 4; y < H - 3; y += 3) lignes.push(`<line x1="${w + 1}" y1="${y}" x2="${w + d - 1}" y2="${y - d + 1}" stroke="#d8cbb0" stroke-width=".6"/>`);
+    return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true">
+      <polygon points="0,${d} ${d},0 ${W},0 ${w},${d}" fill="#f6eedd"/><polygon points="${w},${d} ${W},0 ${W},${h} ${w},${H}" fill="#efe4cc"/>${lignes.join('')}
+      <rect x="0" y="${d}" width="${w}" height="${h}" rx="2" fill="${c}"/><rect x="0" y="${d}" width="${Math.max(4, w * .14)}" height="${h}" rx="2" fill="rgba(0,0,0,.18)"/>
+      <rect x="${w * .26}" y="${d + h * .62}" width="${w * .6}" height="${Math.max(3, h * .06)}" rx="1.5" fill="rgba(255,255,255,.75)"/>
+      <rect x="${w * .26}" y="${d + h * .74}" width="${w * .42}" height="${Math.max(2, h * .04)}" rx="1" fill="rgba(255,255,255,.5)"/>
+      <text x="${w * .57}" y="${d + h * .46}" font-size="${w * .38}" text-anchor="middle" dominant-baseline="middle">${e}</text></svg>`;
+  }
+  const IMAGES = [1, 3, 4, 5, 6, 8];
+  function etgChevet() {
+    const L = chipVal('length');
+    $('couches').innerHTML = chips('length').map(c => {
+      const [w, h, d, col, e, nom] = DUREES[c.dataset.v];
+      return `<button type="button" class="couche ${c.dataset.v === L ? 'on' : ''}" data-v="${c.dataset.v}" aria-pressed="${c.dataset.v === L}">${livreSVG(w, h, d, col, e)}<b>${nom}</b><small>${esc(chipTxt(c).t)}</small></button>`;
+    }).join('');
+    $('ch-dur').textContent = (chipTxt(chip('length', L)).t.split('·')[1] || '').trim();
+    const n = imagesVoulues(), reco = imgReco(), v = chipVal('images');
+    $('cadres').innerHTML = `<button type="button" class="aucune ${n === 0 ? 'on' : ''}" data-n="0" title="Aucune image">✕</button>` +
+      IMAGES.map(k => `<button type="button" class="cadre ${n > 0 && k <= n ? 'on' : ''} ${k === reco ? 'reco' : ''}" data-n="${k}" title="${k === 1 ? 'La couverture seulement' : k + ' images'}"><span>${k}</span></button>`).join('');
+    $('ch-img').textContent = (n === 0 ? 'aucune' : n === 1 ? 'la couverture' : n + ' images') + (v === 'reco' ? ' ⭐' : '');
+    const aChoix = chipVal('format') === 'choix';
+    $('ch-format').classList.toggle('on', aChoix); $('ch-format').setAttribute('aria-pressed', aChoix);
+    $('ch-format-v').textContent = aChoix ? 'Oui, il décide de la suite' : 'Non, une histoire complète';
+    const d = !!dessin;
+    $('ch-dessin').classList.toggle('on', d); $('ch-dessin').classList.toggle('a', d);
+    $('ch-dessin-img').src = d ? $('dessin-apercu').src : '';
+    $('ch-dessin-v').textContent = d ? 'Ajouté ✓' : 'Ajouter une photo';
+  }
+  $('couches').onclick = e => { const b = e.target.closest('[data-v]'); if (b) { chip('length', b.dataset.v).click(); tout(); } };
+  $('cadres').onclick = e => {
+    const b = e.target.closest('[data-n]'); if (!b) return;
+    const k = +b.dataset.n;
+    chip('images', k && k === imgReco() ? 'reco' : String(k)).click(); tout();
+  };
+  $('ch-format').onclick = () => { chip('format', chipVal('format') === 'choix' ? 'complete' : 'choix').click(); tout(); };
+  $('ch-dessin').onclick = e => { if (e.target.closest('#ch-dessin-x')) return; if (!dessin) $('dessin').click(); };
+  $('ch-dessin').onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('ch-dessin').click(); } };
+  $('ch-dessin-x').onclick = () => { $('dessin-retirer').click(); etgChevet(); };
+  $('dessin-apercu').addEventListener('load', etgChevet);
+
+  /* ---------- tout redessiner ---------- */
+  function tout() {
+    etgQui(); etgGenre();
+    etgListe($('etg-avec'), 'friends', 'Avec qui d\'autre ?', AVEC, 'ex. son chien Biscuit, sa cousine Léa');
+    etgPersos();
+    etgListe($('etg-journee'), 'journee', 'Sa journée', JOURNEE, 'ex. elle a perdu sa mitaine rouge au parc');
+    etgSouci();
+    etgListe($('etg-lecon'), 'moral', 'Une leçon ?', LECONS, 'ex. dire bonjour aux voisins', majLecons);
+    etgChevet();
+    store.set('set:mood', chipVal('mood')); store.set('set:mood-autre', $('mood-autre').value);
+  }
+  /* au démarrage : l'ambiance d'hier, les enfants relus, le statut des personnages sous leur tablette */
+  $('mood-autre').value = store.get('set:mood-autre', '');
+  const m = store.get('set:mood'); if (m && chip('mood', m) && (m !== 'autre' || $('mood-autre').value.trim())) chip('mood', m).click();
+  lireEnfants();
+  $('etg-persos-aide').after($('persos-status'));
+  $('lib-list').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.lib-item')) { e.preventDefault(); e.target.click(); } });
+  tout();
+})();
 
 /* Sans ça, Chrome peut vider la mémoire de l'app quand le téléphone manque d'espace */
 if (navigator.storage?.persist) navigator.storage.persisted().then(oui => oui || navigator.storage.persist()).catch(() => {});

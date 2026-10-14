@@ -123,3 +123,12 @@ Astuce : `…/#gemini=CLÉ&eleven=CLÉ&voice=VOICE_ID` enregistre les clés en u
 
 ## v20 (2026-10-08)
 - Clé des voix Google dans **maison-app-jl** (« Histoires du soir - voix Google », référent `https://95.groupelaberge.ca/*`, API Cloud Text-to-Speech seulement), créée avec gcloud. Donnée à l'app par le lien du document « ⚙️ Configurer l'app » (`&gcloud=`, action `cle` du script Drive). Pas de voix Studio fr-CA chez Google : l'app prend Studio fr-FR (France).
+
+## v44 — la bibliothèque de nuit (2026-10-14)
+- Écran Créer = une bibliothèque (maquette « Veilleuse A » choisie par Jonathan) : une tablette de livres par question (Pour qui, Ambiance, Avec qui, Personnages d'avant, Sa journée, Petit souci, Leçon), qui glisse vers la droite quand elle déborde (flèche ›). Le dernier livre de chaque tablette, « ✏️ Choisir », sert à écrire son propre choix.
+- Puis « 💡 Ton idée » (carnet : le vrai champ `#idea` et son micro y déménagent, idées à toucher) et « Sur la table de chevet » : longueur (petit, moyen, gros livre dessinés en SVG), images (cadres), l'enfant choisit (format), dessin. Bouton « Raconte-moi » collé en bas.
+- **Les anciens champs restent** dans `#ancien-form` (caché) et sont toujours la source de vérité : la bibliothèque ne fait que les remplir (pastilles `mood`/`souci`/`length`/`images`/`format`, champs `friends`/`journee`/`moral`/`souci-autre`, enfants, personnages). Gemini, les voix, la sauvegarde et « La suite » n'ont pas changé.
+- Enfants : toucher un livre = il écoute ce soir ou pas (`enfants[i].absent`, au moins un) ; garder le doigt (ou « Les choix de … ») = feuille avec prénom, âge et ses 7 tablettes de choix. Ambiance écrite à la main = pastille cachée `autre` + `#mood-autre`. L'ambiance est maintenant gardée (`set:mood`, `set:mood-autre`).
+- Personnages d'avant : toucher = il revient ; garder le doigt = le retirer de la liste ; dernier livre = « Chercher dans mes histoires ».
+- Histoires : rangées sur des tablettes par période (Cette semaine, Ce mois-ci, puis par mois) + « Mes favoris ». Réglages : tiroirs de commode. L'histoire ouverte est posée sous une tablette ; la barre du bas est une planche. Jetons de bois par thème (`--bois1`, `--meuble1`…) : bois clair pour Livre d'images et Doudou.
+- Test : scratchpad `test_v44.js` (Gemini simulé par Playwright, vérifie la consigne envoyée).
