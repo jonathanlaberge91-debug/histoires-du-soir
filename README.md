@@ -159,3 +159,8 @@ Astuce : `…/#gemini=CLÉ&eleven=CLÉ&voice=VOICE_ID` enregistre les clés en u
 - Petit lecteur collé en bas pendant l'écoute (`#mini-lecteur`) : ⏯, avancement, vitesse (0,7× à 1,5×), 📍 revenir au texte lu, ⚙️ (vitesse, texte qui suit, musique, son pour s'endormir, mode nuit, arrêter). Aussi dans Réglages → Pendant l'histoire.
 - Défiler soi-même (doigt ou molette) pendant la lecture suspend le texte qui suit (`suiviSuspendu`) : plus de retour forcé au paragraphe lu. 📍 clignote ; il reprend avec 📍 ou quand le paragraphe lu revient à l'écran.
 - Test : scratchpad `test_v51.js`.
+
+## v52 — après un choix, seulement la partie choisie (2026-10-14)
+- Bug : au DERNIER choix d'une histoire à choix, « Raconter » voyait que toutes les parties avaient un son et rejouait l'histoire depuis le début. Maintenant `lirePartieChoisie(s)` joue seulement la partie choisie (repli sur « Raconter » si son son manque, si la voix arrive du serveur ou s'il faut choisir une voix).
+- Une nouvelle version de l'app ne recharge plus la page au milieu d'une histoire (en pause comprise), quand des choix attendent, pendant la voix du téléphone ou une fabrication suivie.
+- Test : scratchpad `test_v52.js` (choix, rechargement = « téléphone fermé », second choix).

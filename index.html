@@ -647,7 +647,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v51</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v52</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -3729,6 +3729,13 @@ function preparerReperes(seg) {
   reperesAudio(seg.blob, seg.texte).then(r => { if (r && r.length === seg.fin - seg.debut) seg.reperes = r; });
 }
 
+/* Après un choix : on lit LA partie choisie, et seulement elle. Avant (jusqu'à v51), « Raconter » voyait au
+   dernier choix que toutes les parties avaient un son et rejouait l'histoire depuis le début (signalé le 2026-10-14). */
+function lirePartieChoisie(s) {
+  const k = s.parts.length - 1, pl = plagesParties(s)[k];
+  if (!s.partAudio?.[k] || !pl || voixServeur.has(s.id) || (!voixChoisie.has(s.id) && versionsDe(s).length > 1)) return $('btn-read').click();
+  jouerFile([{ url: URL.createObjectURL(s.partAudio[k]), blob: s.partAudio[k], debut: pl[0], fin: pl[1], texte: s.parts[k].texte, noeud: s.arbre ? (s.chemin || '').slice(0, k) : null }]);
+}
 /* Double-toucher un paragraphe : la lecture repart de là (demandé le 2026-10-13). */
 let lectureTel = null;                                   // voix du téléphone : { liste, d, surFin }
 async function lireDepuis(i) {
@@ -3845,7 +3852,7 @@ $('choix-btns').addEventListener('click', async e => {
       showStory(s);
       const debutP = plagesParties(s)[s.parts.length - 1]?.[0];
       if (debutP != null) document.querySelector(`#s-text p[data-i="${debutP}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      $('btn-read').click();
+      lirePartieChoisie(s);
     } catch (err) {
       // SANS ce retour en arrière, le chemin avançait alors que la partie
       // n'était ni ajoutée ni enregistrée : les boutons restaient éteints
@@ -3867,7 +3874,7 @@ $('choix-btns').addEventListener('click', async e => {
     showStory(s);
     const debut = plagesParties(s)[s.parts.length - 1][0];
     document.querySelector(`#s-text p[data-i="${debut}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    $('btn-read').click();                                     // on raconte la nouvelle partie tout de suite
+    lirePartieChoisie(s);                                      // on raconte la nouvelle partie tout de suite
   } catch (err) {
     status($('choix-status'), err.message, 'err');
     document.querySelectorAll('#choix-btns button').forEach(x => x.disabled = false);
@@ -4902,7 +4909,10 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.se
 /* Une nouvelle version vient de s'installer : on recharge une fois pour l'afficher */
 if ('serviceWorker' in navigator) { let vu = !!navigator.serviceWorker.controller; navigator.serviceWorker.addEventListener('controllerchange', () => {
   if (!vu) { vu = true; return; }
-  const occupe = () => $('btn-gen').disabled || $('btn-read').disabled || /spin/.test($('gen-status').innerHTML + $('tts-status').innerHTML + $('illus-status').innerHTML);
+  // v52 : pas de rechargement au milieu d'une histoire (en pause) ni quand des choix attendent l'enfant
+  const pl = $('player');
+  const occupe = () => $('btn-gen').disabled || $('btn-read').disabled || /spin/.test($('gen-status').innerHTML + $('tts-status').innerHTML + $('illus-status').innerHTML)
+    || (!!pl.getAttribute('src') && pl.currentTime > 0 && !pl.ended) || $('choix-zone').style.display !== 'none' || !!parole?.actif || travauxSuivis.size > 0;
   const essayer = () => occupe() ? setTimeout(essayer, 5000) : location.reload();
   essayer();
 }); }
