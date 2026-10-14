@@ -1,0 +1,21 @@
+[Unit]
+Description=Histoires du soir - la fabrique (texte, images et voix fabriques sur le serveur)
+After=network-online.target histoires-tts.service
+
+[Service]
+ExecStart=/usr/bin/node /opt/histoires-fabrique/fabrique.mjs
+# Memes cles que le relais (RELAIS_CLE, GOOGLE_GEMINI_KEY, GOOGLE_TTS_KEY), root 600, jamais dans le depot
+EnvironmentFile=/etc/secrets/histoires-tts.env
+DynamicUser=yes
+StateDirectory=histoires-fabrique
+StateDirectoryMode=0700
+Restart=always
+RestartSec=5
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+MemoryMax=600M
+
+[Install]
+WantedBy=multi-user.target

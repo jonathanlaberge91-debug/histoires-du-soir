@@ -601,7 +601,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v48</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v49</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -869,15 +869,13 @@
         <select id="engine" hidden>
           <option value="auto">Automatique</option>
           <option value="edge">Voix québécoise Microsoft</option>
-          <option value="eleven">ElevenLabs</option>
           <option value="gcloud">Voix québécoise Google</option>
           <option value="gemini">Voix Gemini</option>
           <option value="phone">Voix du téléphone</option>
         </select>
         <div class="moteurs">
-          <div class="moteur" data-moteur-choix="auto"><span class="m-ic">✨</span><span><b>Automatique</b><small>Les voix Google d'abord (Chirp 3 HD, Neural2, Studio), puis ElevenLabs s'il reste des crédits, puis la voix Microsoft</small></span><span class="rond"></span></div>
+          <div class="moteur" data-moteur-choix="auto"><span class="m-ic">✨</span><span><b>Automatique</b><small>Les voix Google d'abord (Chirp 3 HD, Neural2, Studio), puis la voix Microsoft</small></span><span class="rond"></span></div>
           <div class="moteur" data-moteur-choix="edge"><span class="m-ic">🍁</span><span><b>Voix québécoise Microsoft</b><small>Gratuite, sans limite · Sylvie, Antoine, Jean, Thierry</small></span><span class="rond"></span></div>
-          <div class="moteur" data-moteur-choix="eleven"><span class="m-ic">🎭</span><span><b>ElevenLabs</b><small>La plus expressive (chuchote, rit) · 10 000 caractères gratuits par mois</small></span><span class="rond"></span></div>
           <div class="moteur" data-moteur-choix="gemini"><span class="m-ic">♊</span><span><b>Voix Gemini</b><small>Gratuite, expressive, un peu lente à enregistrer</small></span><span class="rond"></span></div>
           <div class="moteur" data-moteur-choix="phone"><span class="m-ic">📱</span><span><b>Voix du téléphone</b><small>Gratuite, hors ligne, plus robotique</small></span><span class="rond"></span></div>
           <div class="moteur" data-moteur-choix="gcloud"><span class="m-ic">☁️</span><span><b>Voix Google</b><small>Chirp 3 HD, puis Neural2, puis Studio · environ 1 million de caractères gratuits par mois pour chaque</small></span><span class="rond"></span></div>
@@ -897,33 +895,6 @@
           <label class="check"><input type="checkbox" id="opt-multivoix" checked>Une voix par personnage</label>
           <p class="hint">Gemini repère qui parle : chaque personnage reçoit sa voix, plus grave ou plus aiguë selon son âge.</p>
           <div class="actions"><button class="sec" id="btn-preview-ms">▶️ Écouter</button></div>
-        </div>
-
-        <div class="panneau" data-pour="eleven auto">
-          <div class="panneau-tete">🎭 ElevenLabs</div>
-          <label>Crédits du mois</label>
-          <div id="quota-txt" class="hint" style="margin-top:0">—</div>
-          <div class="quota"><div id="quota-bar" style="width:0"></div></div>
-          <label for="voice">Voix</label>
-          <div style="display:flex; gap:8px">
-            <select id="voice" style="flex:1"><option value="">— charge les voix —</option></select>
-            <button class="sec" id="btn-voices" title="Recharger les voix">↻</button>
-          </div>
-          <input id="voice-id" placeholder="…ou colle un Voice ID" style="margin-top:8px">
-          <div class="row" style="margin-top:2px">
-            <div><label for="m-eleven">Modèle</label>
-              <select id="m-eleven">
-                <option value="eleven_v3">Eleven v3 (expressif)</option>
-                <option value="eleven_multilingual_v2">Multilingual v2</option>
-              </select></div>
-            <div><label for="stability">Style</label>
-              <select id="stability">
-                <option value="0">Créatif</option>
-                <option value="0.5" selected>Naturel</option>
-                <option value="1">Stable</option>
-              </select></div>
-          </div>
-          <div class="actions"><button class="sec" id="btn-preview">▶️ Écouter</button><button class="sec" id="btn-quota">↻ Crédits</button></div>
         </div>
 
         <div class="panneau" data-pour="gemini">
@@ -1028,9 +999,6 @@
         <label for="k-gemini">Gemini (écrit les histoires, images)</label>
         <div class="cle"><input id="k-gemini" type="password" placeholder="AIza…"><span class="etat" data-cle="k-gemini"></span></div>
         <p class="hint">Gratuite sur <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a></p>
-        <label for="k-eleven">ElevenLabs</label>
-        <div class="cle"><input id="k-eleven" type="password" placeholder="sk_…"><span class="etat" data-cle="k-eleven"></span></div>
-        <p class="hint"><a href="https://elevenlabs.io/app/settings/api-keys" target="_blank">elevenlabs.io → API Keys</a> · permissions « Text to Speech », « Voices (read) » et « User (read) ».</p>
         <label for="k-gcloud">Google Cloud (voix Google)</label>
         <div class="cle"><input id="k-gcloud" type="password" placeholder="AIza…"><span class="etat" data-cle="k-gcloud"></span></div>
         <p class="sous-titre">Avancé</p>
@@ -1064,7 +1032,7 @@
 <script>
 /* ==================== PROMPT GEMINI ==================== */
 const SYSTEM_PROMPT = `Tu es un auteur primé d'histoires pour enfants ET un directeur artistique pour la narration audio.
-Ton texte sera lu à voix haute par une voix de synthèse ElevenLabs (modèle v3) qui comprend des BALISES AUDIO entre crochets.
+Ton texte sera lu à voix haute par une voix de synthèse qui peut comprendre des BALISES AUDIO entre crochets.
 Ton objectif : une histoire captivante, chaleureuse, adaptée à l'âge, ET un texte écrit pour l'OREILLE, qui sonne comme un vrai conteur passionné.
 
 ## 1. Qualité de l'histoire
@@ -1078,7 +1046,7 @@ Ton objectif : une histoire captivante, chaleureuse, adaptée à l'âge, ET un t
 - La leçon, s'il y en a une, se montre par l'action, jamais par un sermon.
 
 ## 2. Écrire pour la voix (TRÈS IMPORTANT)
-Balises audio ElevenLabs v3 — toujours EN ANGLAIS, entre crochets, placées JUSTE AVANT la phrase qu'elles colorent :
+Balises audio — toujours EN ANGLAIS, entre crochets, placées JUSTE AVANT la phrase qu'elles colorent :
 - Émotions : [excited] [happy] [curious] [surprised] [sad] [nervous] [scared] [relieved] [proud] [amazed] [mischievously] [grumpy] [warmly] [tenderly]
 - Manière de dire : [whispers] [softly] [shouting] [dramatically] [slowly] [quickly] [playfully] [mysteriously] [sleepy]
 - Réactions humaines : [laughs] [giggles] [chuckles] [sighs] [gasps] [yawns] [sniffs] [clears throat] [gulps]
@@ -1157,24 +1125,6 @@ async function majModeles() {
   remplacer(TTS_MODELS, recents(noms.filter(n => /tts/.test(n))).sort((a, b) => /flash/.test(b) - /flash/.test(a)));
   remplacer(IMAGE_MODELS, recents(noms.filter(n => /image/.test(n) && !/imagen|pro/.test(n))).sort((a, b) => /flash/.test(b) - /flash/.test(a)));
 }
-/* Voix de base ElevenLabs (utilisées si la clé n'a pas la permission « Voices read ») */
-const PREMADE_VOICES = [
-  ['XrExE9yKIg1WjnnlVkGX', 'Matilda — femme, chaleureuse, conteuse'],
-  ['FGY2WhTYpPnrIDTdsKH5', 'Laura — femme, enjouée'],
-  ['EXAVITQu4vr4xnSDxMaL', 'Sarah — femme, douce et rassurante'],
-  ['pFZP5JQG7iQjIQuC4Bku', 'Lily — femme, velouté'],
-  ['Xb7hH8MSUJpSbSDYk0k2', 'Alice — femme, claire'],
-  ['JBFqnCBsd6RMkjVDRZzb', 'George — homme, conteur chaleureux'],
-  ['nPczCjzI2devNBz1zQrb', 'Brian — homme, grave et posé'],
-  ['onwK4e9ZLuTAKqWW03F9', 'Daniel — homme, narrateur'],
-  ['IKne3meq5aSn9XLyUdCD', 'Charlie — homme, décontracté'],
-  ['pqHfZKP75CyOw3sBF5Ji', 'Bill — homme, grand-papa']
-];
-function fillPremade() {
-  const cur = $('voice-id').value;
-  $('voice').innerHTML = PREMADE_VOICES.map(([id, n]) => `<option value="${id}" ${id === cur ? 'selected' : ''}>${n}</option>`).join('');
-  if (!cur) $('voice-id').value = $('voice').value;
-}
 const LENGTHS = { court: 'environ 350 mots', moyen: 'environ 700 mots', long: 'environ 1200 mots' };
 const LENGTHS_PART = { court: 'environ 150 mots', moyen: 'environ 250 mots', long: 'environ 400 mots' };
 const LANGS = {
@@ -1199,7 +1149,7 @@ const store = {
 function status(el, msg, cls = '') { el.className = 'status ' + cls; el.innerHTML = msg; }
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const stripTags = t => t.replace(/\[[^\]\n]{1,40}\]\s*/g, '');
-/* Texte écrit pour ElevenLabs v3, lu par une autre voix : on enlève ce qu'elle prononcerait mal.
+/* Texte écrit avec des balises et des effets, lu par une voix simple : on enlève ce qu'elle prononcerait mal.
    « Ouuuuh » → « Ouh », « Crrrac » → « Crac », « Trèèès » → « Très », « BRILLANTE » → « brillante ». */
 function pourVoixSimple(t) { return pourVoixGoogle(stripTags(t)); }
 /* Même nettoyage, mais en gardant les balises de jeu (les voix Google les traduisent) */
@@ -1394,54 +1344,28 @@ document.querySelectorAll('.chips').forEach(g => g.addEventListener('click', e =
 const chipVal = g => document.querySelector(`.chips[data-group="${g}"] .chip.on`).dataset.v;
 
 /* ==================== RÉGLAGES ==================== */
-const SETTINGS = ['k-gemini', 'm-gemini', 'k-eleven', 'voice-id', 'm-eleven', 'stability', 'lang', 'name', 'age', 'friends',
+const SETTINGS = ['k-gemini', 'm-gemini', 'lang', 'name', 'age', 'friends',
   'engine', 'g-voice', 'p-voice', 'p-rate', 'musique-vol', 'img-style', 'k-gcloud', 'gc-voice', 'gc-voice-studio', 'gc-voice-neural', 'gc-rate', 'gc-plafond', 'ms-voice', 'ms-rate', 'vit-mode'];
 const CHECKS = ['opt-musique', 'opt-suivre', 'opt-drive', 'opt-multivoix'];
 SETTINGS.forEach(id => { const v = store.get('set:' + id); if (v) $(id).value = v; });
+if (!$('engine').value || store.get('set:engine') === 'eleven') { $('engine').value = 'auto'; store.set('set:engine', 'auto'); }   // ElevenLabs retiré
 CHECKS.forEach(id => { const v = store.get('set:' + id); if (v) $(id).checked = v === '1'; });
-/* Import de clés par lien : …/#gemini=CLÉ&eleven=CLÉ (enregistrées puis retirées de l'adresse).
+/* Import de clé par lien : …/#gemini=CLÉ (enregistrée puis retirée de l'adresse).
    Plus de configuration par le Drive (2026-10-13) : la connexion de l'app Maison suffit. */
 if (location.hash.length > 1) {
   const h = new URLSearchParams(location.hash.slice(1));
   if (h.get('gemini')) store.set('set:k-gemini', $('k-gemini').value = h.get('gemini'));
-  if (h.get('eleven')) store.set('set:k-eleven', $('k-eleven').value = h.get('eleven'));
-  if (h.get('voice')) store.set('set:voice-id', $('voice-id').value = h.get('voice'));
   history.replaceState(null, '', location.pathname);
 }
 if (['gemini-2.5-flash', 'gemini-3.8-flash'].includes($('m-gemini').value)) $('m-gemini').value = 'gemini-flash-latest';
 function saveSettings() {
   SETTINGS.forEach(id => store.set('set:' + id, $(id).value.trim()));
   CHECKS.forEach(id => store.set('set:' + id, $(id).checked ? '1' : '0'));
-  const sel = $('voice').value; if (sel) { $('voice-id').value = sel; store.set('set:voice-id', sel); }
 }
 $('btn-save').onclick = () => { saveSettings(); status($('set-status'), '✔ Réglages enregistrés', 'ok'); };
-$('voice').onchange = () => { if ($('voice').value) $('voice-id').value = $('voice').value; };
 $('musique-vol').oninput = () => { musique.volume = parseFloat($('musique-vol').value); };
 CHECKS.forEach(id => $(id).onchange = () => { store.set('set:' + id, $(id).checked ? '1' : '0'); if (id === 'opt-musique' && !$(id).checked) musiquePause(); });
 
-async function loadVoices() {
-  const key = $('k-eleven').value.trim();
-  if (!key) return status($('set-status'), 'Entre d\'abord ta clé ElevenLabs.', 'err');
-  status($('set-status'), '<span class="spin"></span>Chargement des voix…');
-  try {
-    const r = await fetch('https://api.elevenlabs.io/v1/voices', { headers: { 'xi-api-key': key } });
-    if (!r.ok) throw new Error(await errText(r));
-    const { voices } = await r.json();
-    const cur = $('voice-id').value;
-    $('voice').innerHTML = '<option value="">— choisis une voix —</option>' + voices.map(v => {
-      const l = v.labels || {};
-      const info = [l.gender, l.accent, l.description || l.descriptive, l.use_case].filter(Boolean).join(' · ');
-      return `<option value="${v.voice_id}" ${v.voice_id === cur ? 'selected' : ''} data-prev="${v.preview_url || ''}">${esc(v.name)}${info ? ' — ' + esc(info) : ''}</option>`;
-    }).join('');
-    status($('set-status'), `✔ ${voices.length} voix chargées. Astuce : une voix « narration » ou « storytelling » donne le meilleur résultat.`, 'ok');
-  } catch (e) {
-    fillPremade();
-    status($('set-status'), /voices_read|permission/i.test(e.message)
-      ? 'Ta clé n\'a pas la permission « Voices (read) » : voici les voix de base d\'ElevenLabs. Elles fonctionnent toutes très bien.'
-      : 'Impossible de charger tes voix (' + esc(e.message) + ') : voici les voix de base.', /voices_read|permission/i.test(e.message) ? '' : 'err');
-  }
-}
-$('btn-voices').onclick = loadVoices;
 const EXTRAIT = () => $('lang').value === 'en'
   ? '[warmly] Once upon a time… [whispers] in a forest full of secrets, [excited] a little fox found a GLOWING stone!'
   : '[warmly] Il était une fois… [whispers] dans une forêt pleine de secrets, [excited] un petit renard qui trouva une pierre BRILLANTE !';
@@ -1493,19 +1417,6 @@ function jouerExtrait(no, blob, facteur = 1) {
   extraitAudio.play().catch(() => {});
   return true;
 }
-$('btn-preview').onclick = async () => {
-  if (!$('k-eleven').value.trim()) return status($('set-status'), 'Ajoute d’abord ta clé ElevenLabs dans ⚙️ Réglages → Clés.', 'err');
-  const id = $('voice-id').value.trim() || $('voice').value;
-  if (!id) return status($('set-status'), 'Choisis une voix ElevenLabs (touche ↻ pour charger la liste).', 'err');
-  saveSettings();
-  status($('set-status'), '<span class="spin"></span>Génération d\'un extrait…');
-  try {
-    const no = nouvelExtrait();
-    const x = await extraitGarde(['eleven', id, $('m-eleven').value, $('stability').value, EXTRAIT()], () => tts(EXTRAIT()));
-    if (!jouerExtrait(no, x.blob)) return;
-    status($('set-status'), '✔ Lecture de l\'extrait' + gratuit(x), 'ok');
-  } catch (e) { status($('set-status'), 'Erreur : ' + esc(e.message), 'err'); }
-};
 $('btn-preview-g').onclick = async () => {
   saveSettings();
   status($('set-status'), '<span class="spin"></span>Gemini enregistre un extrait…');
@@ -1557,41 +1468,6 @@ async function errText(r) {
   catch { return 'HTTP ' + r.status; }
 }
 
-/* ==================== CRÉDITS ELEVENLABS ==================== */
-const moisCle = () => 'el:' + new Date().toISOString().slice(0, 7);
-const utiliseLocal = () => parseInt(store.get(moisCle(), '0'), 10) || 0;
-function noterUtilise(n) { store.set(moisCle(), String(utiliseLocal() + n)); quotaCache = null; }
-let quotaCache = null;
-/* { utilise, limite, reste, reset?, estime } — l'API si la clé a « User (read) », sinon le compte de l'app */
-async function quotaEleven(force) {
-  if (!force && quotaCache && Date.now() - quotaCache.at < 120000) return quotaCache;
-  const key = $('k-eleven').value.trim();
-  let q = null;
-  if (key) {
-    try {
-      const r = await fetch('https://api.elevenlabs.io/v1/user/subscription', { headers: { 'xi-api-key': key } });
-      if (r.ok) {
-        const j = await r.json();
-        q = { utilise: j.character_count, limite: j.character_limit, reset: j.next_character_count_reset_unix, estime: false };
-      }
-    } catch {}
-  }
-  if (!q) q = { utilise: utiliseLocal(), limite: 10000, estime: true };
-  q.reste = Math.max(0, q.limite - q.utilise);
-  q.at = Date.now();
-  return quotaCache = q;
-}
-async function afficherQuota(force) {
-  const q = await quotaEleven(force);
-  const reset = q.reset ? ` · remis à zéro le ${new Date(q.reset * 1000).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long' })}` : '';
-  $('quota-txt').innerHTML = `Il reste <b>${fmt(q.reste)}</b> caractères sur ${fmt(q.limite)}${reset}` +
-    (q.estime ? '<br>(estimé par l\'app — ajoute la permission « User (read) » à ta clé pour le chiffre exact)' : '');
-  $('quota-bar').style.width = (q.limite ? q.reste / q.limite * 100 : 0) + '%';
-  $('quota-bar').style.background = q.reste < 2000 ? 'var(--err)' : q.reste < 5000 ? 'var(--accent)' : 'var(--ok)';
-  return q;
-}
-$('btn-quota').onclick = () => afficherQuota(true);
-
 /* Quelle voix va raconter ce texte ? */
 async function choisirMoteur(nb) {
   const m = $('engine').value;
@@ -1599,17 +1475,7 @@ async function choisirMoteur(nb) {
   // Appareil neuf : la liste des voix Google n'est peut-être pas encore là — on l'attend, sinon on sauterait Google
   if (gcCle() && !gcVoix()) await gcChargerVoix().catch(() => {});
   if (gcCle() && gcVoix() && gcPalier(Math.round(nb * 1.3))) return { moteur: 'gcloud' };   // les voix Google d'abord
-  return apresGoogle(nb);
-}
-/* Après les voix Google : ElevenLabs s'il reste des crédits, puis Microsoft, Gemini, téléphone */
-async function apresGoogle(nb) {
-  const kE = $('k-eleven').value.trim();
-  if (kE) {
-    const q = await quotaEleven();
-    if (q.reste >= nb + 50) return { moteur: 'eleven' };
-    return { moteur: secours(nb, 'eleven'), raison: `crédits ElevenLabs épuisés (${fmt(q.reste)} restants, il en faut ${fmt(nb)})` };
-  }
-  return { moteur: secours(nb, 'eleven') };
+  return { moteur: secours(nb, 'gcloud') };
 }
 /* Voix de secours, dans l'ordre : québécoise Google (sous le plafond), Gemini, téléphone */
 function secours(nb, sauf) {
@@ -1618,7 +1484,7 @@ function secours(nb, sauf) {
   if (sauf !== 'gemini' && cleGemini()) return 'gemini';
   return 'phone';
 }
-const NOMS_VOIX = { edge: 'la voix québécoise Microsoft', eleven: 'ElevenLabs', gcloud: 'la voix Google', gemini: 'la voix Gemini', phone: 'la voix du téléphone' };
+const NOMS_VOIX = { edge: 'la voix québécoise Microsoft', gcloud: 'la voix Google', gemini: 'la voix Gemini', phone: 'la voix du téléphone' };
 
 /* ==================== GEMINI : TEXTE ==================== */
 async function appelGemini(user, schema, onStatus, opts = {}) {
@@ -1652,13 +1518,14 @@ const SCHEMA_CHOIX = { type: 'OBJECT', properties: { titre: { type: 'STRING' }, 
   required: ['titre', 'histoire', 'choixA', 'choixB'] };
 
 /* Quelle voix va raconter ? On l'estime AVANT d'écrire, pour adapter le texte :
-   ElevenLabs v3 comprend les balises et les effets ; les autres voix les prononcent mal. */
+   la voix Google a sa propre direction de jeu (balises permises) ; les autres voix lisent un texte simple.
+   (ElevenLabs, seul à comprendre toutes les balises, est retiré de l'app depuis le 2026-10-14.) */
 let voixSimple = false, voixGoogle = false;
 const LONGUEUR_ESTIMEE = { court: 2600, moyen: 5000, long: 8500 };
 async function preparerEcriture(nbCaracteres) {
   try {
     const { moteur } = await choisirMoteur(nbCaracteres || LONGUEUR_ESTIMEE[chipVal('length')] || 5000);
-    voixSimple = !(moteur === 'eleven' && $('m-eleven').value === 'eleven_v3');
+    voixSimple = true;
     voixGoogle = moteur === 'gcloud';
   } catch { voixSimple = true; voixGoogle = false; }
   return voixSimple;
@@ -1701,10 +1568,13 @@ function consignes(opts = {}) {
 }
 
 /* Histoire complète */
+/* La consigne de chaque sorte d'histoire. Elle part au serveur (la fabrique) telle quelle ; sans session Maison,
+   l'app appelle Gemini elle-même avec la même consigne. */
+const promptHistoire = () => [...consignes(), `Longueur : ${LENGTHS[chipVal('length')]} (sans compter les balises).`].join('\n');
 async function genererHistoire(onStatus) {
-  const user = [...consignes(), `Longueur : ${LENGTHS[chipVal('length')]} (sans compter les balises).`].join('\n');
-  return appelGemini(user, SCHEMA, onStatus, { images: dessin ? [dessin] : [] });
+  return appelGemini(promptHistoire(), SCHEMA, onStatus, { images: dessin ? [dessin] : [] });
 }
+genererHistoire.recette = () => ({ type: 'histoire', user: promptHistoire(), schema: SCHEMA });
 
 /* Résumé de ce qui précède (pour les suites), sans balises et pas trop long */
 function contexte(texte) {
@@ -1713,8 +1583,7 @@ function contexte(texte) {
 }
 
 /* Le chapitre suivant d'une histoire */
-async function genererSuite(prec, onStatus) {
-  const user = [
+const promptSuite = prec => [
     `Voici le chapitre ${prec.chap || 1} d'une série d'histoires du soir, intitulé « ${prec.titre} » :`,
     '---', contexte(prec.histoire), '---',
     `Écris le CHAPITRE ${(prec.chap || 1) + 1} : une NOUVELLE aventure complète avec les mêmes personnages (mêmes noms, mêmes personnalités, mêmes voix), qui commence par un petit rappel en une ou deux phrases de ce qui s'est passé avant, et qui se termine pour de bon (on peut l'écouter seul).`,
@@ -1723,7 +1592,8 @@ async function genererSuite(prec, onStatus) {
     `Longueur : ${LENGTHS[chipVal('length')]} (sans compter les balises).`,
     'Le titre est celui du nouveau chapitre (sans le mot « chapitre »).'
   ].filter(Boolean).join('\n');
-  return appelGemini(user, SCHEMA, onStatus);
+async function genererSuite(prec, onStatus) {
+  return appelGemini(promptSuite(prec), SCHEMA, onStatus);
 }
 
 /* Histoire dont l'enfant choisit la suite : 3 parties, 2 choix */
@@ -1739,9 +1609,9 @@ const SCHEMA_ARBRE = (() => {
     debut: { type: 'OBJECT', properties: { texte: { type: 'STRING' }, choixA: { type: 'STRING' }, choixB: { type: 'STRING' } }, required: ['texte', 'choixA', 'choixB'] },
     suiteA: suite, suiteB: suite }, required: ['titre', 'debut', 'suiteA', 'suiteB'] };
 })();
-async function genererArbre(onStatus) {
+function promptArbre() {
   const lg = LENGTHS_PART[chipVal('length')];
-  const user = [
+  return [
     ...consignes(),
     'C\'est une histoire INTERACTIVE où l\'enfant choisit la suite. Écris-la EN ENTIER, avec toutes ses branches :',
     `- « debut » (${lg}) : l'ouverture, qui se termine par une question à l'enfant proposant DEUX possibilités claires et amusantes, dites dans le texte (par exemple : « Que devrait faire Léa ? Entrer dans la grotte qui brille… ou suivre le petit hibou ? »). « choixA » et « choixB » résument chaque possibilité en deux à cinq mots, dans le même ordre que dans la question.`,
@@ -1750,7 +1620,10 @@ async function genererArbre(onStatus) {
     '- Chaque morceau se lit juste après le précédent : ne répète pas et ne résume pas ce qui a déjà été raconté. Garde les mêmes personnages, les mêmes noms et les mêmes voix partout.',
     '- Le « titre » est celui de toute l\'histoire.'
   ].join('\n');
-  const j = await appelGemini(user, SCHEMA_ARBRE, onStatus, { images: dessin ? [dessin] : [] });
+}
+genererArbre.recette = () => ({ type: 'arbre', user: promptArbre(), schema: SCHEMA_ARBRE });
+async function genererArbre(onStatus) {
+  const j = await appelGemini(promptArbre(), SCHEMA_ARBRE, onStatus, { images: dessin ? [dessin] : [] });
   const t = x => String(x || '').replace(/\\n/g, '\n').trim();
   const arbre = { '': { texte: t(j.debut.texte), choixA: j.debut.choixA, choixB: j.debut.choixB } };
   for (const c of ['A', 'B']) {
@@ -2200,7 +2073,7 @@ function fabDessiner() {
     row.querySelector('.fab-det').textContent = x.det || '';
   }
   const actif = lignes.some(([, x]) => x.etat === 'actif' || x.etat === 'attente');
-  ecranAllume(actif);
+  ecranAllume(actif && !fabParServeur);                 // le serveur fabrique : l'écran peut s'éteindre
   $('fab-titre').textContent = actif ? 'Fabrication de l\'histoire' : lignes.some(([, x]) => x.etat === 'err') ? 'Fabrication : un souci' : '✔ Tout est prêt';
   clearTimeout(fabFin);
   if (!actif) fabFin = setTimeout(() => { FAB.histoire = FAB.images = FAB.voix = null; fabDessiner(); }, 8000);
@@ -2236,30 +2109,226 @@ async function voixAuto(s) {
 }
 
 
-/* ==================== ELEVENLABS ==================== */
-async function tts(text) {
-  const key = $('k-eleven').value.trim();
-  const voice = $('voice-id').value.trim() || $('voice').value;
-  if (!key) throw new Error('Ajoute ta clé ElevenLabs dans ⚙️ Réglages.');
-  if (!voice) throw new Error('Choisis une voix dans ⚙️ Réglages.');
-  const model = $('m-eleven').value;
-  const body = { text: model === 'eleven_v3' ? text : pourVoixSimple(text), model_id: model };
-  body.voice_settings = model === 'eleven_v3'
-    ? { stability: parseFloat($('stability').value) }
-    : { stability: 0.4, similarity_boost: 0.8, style: 0.45, use_speaker_boost: true };
-  const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice}?output_format=mp3_44100_128`, {
-    method: 'POST',
-    headers: { 'xi-api-key': key, 'Content-Type': 'application/json', 'Accept': 'audio/mpeg' },
-    body: JSON.stringify(body)
-  });
-  if (!r.ok) {
-    const m = await errText(r);
-    const e = new Error('ElevenLabs : ' + m);
-    e.quota = r.status === 401 && /quota|credits|exceed/i.test(m) || /quota_exceeded/i.test(m);
-    throw e;
+/* ==================== LA FABRIQUE DU SERVEUR (v49) ====================
+   Demandé par Jonathan le 2026-10-14 : l'histoire doit se fabriquer même écran éteint ou app fermée.
+   Avec une session Maison, l'app n'appelle plus Gemini elle-même : elle envoie une « recette » (la consigne
+   déjà écrite, les réglages des images et de la voix) au serveur (serveur/fabrique/fabrique.mjs), qui écrit
+   le texte, dessine les images et enregistre la voix. L'app suit l'avancement quand elle est ouverte, et
+   récupère chaque morceau dès qu'il est prêt. Rouverte plus tard, elle reprend là où le serveur en est.
+   Une notification « Ton histoire est prête » part à la fin. Sans session Maison : l'ancienne façon (tout dans l'app). */
+const URL_FAB = (location.hostname === '95.groupelaberge.ca' ? '' : 'https://95.groupelaberge.ca') + '/histoires/fabrique';
+const parFabrique = () => !!jetonMaison();
+const travauxSuivis = new Map();          // id → suivi
+const voixServeur = new Map();            // id de l'histoire → promesse : la voix arrive du serveur
+let fabParServeur = false;
+const travauxGardes = () => { try { return JSON.parse(store.get('fab:travaux', '[]')); } catch { return []; } };
+const garderTravail = id => store.set('fab:travaux', JSON.stringify([...new Set([...travauxGardes(), id])].slice(-10)));
+const oublierTravail = id => store.set('fab:travaux', JSON.stringify(travauxGardes().filter(x => x !== id)));
+async function fabFetch(chemin, init = {}) {
+  await rafraichirSession();
+  return reseau(() => fetch(URL_FAB + chemin, { ...init, headers: { ...(init.headers || {}), ...entetesRelais() } }));
+}
+const enB64 = async b => ({ b64: await b64(b), type: b.type || 'image/jpeg' });
+
+/* Notifications : demandées au premier « Raconte-moi » (il faut un geste de l'utilisateur) */
+function demanderNotifications() {
+  if (!('Notification' in window) || !('serviceWorker' in navigator) || Notification.permission === 'denied') return;
+  const p = Notification.permission === 'granted' ? Promise.resolve('granted') : Notification.requestPermission();
+  p.then(async ok => {
+    if (ok !== 'granted') return;
+    const reg = await navigator.serviceWorker.ready;
+    let abo = await reg.pushManager.getSubscription();
+    if (!abo) {
+      const { cle } = await (await fetch(URL_FAB + '/vapid')).json();
+      const brut = Uint8Array.from(atob(cle.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - cle.length % 4) % 4)), c => c.charCodeAt(0));
+      abo = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: brut });
+    }
+    if (store.get('fab:abo') === abo.endpoint) return;
+    const r = await fabFetch('/abonnement', { method: 'POST', body: JSON.stringify({ endpoint: abo.endpoint }) });
+    if (r.ok) store.set('fab:abo', abo.endpoint);
+  }).catch(() => {});
+}
+
+/* Envoie la recette au serveur, puis suit le travail */
+async function creerServeur(fn, extra) {
+  demanderNotifications();
+  saveSettings();
+  const btn = $('btn-gen');
+  btn.disabled = $('btn-regen').disabled = $('btn-suite').disabled = true;
+  const st = (m, c) => status($('gen-status'), m, c);
+  st('<span class="spin"></span>Envoi de ta recette au serveur…');
+  FAB.images = FAB.voix = null;
+  fabMaj('histoire', { etat: 'attente', fn: null, det: 'envoi au serveur…' });
+  try {
+    await preparerEcriture(extra.interactive ? LONGUEUR_ESTIMEE[chipVal('length')] * 7 / 3 : 0);
+    const r0 = fn.recette();
+    const nb = imagesVoulues();
+    const repris = persosPourHistoire();
+    const ficheAvant = extra.serie ? ((await DB.liste()).find(x => (x.serie || x.id) === extra.serie && x.illus?.fiche)?.illus.fiche || '') : '';
+    const refs = dessin ? [dessin.blob] : await refsCouverture({ persoRepris: repris });
+    const moteur = $('engine').value;
+    const recette = {
+      type: r0.type, avecDessin: !!(extra.avecDessin && dessin),
+      texte: { system: SYSTEM_PROMPT, user: r0.user, schema: r0.schema, images: dessin ? [{ b64: dessin.b64, type: dessin.type }] : [],
+        modeles: [...new Set([$('m-gemini').value.trim() || 'gemini-flash-latest', ...FALLBACK_MODELS])],
+        attendu: Math.round((LONGUEUR_ESTIMEE[chipVal('length')] || 5000) * (r0.type === 'arbre' ? 7 / 3 : 1) * 1.05) },
+      images: nb ? { nb, style: $('img-style').value, modeles: IMAGE_MODELS, ficheAvant, persoRepris: repris, dessin: !!dessin, refs: await Promise.all(refs.map(enB64)) } : { nb: 0 },
+      voix: { moteur: moteur === 'gcloud' || moteur === 'edge' || moteur === 'phone' ? moteur : 'auto', multivoix: $('opt-multivoix').checked, neutre: vitesseALaLecture(),
+        gcRate: $('gc-rate').value, msRate: $('ms-rate').value, msVoix: $('ms-voice').value, plafond: gcPlafond(), modeles: [...new Set(['gemini-flash-latest', ...FALLBACK_MODELS])],
+        gcVoix: Object.fromEntries(GC_PALIERS.map(pl => [pl.id, gcVoixDe(pl)])) },
+      info: { meta: { name: consignesEnfants().noms.join(' et ') || $('name').value.trim(), friends: $('friends').value.trim(), mood: chipVal('mood') },
+        illusNb: nb, extra: { ...extra, avecDessin: undefined }, persoRepris: repris, ecriture: voixGoogle ? 'google' : 'simple', cree: Date.now() }
+    };
+    const r = await fabFetch('/travaux', { method: 'POST', body: JSON.stringify(recette) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.erreur || 'le serveur a refusé (HTTP ' + r.status + ')');
+    garderTravail(j.id);
+    st('<span class="spin"></span>Le serveur écrit ton histoire… Tu peux éteindre l\'écran : elle sera prête à ton retour.');
+    suivreTravail(j.id, { afficher: true });
+  } catch (e) {
+    st(esc(e.message), 'err');
+    fabMaj('histoire', { etat: 'err', fn: null, det: e.message.slice(0, 90) });
+    btn.disabled = $('btn-regen').disabled = $('btn-suite').disabled = false;
   }
-  noterUtilise(body.text.length);
+}
+
+/* Suit un travail du serveur et range chaque morceau dans l'histoire dès qu'il arrive */
+async function suivreTravail(id, { afficher = false } = {}) {
+  if (travauxSuivis.has(id)) return;
+  const suivi = { id, s: null, images: new Set(), noeuds: new Set(), afficher, voixFin: null };
+  travauxSuivis.set(id, suivi);
+  fabParServeur = true;
+  const visible = () => new Promise(ok => {
+    if (document.visibilityState === 'visible') return ok();
+    const f = () => { if (document.visibilityState === 'visible') { document.removeEventListener('visibilitychange', f); ok(); } };
+    document.addEventListener('visibilitychange', f);
+  });
+  try {
+    for (;;) {
+      await visible();                                         // app cachée : on ne demande rien, le serveur continue seul
+      let v;
+      try {
+        const r = await fabFetch('/travaux/' + id);
+        if (r.status === 404) { oublierTravail(id); break; }    // déjà récupéré ailleurs, ou trop vieux
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        v = await r.json();
+      } catch { await sleep(4000); continue; }
+      for (const ph of ['histoire', 'images', 'voix']) {
+        const x = v.phases?.[ph];
+        fabMaj(ph, x ? { etat: x.etat, pct: x.pct || 0, fn: null, det: x.det || '' } : null);
+      }
+      try { await rangerTravail(suivi, v); } catch (e) { console.warn('fabrique', e); }
+      if (v.fini) { await finirTravail(suivi, v); break; }
+      await sleep(1500);
+    }
+  } finally {
+    travauxSuivis.delete(id);
+    if (!travauxSuivis.size) fabParServeur = false;
+    if (suivi.afficher || !travauxSuivis.size) $('btn-gen').disabled = $('btn-regen').disabled = $('btn-suite').disabled = false;
+  }
+}
+/* Les changements vont dans l'histoire suivie ET dans celle à l'écran si c'est la même (objets différents) */
+async function majHistoire(suivi, champs, quoi) {
+  const s = suivi.s;
+  Object.assign(s, champs);
+  if (current && current.id === s.id && current !== s) Object.assign(current, champs);
+  await DB.put(s);
+  if (current?.id !== s.id) return;
+  if (quoi === 'images') { afficherCouverture(current); placerIllustrations(current); majBoutonIllustrer(current); }
+  if (quoi === 'voix') { setAudio(current); status($('tts-status'), '✔ La voix est prête : touche ▶️ Réécouter', 'ok'); }
+}
+async function fichierTravail(id, nom) {
+  const r = await fabFetch(`/travaux/${id}/f/${nom}`);
+  if (!r.ok) throw new Error('fichier ' + nom + ' : HTTP ' + r.status);
   return r.blob();
+}
+async function rangerTravail(suivi, v) {
+  const R = v.resultat || {}, I = R.info || {};
+  // 1. le texte : l'histoire existe dès qu'il est écrit
+  if (!suivi.s && R.titre && R.histoire) {
+    let s = await DB.get(v.id).catch(() => null);
+    if (!s) {
+      s = { id: v.id, createdAt: I.cree || v.cree, titre: R.titre, histoire: R.histoire, meta: I.meta || {}, illusNb: I.illusNb || 0,
+        ...(I.extra || {}), ecriture: I.ecriture || 'simple', fab: true };
+      delete s.avecDessin;
+      if (I.persoRepris?.length) s.persoRepris = I.persoRepris;
+      if (s.interactive) { s.parts = [{ texte: R.histoire, choixA: R.choixA, choixB: R.choixB }]; s.partAudio = []; }
+      if (R.arbre) { s.arbre = R.arbre; s.chemin = ''; s.audioNoeuds = {}; }
+      if (R.dessin) { try { s.image = await reduireImage(await fichierTravail(v.id, 'dessin')); s.dessin = true; } catch {} }
+      await DB.put(s);
+      extrairePersonnages(s).catch(() => {});
+    }
+    suivi.s = s;
+    Object.keys(s.illusImages || {}).forEach(c => suivi.images.add(c));
+    Object.keys(s.audioNoeuds || {}).forEach(c => suivi.noeuds.add(c));
+    if (!s.audio && !(s.arbre && Object.keys(s.audioNoeuds || {}).length === Object.keys(s.arbre).length)) {
+      voixServeur.set(s.id, new Promise((ok, ko) => { suivi.voixFin = { ok, ko }; }));
+      voixServeur.get(s.id).catch(() => {});
+    }
+    if (suivi.afficher || !current) {
+      showStory(s);
+      status($('gen-status'), '<span class="spin"></span>Histoire écrite ! Les images et la voix arrivent…');
+      if (suivi.afficher) $('story-card').scrollIntoView({ behavior: 'smooth' });
+    }
+  }
+  const s = suivi.s; if (!s) return;
+  // 2. les images, une à une
+  if (R.illus && !s.illus) await majHistoire(suivi, { illus: R.illus, illusImages: s.illusImages || {} }, 'images');
+  for (const im of R.images || []) {
+    if (suivi.images.has(im.cle)) continue;
+    suivi.images.add(im.cle);
+    try {
+      const blob = await reduireImage(await fichierTravail(v.id, 'image-' + im.cle));
+      const illusImages = { ...(s.illusImages || {}), [im.cle]: blob };
+      await majHistoire(suivi, { illusImages, ...(!s.image && im.cle === R.illus?.scenes?.[0]?.cle ? { image: blob } : {}) }, 'images');
+    } catch { suivi.images.delete(im.cle); }
+  }
+  // 3. la voix : l'histoire entière, ou les 7 morceaux d'une histoire à choix
+  if (R.audio && !s.audio) {
+    try {
+      const audio = await fichierTravail(v.id, 'audio');
+      await majHistoire(suivi, { audio, vitMoteur: R.vitMoteur, vitNeutre: R.vitNeutre }, 'voix');
+      suivi.voixFin?.ok();
+    } catch {}
+  }
+  for (const c of R.noeuds || []) {
+    if (suivi.noeuds.has(c)) continue;
+    suivi.noeuds.add(c);
+    try {
+      const b = await fichierTravail(v.id, 'noeud-' + (c || 'debut'));
+      await majHistoire(suivi, { audioNoeuds: { ...(s.audioNoeuds || {}), [c]: b }, vitNoeuds: { ...(s.vitNoeuds || {}), ...(R.vitNoeuds || {}) },
+        ...(c === '' ? { vitMoteur: R.vitMoteur, vitNeutre: R.vitNeutre } : {}) });
+      if (s.arbre && Object.keys(s.audioNoeuds).length === Object.keys(s.arbre).length) {
+        s.partAudio = audioChemin(s); if (current?.id === s.id && current !== s) current.partAudio = audioChemin(current);
+        suivi.voixFin?.ok();
+      }
+    } catch { suivi.noeuds.delete(c); }
+  }
+}
+async function finirTravail(suivi, v) {
+  const s = suivi.s;
+  if (!s) {                                              // l'histoire n'a pas pu s'écrire
+    if (suivi.afficher || !current) status($('gen-status'), esc(v.erreur || 'la fabrication a échoué'), 'err');
+  } else {
+    if (v.phases?.voix?.etat === 'err') suivi.voixFin?.ko(new Error(v.phases.voix.det));
+    else suivi.voixFin?.ok();
+    voixServeur.delete(s.id);
+    srvSauver(s);                                       // sauvegarde sur le serveur Maison (texte, images, voix)
+    if (current?.id === s.id) {
+      status($('gen-status'), `✔ « ${esc(s.titre)} » est prête !`, 'ok');
+      majBoutonIllustrer(current);
+      if (v.phases?.voix?.etat === 'err') status($('tts-status'), 'La voix n\'a pas pu s\'enregistrer sur le serveur (' + esc(v.phases.voix.det || '') + ') : touche 🔊 Raconter pour l\'enregistrer ici.', 'err');
+    }
+  }
+  oublierTravail(v.id);
+  fabFetch('/travaux/' + v.id, { method: 'DELETE' }).catch(() => {});
+}
+/* À l'ouverture : les travaux en cours ou finis pendant que l'app dormait */
+async function reprendreTravaux() {
+  if (!parFabrique()) return;
+  let ids = travauxGardes();
+  try { const r = await fabFetch('/travaux'); if (r.ok) ids = [...new Set([...ids, ...(await r.json()).travaux.map(t => t.id)])]; } catch {}
+  for (const id of ids) suivreTravail(id);
 }
 
 /* ==================== VOIX QUÉBÉCOISE MICROSOFT (relais du serveur) ==================== */
@@ -3251,9 +3320,8 @@ async function infoCredits() {
   const t = texteALire(s);
   const { moteur, raison } = await choisirMoteur(t.length);
   if (s !== current) return;
-  const nom = NOMS_VOIX[moteur] + (moteur === 'eleven' ? '' : ' (gratuite)');
+  const nom = NOMS_VOIX[moteur] + ' (gratuite)';
   let m = `${fmt(t.length)} caractères · sera lue par ${nom}`;
-  if (moteur === 'eleven') { const q = await quotaEleven(); m += ` · il te restera ${fmt(q.reste - t.length)} caractères ce mois-ci`; }
   if (raison) m += ` (${raison})`;
   status($('tts-status'), m);
 }
@@ -3570,6 +3638,7 @@ $('choix-btns').addEventListener('click', async e => {
 
 /* ==================== ACTIONS ==================== */
 async function creer(fn, extra = {}) {
+  if (parFabrique() && fn.recette) return creerServeur(fn, extra);       // v49 : le serveur fabrique tout
   saveSettings();
   const btn = $('btn-gen');
   btn.disabled = $('btn-regen').disabled = $('btn-suite').disabled = true;
@@ -3595,7 +3664,7 @@ async function creer(fn, extra = {}) {
     const repris = persosPourHistoire(); if (repris.length) s.persoRepris = repris;
     if (extra.interactive) { s.parts = [{ texte: j.histoire, choixA: j.choixA, choixB: j.choixB }]; s.partAudio = []; }
     if (j.arbre) { s.arbre = j.arbre; s.chemin = ''; s.audioNoeuds = {}; }
-    s.ecriture = voixGoogle ? 'google' : voixSimple ? 'simple' : 'eleven';
+    s.ecriture = voixGoogle ? 'google' : 'simple';
     if (s.avecDessin && dessin) { s.image = dessin.blob; s.dessin = true; }
     delete s.avecDessin;
     await DB.put(s);
@@ -3624,7 +3693,9 @@ $('btn-suite').onclick = () => {
   if (!current) return;
   const prec = current;
   document.querySelector('#form-card').scrollIntoView({ behavior: 'smooth' });
-  creer(st => genererSuite(prec, st), { serie: prec.serie || prec.id, chap: (prec.chap || 1) + 1 });
+  const f = st => genererSuite(prec, st);
+  f.recette = () => ({ type: 'histoire', user: promptSuite(prec), schema: SCHEMA });
+  creer(f, { serie: prec.serie || prec.id, chap: (prec.chap || 1) + 1 });
 };
 $('btn-tags').onclick = () => $('s-text').classList.toggle('hide-tags');
 
@@ -3640,25 +3711,15 @@ $('nuit-sortie').onclick = () => {
   try { verrouEcran?.release(); } catch {} verrouEcran = null;
 };
 
-/* Fabrique l'audio d'un texte avec le bon moteur (repli automatique si ElevenLabs est à sec) */
+/* Fabrique l'audio d'un texte avec le bon moteur (repli automatique) */
 /* Le moteur suivant à essayer en mode automatique, sans repasser par ceux déjà essayés */
 async function moteurSuivant(nb, essayes) {
   if (!essayes.has('gcloud') && gcCle() && gcVoix() && gcPalier(Math.round(nb * 1.3))) return 'gcloud';
-  if (!essayes.has('eleven') && $('k-eleven').value.trim()) { try { const q = await quotaEleven(); if (q.reste >= nb + 50) return 'eleven'; } catch {} }
   if (!essayes.has('edge') && !edgeEnPanne) return 'edge';
   if (!essayes.has('gemini') && cleGemini()) return 'gemini';
   return 'phone';
 }
 async function fabriquerAvec(moteur, texte, onStatus, prog, neutre) {
-  if (moteur === 'eleven') {
-    const parts = chunk(texte), blobs = [];
-    for (let i = 0; i < parts.length; i++) {
-      onStatus(`<span class="spin"></span>ElevenLabs enregistre la voix… (${i + 1}/${parts.length})`);
-      blobs.push(await tts(parts[i]));
-      prog((i + 1) / parts.length);
-    }
-    return new Blob(blobs, { type: 'audio/mpeg' });
-  }
   if (moteur === 'edge') {
     if ($('opt-multivoix').checked && cleGemini()) {
       try { return await ttsEdgeMulti(texte, onStatus, prog, neutre); }
@@ -3706,7 +3767,7 @@ async function enregistrer(texte, onStatus, prog, moteurImpose) {
       return { moteur, neutre, blob };
     } catch (e) {
       const auto = $('engine').value === 'auto';
-      if (!auto && !(moteur === 'eleven' && e.quota)) throw e;   // voix imposée : on montre l'erreur
+      if (!auto) throw e;                                       // voix imposée : on montre l'erreur
       if (moteur === 'edge' && /injoignable|HTTP 5/.test(e.message)) edgeEnPanne = true;
       const suivant = await moteurSuivant(texte.length, essayes);
       onStatus(`<span class="spin"></span>${esc(e.message)} → ${NOMS_VOIX[suivant]}`);
@@ -3719,6 +3780,17 @@ async function enregistrer(texte, onStatus, prog, moteurImpose) {
 $('btn-read').onclick = async () => {
   const s = current;
   if (!s) return;
+  if (voixServeur.has(s.id) && !s.audio) {                  // v49 : la voix se fabrique sur le serveur : on l'attend
+    const btn = $('btn-read'); btn.disabled = true;
+    status($('tts-status'), '<span class="spin"></span>La voix arrive du serveur (voir le pourcentage en bas)… elle partira toute seule.');
+    try { await voixServeur.get(s.id); } catch {}
+    btn.disabled = false;
+    const x = await DB.get(s.id).catch(() => null);
+    if (x) for (const k of ['audio', 'audioNoeuds', 'vitMoteur', 'vitNeutre', 'vitNoeuds']) if (x[k] && !s[k]) s[k] = x[k];
+    if (s.arbre) s.partAudio = audioChemin(s);
+    if (current !== s) return;
+    if (s.audio) setAudio(s);
+  }
   const plages = plagesParties(s);
   const interactifEnCours = s.interactive && s.parts.length < NB_PARTIES;
   const segPart = k => ({ url: URL.createObjectURL(s.partAudio[k]), blob: s.partAudio[k], debut: plages[k][0], fin: plages[k][1], texte: s.parts[k].texte, noeud: s.arbre ? (s.chemin || '').slice(0, k) : null });
@@ -4058,13 +4130,10 @@ $('lib-list').addEventListener('click', async e => {
 });
 
 /* Premier lancement : aller aux réglages si clés manquantes */
-if (!$('k-gemini').value || (!$('k-eleven').value && $('engine').value === 'eleven')) {
+if (!$('k-gemini').value && !parServeur()) {
   document.querySelector('nav button[data-v="v-set"]').click();
-  status($('set-status'), '👋 Bienvenue ! Entre ta clé Gemini (et ElevenLabs si tu l\'as), puis enregistre.');
-} else if ($('k-eleven').value) {
-  loadVoices().then(() => { if (!$('set-status').classList.contains('err')) status($('set-status'), ''); });
+  status($('set-status'), '👋 Bienvenue ! Connecte-toi à l\'app Maison (95.groupelaberge.ca), ou entre ta clé Gemini.');
 }
-if ($('k-eleven').value) afficherQuota();
 /* Voix québécoise Microsoft : extrait */
 $('btn-preview-ms').onclick = async () => {
   saveSettings();
@@ -4149,7 +4218,7 @@ $('voile').onclick = fermerChoix;
 document.addEventListener('keydown', e => { if (e.key === 'Escape') fermerChoix(); });
 
 /* Qui raconte ? : des cartes à la place d'un menu ; on ne montre que les réglages de la voix choisie */
-const NOMS_MOTEUR = { auto: 'Automatique', edge: 'Voix québécoise Microsoft', eleven: 'ElevenLabs', gcloud: 'Voix québécoise Google', gemini: 'Voix Gemini', phone: 'Voix du téléphone' };
+const NOMS_MOTEUR = { auto: 'Automatique', edge: 'Voix québécoise Microsoft', gcloud: 'Voix québécoise Google', gemini: 'Voix Gemini', phone: 'Voix du téléphone' };
 function majMoteur() {
   const m = $('engine').value || 'auto';
   document.querySelectorAll('[data-moteur-choix]').forEach(c => c.classList.toggle('on', c.dataset.moteurChoix === m));
@@ -4175,9 +4244,9 @@ function majResumes() {
   const p = [$('opt-suivre').checked && 'texte qui suit', 'images ' + $('img-style').selectedOptions[0].text.toLowerCase(), $('opt-musique').checked && 'musique'].filter(Boolean);
   $('res-pendant').textContent = (p.join(' · ') || 'rien de plus') + ' · ' + $('lang').selectedOptions[0].text;
   $('res-drive').textContent = !$('opt-drive').checked ? 'Désactivée' : jetonMaison() ? 'Activée' : 'Connecte-toi à l\'app Maison';
-  const cles = ['k-gemini', 'k-eleven', 'k-gcloud'];
+  const cles = ['k-gemini', 'k-gcloud'];
   cles.forEach(k => { const e = document.querySelector(`.etat[data-cle="${k}"]`); if (e) e.textContent = $(k).value.trim() ? '✓' : ''; });
-  const n = { 'k-gemini': 'Gemini', 'k-eleven': 'ElevenLabs', 'k-gcloud': 'Google' };
+  const n = { 'k-gemini': 'Gemini', 'k-gcloud': 'Google' };
   const ok = cles.filter(k => $(k).value.trim()).map(k => n[k]);
   $('res-cles').textContent = ok.length ? ok.join(' · ') + ' ✓' : 'Aucune clé : ajoute au moins Gemini';
 }
@@ -4498,6 +4567,9 @@ if (!cleGemini()) document.querySelector('#res-cles').closest('details').open = 
   $('lib-list').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.lib-item')) { e.preventDefault(); e.target.click(); } });
   tout();
 })();
+
+/* v49 : histoires fabriquées sur le serveur pendant que l'app dormait */
+reprendreTravaux().catch(() => {});
 
 /* Sans ça, Chrome peut vider la mémoire de l'app quand le téléphone manque d'espace */
 if (navigator.storage?.persist) navigator.storage.persisted().then(oui => oui || navigator.storage.persist()).catch(() => {});
