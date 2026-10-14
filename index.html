@@ -612,6 +612,33 @@
   .modele select { margin-top: 8px; padding: 9px 12px; }
   .modele:not(.on) select { display: none; }
   #etg-feuille .big { margin-top: 14px; }
+
+  /* ═══════════════ v51 : le petit lecteur ═══════════════ */
+  .mini-lecteur { position: fixed; left: 10px; right: 10px; bottom: calc(70px + env(safe-area-inset-bottom)); z-index: 31; border-radius: 16px; padding: 7px 8px;
+    background: linear-gradient(var(--meuble1), var(--meuble2)); border: 1px solid var(--meuble-bord); color: var(--meuble-txt); box-shadow: 0 10px 28px rgba(0,0,0,.45); }
+  .mini-lecteur[hidden] { display: none; }
+  .ml-rangee { display: flex; align-items: center; gap: 6px; }
+  .ml-rangee button { flex: none; height: 42px; min-width: 42px; border-radius: 12px; border: 1px solid var(--meuble-bord); background: var(--meuble-creux);
+    color: var(--meuble-txt); font: 800 .9rem var(--f-texte); cursor: pointer; }
+  #ml-jouer { min-width: 50px; font-size: 1.2rem; background: var(--accent-grad); color: var(--accent-txt); border: 0; }
+  #ml-vit { padding: 0 9px; color: var(--accent); }
+  #ml-revenir.appel { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; animation: respire 1.6s ease-in-out infinite; }
+  .ml-milieu { flex: 1; min-width: 0; }
+  .ml-piste { height: 6px; border-radius: 4px; background: var(--meuble-creux); overflow: hidden; }
+  .ml-piste i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 4px; }
+  .ml-milieu small { display: block; margin-top: 4px; font: 700 .7rem var(--f-texte); color: var(--doux); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ml-vitesses, .ml-choix { display: flex; flex-wrap: wrap; gap: 6px; }
+  .ml-vitesses { padding: 2px 2px 8px; }
+  .ml-vitesses[hidden] { display: none; }
+  .ml-vitesses button, .ml-choix button { flex: 1 1 auto; min-width: 46px; height: 38px; border-radius: 10px; border: 1px solid var(--meuble-bord); background: var(--meuble-creux);
+    color: var(--meuble-txt); font: 800 .85rem var(--f-texte); cursor: pointer; }
+  .ml-choix button { background: var(--surface2); color: var(--texte); border-color: var(--ligne); }
+  .ml-vitesses button.on, .ml-choix button.on { background: var(--accent); color: var(--accent-txt); border-color: var(--accent); }
+  body.mini-on { padding-bottom: calc(160px + env(safe-area-inset-bottom)); }
+  body.mini-on .fabrication { bottom: calc(132px + env(safe-area-inset-bottom)); }
+  body.mini-on .raconte { bottom: calc(136px + env(safe-area-inset-bottom)); }
+  body.nuit .mini-lecteur { bottom: calc(12px + env(safe-area-inset-bottom)); opacity: .45; background: #111; border-color: #222; }
+  body.nuit #ml-jouer { background: #3a2c1a; color: #e0b878; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 </head>
@@ -620,7 +647,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v50</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v51</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -979,7 +1006,9 @@
           <option value="lecture" selected>À la lecture : la vitesse change en tout temps, sans réenregistrer</option>
           <option value="voix">Par la voix : un peu plus naturel, mais changer la vitesse = réenregistrer</option>
         </select>
-        <p class="hint">La vitesse se règle avec le curseur de chaque voix (Google, Microsoft). Les extraits « Écouter » appliquent toujours la vitesse à la lecture : ils restent gratuits à réécouter.</p>
+        <label for="vit-lecture">Vitesse d'écoute (pour toutes les voix)</label>
+        <select id="vit-lecture"><option value="0.7">0,7× — très lent</option><option value="0.8">0,8×</option><option value="0.9">0,9× — posé</option><option value="1">1× — normal</option><option value="1.1">1,1×</option><option value="1.25">1,25×</option><option value="1.5">1,5× — rapide</option></select>
+        <p class="hint">Elle se change aussi PENDANT l'histoire, avec le bouton « 0,9× » du petit lecteur en bas. Les curseurs de vitesse de chaque voix ne servent plus qu'aux extraits « Écouter » (et à l'enregistrement en mode « Par la voix »).</p>
         <div class="row" style="margin-top:6px">
           <div style="grid-column: 1 / -1"><label for="img-style">Style des images</label>
             <select id="img-style">
@@ -1033,6 +1062,16 @@
   </div>
 </section>
 
+<div class="mini-lecteur" id="mini-lecteur" hidden>
+  <div class="ml-vitesses" id="ml-vitesses" hidden></div>
+  <div class="ml-rangee">
+    <button type="button" id="ml-jouer" title="Pause">⏸️</button>
+    <div class="ml-milieu"><div class="ml-piste"><i id="ml-barre"></i></div><small id="ml-temps"></small></div>
+    <button type="button" id="ml-vit" title="Vitesse d'écoute">0,9×</button>
+    <button type="button" id="ml-revenir" title="Revenir au texte lu">📍</button>
+    <button type="button" id="ml-reglages" title="Réglages de l'écoute">⚙️</button>
+  </div>
+</div>
 <div class="fabrication" id="fabrication" hidden aria-live="polite">
   <div class="fab-tete"><b id="fab-titre">Fabrication de l'histoire</b><button type="button" id="fab-x" title="Réduire / agrandir">▾</button></div>
   <div class="fab-ligne" data-ph="histoire"><span class="fab-ic">📝</span><span class="fab-nom">Histoire<small class="fab-det"></small></span><span class="fab-barre"><i></i></span><span class="fab-pct"></span></div>
@@ -3402,7 +3441,7 @@ function parler(listeParas, surPara, surFin) {
     const u = new SpeechSynthesisUtterance(listeParas[i]);
     if (voix) u.voice = voix;
     u.lang = voix?.lang || lang;
-    u.rate = parseFloat($('p-rate').value) || .9;
+    u.rate = (parseFloat($('p-rate').value) || .9) * vitesseLecture() / .9;   // v51 : la vitesse d'écoute compte aussi ici
     const k = i;
     u.onstart = () => surPara(k);
     u.onend = () => { i++; setTimeout(suivant, 350); };
@@ -3528,8 +3567,8 @@ function texteALire(s) {
   if (s.interactive && s.parts.length < NB_PARTIES) return s.parts[s.parts.length - 1].texte;
   return s.histoire;
 }
-const vitesseHistoire = s => s?.vitNeutre ? facteurLecture(s.vitMoteur) : 1;
-const vitesseNoeud = (s, c) => { const v = s?.vitNoeuds?.[c]; return v ? (v.n ? facteurLecture(v.m) : 1) : vitesseHistoire(s); };
+const vitesseHistoire = s => vitesseLecture();          // v51 : une seule vitesse d'écoute, pour toutes les voix
+const vitesseNoeud = (s, c) => vitesseLecture();
 let lectureEnFile = false;
 function appliquerVitesseLecteur() {
   const f = lectureEnFile ? file[fileIdx] : null;
@@ -3572,6 +3611,7 @@ function eclairer(i) {
   const p = document.querySelector(`#s-text p[data-i="${i}"]`);
   if (!p) return;
   p.classList.add('lit');
+  if (suiviSuspendu) { if (!enVue(p)) return; suiviSuspendu = false; majMiniLecteur(); }   // v51 : on a défilé soi-même
   p.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 $('player').addEventListener('timeupdate', () => {
@@ -4767,6 +4807,90 @@ if (!cleGemini()) document.querySelector('#res-cles').closest('details').open = 
   $('lib-list').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.lib-item')) { e.preventDefault(); e.target.click(); } });
   tout();
 })();
+
+/* ==================== LE PETIT LECTEUR (v51) ====================
+   Signalé par Jonathan le 2026-10-14 : 1) la vitesse ne changeait rien — seul le curseur de LA voix qui avait
+   enregistré l'histoire comptait (Google ou Microsoft), sans qu'on sache laquelle ; 2) pour aller la régler en haut,
+   le texte qui suit la lecture ramenait sans cesse au paragraphe lu.
+   Maintenant : UNE vitesse d'écoute pour toutes les voix (set:vit-lecture, appliquée à la lecture), réglée depuis un
+   petit lecteur collé en bas (⏯, avancement, vitesse, 📍 revenir au texte lu, ⚙️ réglages rapides). Dès qu'on fait
+   défiler soi-même, le texte cesse de suivre ; 📍 (ou revenir au paragraphe lu) le fait reprendre. */
+const VITESSES = [0.7, 0.8, 0.9, 1, 1.1, 1.25, 1.5];
+const vitesseLecture = () => parseFloat(store.get('set:vit-lecture', '0.9')) || 0.9;
+const fmtVitesse = v => String(v).replace('.', ',') + '×';
+function poserVitesse(v) {
+  store.set('set:vit-lecture', String(v));
+  appliquerVitesseLecteur();
+  majMiniLecteur();
+  document.querySelectorAll('[data-vit]').forEach(b => b.classList.toggle('on', +b.dataset.vit === v));
+  if ($('vit-lecture')) $('vit-lecture').value = String(v);
+}
+let suiviSuspendu = false;
+const lectureEnCours = () => { const pl = $('player'); return (!!pl.src && !pl.paused && !pl.ended) || !!(parole?.actif && !parole.pause); };
+['touchmove', 'wheel'].forEach(ev => addEventListener(ev, () => {
+  if (!suiviSuspendu && (lectureEnCours() || parole?.actif) && litIdx >= 0) { suiviSuspendu = true; majMiniLecteur(); }
+}, { passive: true }));
+function revenirAuTexte() {
+  suiviSuspendu = false; majMiniLecteur();
+  document.querySelector(`#s-text p[data-i="${litIdx}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+const enVue = el => { const r = el.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight; };
+function miniVisible() {
+  const pl = $('player');
+  return !!current && (lectureTel && $('phone-ctrl').style.display !== 'none' || (!!pl.getAttribute('src') && (!pl.paused || (pl.currentTime > 0 && !pl.ended))));
+}
+const fmtTemps = t => isFinite(t) ? `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}` : '–:––';
+function majMiniLecteur() {
+  const m = $('mini-lecteur'), on = miniVisible();
+  m.hidden = !on; document.body.classList.toggle('mini-on', on);
+  if (!on) return;
+  const pl = $('player'), tel = lectureTel && $('phone-ctrl').style.display !== 'none';
+  const joue = tel ? !parole?.pause : !pl.paused;
+  $('ml-jouer').textContent = joue ? '⏸️' : '▶️';
+  $('ml-jouer').title = joue ? 'Pause' : 'Reprendre';
+  $('ml-vit').textContent = fmtVitesse(vitesseLecture());
+  $('ml-revenir').classList.toggle('appel', suiviSuspendu);
+  const d = tel ? 0 : pl.duration, t = tel ? 0 : pl.currentTime;
+  $('ml-barre').style.width = tel ? '0' : (d ? t / d * 100 : 0) + '%';
+  $('ml-temps').textContent = tel ? 'voix du téléphone' : `${fmtTemps(t)} / ${fmtTemps(d)}`;
+}
+['play', 'pause', 'ended', 'emptied', 'loadedmetadata'].forEach(ev => $('player').addEventListener(ev, majMiniLecteur));
+$('player').addEventListener('timeupdate', () => { if (!$('mini-lecteur').hidden) { const pl = $('player'); $('ml-barre').style.width = (pl.duration ? pl.currentTime / pl.duration * 100 : 0) + '%'; $('ml-temps').textContent = `${fmtTemps(pl.currentTime)} / ${fmtTemps(pl.duration)}`; } });
+$('ml-jouer').onclick = () => {
+  if (lectureTel && $('phone-ctrl').style.display !== 'none') { $('btn-ph-pause').click(); return majMiniLecteur(); }
+  const pl = $('player'); pl.paused ? pl.play().catch(() => {}) : pl.pause();
+};
+$('ml-revenir').onclick = revenirAuTexte;
+$('ml-vit').onclick = () => { $('ml-vitesses').hidden = !$('ml-vitesses').hidden; };
+$('ml-vitesses').innerHTML = VITESSES.map(v => `<button type="button" data-vit="${v}" class="${v === vitesseLecture() ? 'on' : ''}">${fmtVitesse(v)}</button>`).join('');
+$('ml-vitesses').onclick = e => { const b = e.target.closest('[data-vit]'); if (b) { poserVitesse(+b.dataset.vit); $('ml-vitesses').hidden = true; } };
+$('ml-reglages').onclick = () => {
+  const f = $('etg-feuille');
+  f.innerHTML = `<div class="poignee"></div><h3>Pendant l'écoute</h3>
+    <p class="etg-sous" style="margin-top:4px">Vitesse <small>· pour toutes les voix</small></p>
+    <div class="ml-choix">${VITESSES.map(v => `<button type="button" data-vit="${v}" class="${v === vitesseLecture() ? 'on' : ''}">${fmtVitesse(v)}</button>`).join('')}</div>
+    <label class="check"><input type="checkbox" id="mr-suivre" ${$('opt-suivre').checked ? 'checked' : ''}>Le texte suit la lecture</label>
+    <label class="check"><input type="checkbox" id="mr-musique" ${$('opt-musique').checked ? 'checked' : ''}>Musique douce en fond</label>
+    <label for="mr-son">Après l'histoire, un son pour s'endormir</label>
+    <select id="mr-son">${[...$('sl-son').options].map(o => `<option value="${o.value}" ${o.value === $('sl-son').value ? 'selected' : ''}>${esc(o.text)}</option>`).join('')}</select>
+    <div class="actions"><button type="button" class="sec" id="mr-nuit">🌙 Mode nuit</button><button type="button" class="sec" id="mr-arreter">⏹️ Arrêter la lecture</button></div>
+    <button type="button" class="big" id="mr-ok">C'est bon</button>`;
+  document.body.classList.add('etg-ouvert');
+  f.onclick = e => { const b = e.target.closest('[data-vit]'); if (b) poserVitesse(+b.dataset.vit); };
+  f.onchange = e => {
+    const fixe = (id, src) => { $(id).checked = $(src).checked; $(id).dispatchEvent(new Event('change', { bubbles: true })); };
+    if (e.target.id === 'mr-suivre') { fixe('opt-suivre', 'mr-suivre'); if ($('opt-suivre').checked) revenirAuTexte(); }
+    if (e.target.id === 'mr-musique') fixe('opt-musique', 'mr-musique');
+    if (e.target.id === 'mr-son') { $('sl-son').value = $('mr-son').value; $('sl-son').dispatchEvent(new Event('change')); }
+  };
+  const fermer = () => { f.onclick = f.onchange = null; document.body.classList.remove('etg-ouvert'); };
+  $('mr-ok').onclick = fermer;
+  $('mr-nuit').onclick = () => { fermer(); $('btn-nuit').click(); };
+  $('mr-arreter').onclick = () => { fermer(); $('player').pause(); $('player').currentTime = 0; arreterParole(); eclairer(-1); majMiniLecteur(); };
+};
+$('vit-lecture').value = String(vitesseLecture());
+$('vit-lecture').onchange = () => poserVitesse(parseFloat($('vit-lecture').value));
+setInterval(majMiniLecteur, 1000);                     // voix du téléphone : pas d'événement à écouter
 
 /* v49 : histoires fabriquées sur le serveur pendant que l'app dormait */
 reprendreTravaux().catch(() => {});

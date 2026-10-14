@@ -153,3 +153,9 @@ Astuce : `…/#gemini=CLÉ&eleven=CLÉ&voice=VOICE_ID` enregistre les clés en u
 - Une histoire qui a plusieurs voix : « Écouter (N voix) » ouvre d'abord « Quelle voix ce soir ? » (une fois par ouverture depuis Histoires) ; 🗑️ efface une voix. Histoires affiche « 🎙️ N voix ».
 - Le serveur Maison ne garde que la voix active ; les autres restent sur l'appareil. La fabrique donne aussi le nom et la clé de sa voix. Pas de voix multiples pour les histoires à choix de l'ancienne façon (parties écrites une à une).
 - Test : scratchpad `test_v50.js`.
+
+## v51 — le petit lecteur, une seule vitesse (2026-10-14)
+- Bug : la vitesse ne changeait rien, car seul le curseur de LA voix qui avait enregistré l'histoire comptait. Maintenant UNE vitesse d'écoute pour toutes les voix (`set:vit-lecture`, 0,9× au départ), appliquée à la lecture (`vitesseHistoire`/`vitesseNoeud` = `vitesseLecture()`, voix du téléphone comprise). Les curseurs de chaque voix ne servent plus qu'aux extraits et au mode « Par la voix ».
+- Petit lecteur collé en bas pendant l'écoute (`#mini-lecteur`) : ⏯, avancement, vitesse (0,7× à 1,5×), 📍 revenir au texte lu, ⚙️ (vitesse, texte qui suit, musique, son pour s'endormir, mode nuit, arrêter). Aussi dans Réglages → Pendant l'histoire.
+- Défiler soi-même (doigt ou molette) pendant la lecture suspend le texte qui suit (`suiviSuspendu`) : plus de retour forcé au paragraphe lu. 📍 clignote ; il reprend avec 📍 ou quand le paragraphe lu revient à l'écran.
+- Test : scratchpad `test_v51.js`.
