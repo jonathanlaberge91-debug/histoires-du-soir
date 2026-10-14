@@ -643,6 +643,40 @@
   /* ═══════════════ v54 : musiques de fond ═══════════════ */
   .mr-musiques button { flex: 1 1 45%; text-align: left; padding: 0 10px; font-size: .8rem; }
   #mr-vol { width: 100%; }
+
+  /* ═══════════════ v55 : mode télé ═══════════════ */
+  .tele { position: fixed; inset: 0; z-index: 70; background: #05060f; color: #fff; overflow: hidden; user-select: none; }
+  .tele[hidden] { display: none; }
+  .tele.sans-image { background: radial-gradient(120% 90% at 50% 0%, #2a2f78, #05060f 70%); }
+  .t-flou { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: blur(30px) brightness(.4); transform: scale(1.15); }
+  .t-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; transition: opacity 1.1s ease; }
+  .t-img.bas { opacity: 0; } .t-img.haut { opacity: 1; }
+  .tele img:not([src]) { display: none; }
+  .t-titre { position: absolute; left: 4vw; top: 4vh; right: 30vw; font: 700 clamp(16px, 4.2vh, 40px)/1.15 var(--f-titre); color: #fff4d6;
+    text-shadow: 0 2px 10px rgba(0,0,0,.8); opacity: 0; transition: opacity .4s; }
+  .tele.boutons .t-titre, .tele.sans-image .t-titre { opacity: .95; }
+  .t-sous { position: absolute; left: 7vw; right: 7vw; bottom: 5vh; text-align: center; font: 600 clamp(17px, 4.6vh, 48px)/1.38 var(--f-histoire);
+    padding: .45em .9em; border-radius: 20px; background: rgba(5,6,20,.62); text-shadow: 0 2px 6px rgba(0,0,0,.7); max-height: 40vh; overflow: hidden;
+    transition: opacity .5s; box-shadow: 0 10px 40px rgba(0,0,0,.4); }
+  .t-sous.vide { opacity: 0; }
+  .t-boutons { position: absolute; right: 3vw; top: 3vh; display: flex; gap: 12px; opacity: 0; pointer-events: none; transition: opacity .3s; }
+  .tele.boutons .t-boutons { opacity: 1; pointer-events: auto; }
+  .t-boutons button { width: clamp(48px, 10vh, 72px); height: clamp(48px, 10vh, 72px); border-radius: 50%; border: 0; background: rgba(255,255,255,.16);
+    color: #fff; font-size: clamp(18px, 4vh, 30px); cursor: pointer; backdrop-filter: blur(6px); }
+  #t-jouer { background: var(--accent); color: #2a1d00; }
+  .t-depart { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: .6em 1.4em; border: 0; border-radius: 999px;
+    background: var(--accent-grad); color: #2a1d00; font: 800 clamp(20px, 6vh, 48px) var(--f-titre); box-shadow: 0 10px 40px rgba(0,0,0,.5); cursor: pointer; }
+  .t-depart[hidden] { display: none; }
+  .t-choix { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); display: flex; gap: 3vw; width: 86vw; justify-content: center; }
+  .t-choix[hidden] { display: none; }
+  .t-choix button { flex: 1; max-width: 42vw; padding: .8em 1em; border-radius: 26px; border: 3px solid var(--accent); background: rgba(5,6,20,.78);
+    color: #fff; font: 800 clamp(18px, 5vh, 44px)/1.2 var(--f-titre); cursor: pointer; box-shadow: 0 10px 40px rgba(0,0,0,.5); }
+  @media (orientation: portrait) {                         /* le cell n'a pas voulu tourner : image en haut, texte dessous */
+    .t-img, .t-flou { height: 58%; }
+    .t-sous { bottom: 4vh; max-height: 34vh; font-size: clamp(17px, 2.6vh, 30px); }
+    .t-choix { flex-direction: column; top: 66%; } .t-choix button { max-width: none; font-size: clamp(18px, 3vh, 30px); }
+  }
+  body.tele-on .mini-lecteur, body.tele-on .fabrication, body.tele-on nav { display: none !important; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 </head>
@@ -651,7 +685,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v54</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v55</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -823,6 +857,7 @@
       <button class="sec" id="btn-nuit" title="Mode nuit">🌙</button>
     </div>
     <div class="petites">
+      <button class="sec" id="btn-tele">📺 Mode télé</button>
       <button class="sec" id="btn-voix">🎙️ Autre voix</button>
       <button class="sec" id="btn-suite">📖 La suite</button>
       <button class="sec" id="btn-regen">🔁 Une autre</button>
@@ -1069,6 +1104,19 @@
   </div>
 </section>
 
+<div class="tele" id="tele" hidden>
+  <img class="t-flou" alt=""><img class="t-img bas" alt=""><img class="t-img haut" alt="">
+  <div class="t-titre" id="t-titre"></div>
+  <button type="button" class="t-depart" id="t-depart">▶️ Raconter</button>
+  <div class="t-choix" id="t-choix" hidden></div>
+  <div class="t-sous vide" id="t-sous"></div>
+  <div class="t-boutons">
+    <button type="button" id="t-prec" title="Paragraphe précédent">⏮</button>
+    <button type="button" id="t-jouer" title="Pause">⏸️</button>
+    <button type="button" id="t-suiv" title="Paragraphe suivant">⏭</button>
+    <button type="button" id="t-quitter" title="Quitter le mode télé">✕</button>
+  </div>
+</div>
 <div class="mini-lecteur" id="mini-lecteur" hidden>
   <div class="ml-vitesses" id="ml-vitesses" hidden></div>
   <div class="ml-rangee">
@@ -5029,7 +5077,7 @@ $('ml-reglages').onclick = () => {
     <input id="mr-vol" type="range" min="0" max="0.8" step="0.05" value="${$('musique-vol').value}">
     <label for="mr-son">Après l'histoire, un son pour s'endormir</label>
     <select id="mr-son">${[...$('sl-son').options].map(o => `<option value="${o.value}" ${o.value === $('sl-son').value ? 'selected' : ''}>${esc(o.text)}</option>`).join('')}</select>
-    <div class="actions"><button type="button" class="sec" id="mr-nuit">🌙 Mode nuit</button><button type="button" class="sec" id="mr-arreter">⏹️ Arrêter la lecture</button></div>
+    <div class="actions"><button type="button" class="sec" id="mr-tele">📺 Mode télé</button><button type="button" class="sec" id="mr-nuit">🌙 Mode nuit</button><button type="button" class="sec" id="mr-arreter">⏹️ Arrêter la lecture</button></div>
     <button type="button" class="big" id="mr-ok">C'est bon</button>`;
   document.body.classList.add('etg-ouvert');
   f.onclick = e => {
@@ -5046,11 +5094,96 @@ $('ml-reglages').onclick = () => {
   const fermer = () => { f.onclick = f.onchange = f.oninput = null; document.body.classList.remove('etg-ouvert'); };
   $('mr-ok').onclick = fermer;
   $('mr-nuit').onclick = () => { fermer(); $('btn-nuit').click(); };
+  $('mr-tele').onclick = () => { fermer(); teleOuvrir(); };
   $('mr-arreter').onclick = () => { fermer(); $('player').pause(); $('player').currentTime = 0; arreterParole(); eclairer(-1); majMiniLecteur(); };
 };
 $('vit-lecture').value = String(vitesseLecture());
 $('vit-lecture').onchange = () => poserVitesse(parseFloat($('vit-lecture').value));
 setInterval(majMiniLecteur, 1000);                     // voix du téléphone : pas d'événement à écouter
+
+/* ==================== MODE TÉLÉ (v55) ====================
+   Demandé par Jonathan le 2026-10-14 : voir l'histoire sur la télé (Smart View, ou tout partage d'écran Android :
+   la télé montre l'écran du cell). Plein écran, cell tourné en PAYSAGE, l'image de la partie lue en grand,
+   le paragraphe lu en gros sous-titre, des boutons qui s'effacent, les choix en gros. L'écran reste allumé.
+   On suit l'état de la lecture toutes les 300 ms (image, paragraphe, choix) : rien à changer ailleurs. */
+let tele = null;                          // { minuterie, verrou, boutons }
+/* La lecture a commencé (et pas seulement « une voix est chargée ») */
+const teleCommence = () => { const pl = $('player'); return (!!pl.getAttribute('src') && (!pl.paused || pl.currentTime > 0)) || !!parole?.actif; };
+function teleImage() {
+  if (!current) return null;
+  return imagePourParagraphe(current, litIdx >= 0 ? litIdx : 0).blob || current.image || null;
+}
+function teleMaj() {
+  if (!tele || !current) return;
+  const t = $('tele');
+  // l'image (fondu)
+  const b = teleImage();
+  if (b !== tele.blob) {
+    tele.blob = b;
+    const haut = t.querySelector('.t-img.haut'), bas = t.querySelector('.t-img.bas');
+    if (b) { const u = urlIllus(b); bas.src = u; t.querySelector('.t-flou').src = u; bas.classList.replace('bas', 'haut'); haut.classList.replace('haut', 'bas'); }
+    t.classList.toggle('sans-image', !b);
+  }
+  // le sous-titre : le paragraphe lu (sinon le titre)
+  const p = litIdx >= 0 ? document.querySelector(`#s-text p[data-i="${litIdx}"]`) : null;
+  const txt = p ? stripTags(p.textContent).trim() : '';
+  if (txt !== tele.txt) { tele.txt = txt; $('t-sous').textContent = txt; $('t-sous').classList.toggle('vide', !txt); }
+  $('t-titre').textContent = current.titre || '';
+  // les choix d'une histoire à choix, quand la partie est finie (ou pas encore commencée)
+  const pl = $('player'), libre = pl.paused || pl.ended;
+  const choix = $('choix-zone').style.display !== 'none' && libre ? [...document.querySelectorAll('#choix-btns button')] : [];
+  const sig = choix.map(x => x.textContent).join('|');
+  if (sig !== tele.choix) {
+    tele.choix = sig;
+    $('t-choix').innerHTML = choix.map((x, k) => `<button type="button" data-k="${k}">${esc(x.textContent)}</button>`).join('');
+    $('t-choix').hidden = !choix.length;
+  }
+  // lecture : le gros ▶️ si rien n'a encore commencé
+  $('t-depart').hidden = teleCommence() || !!choix.length;
+  $('t-jouer').textContent = (parole?.actif ? !parole.pause : !pl.paused) ? '⏸️' : '▶️';
+}
+function teleMontrerBoutons() {
+  if (!tele) return;
+  $('tele').classList.add('boutons');
+  clearTimeout(tele.boutons);
+  tele.boutons = setTimeout(() => $('tele')?.classList.remove('boutons'), 3500);
+}
+async function teleOuvrir() {
+  if (!current || tele) return;
+  const t = $('tele');
+  tele = { blob: undefined, txt: null, choix: null };
+  t.hidden = false; document.body.classList.add('tele-on');
+  try { await t.requestFullscreen?.({ navigationUI: 'hide' }); } catch {}
+  try { await screen.orientation?.lock?.('landscape'); } catch {}           // possible seulement en plein écran (Android)
+  try { tele.verrou = await navigator.wakeLock?.request('screen'); } catch {}
+  tele.minuterie = setInterval(teleMaj, 300);
+  teleMaj(); teleMontrerBoutons();
+}
+function teleFermer() {
+  if (!tele) return;
+  clearInterval(tele.minuterie); clearTimeout(tele.boutons);
+  try { tele.verrou?.release(); } catch {}
+  try { screen.orientation?.unlock?.(); } catch {}
+  if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+  tele = null;
+  $('tele').hidden = true; document.body.classList.remove('tele-on');
+}
+document.addEventListener('fullscreenchange', () => { if (tele && !document.fullscreenElement && tele.plein) teleFermer(); if (tele && document.fullscreenElement) tele.plein = true; });
+document.addEventListener('keydown', e => { if (!tele) return; if (e.key === 'Escape') teleFermer(); if (e.key === ' ') { e.preventDefault(); $('t-jouer').click(); } });
+$('tele').addEventListener('pointerdown', teleMontrerBoutons);
+$('t-quitter').onclick = teleFermer;
+$('t-jouer').onclick = () => {
+  if (lectureTel && $('phone-ctrl').style.display !== 'none') return $('btn-ph-pause').click();
+  const pl = $('player');
+  if (!teleCommence()) return $('btn-read').click();           // Raconter : choix de la voix, histoire à choix, etc.
+  pl.paused ? pl.play().catch(() => {}) : pl.pause();
+};
+$('t-depart').onclick = () => { $('btn-read').click(); teleMontrerBoutons(); };
+const teleSauter = d => { const n = document.querySelectorAll('#s-text p[data-i]').length, i = Math.max(0, Math.min(n - 1, (litIdx >= 0 ? litIdx : 0) + d)); lireDepuis(i); };
+$('t-prec').onclick = () => teleSauter(-1);
+$('t-suiv').onclick = () => teleSauter(1);
+$('t-choix').onclick = e => { const b = e.target.closest('[data-k]'); if (b) { document.querySelectorAll('#choix-btns button')[+b.dataset.k]?.click(); tele.choix = null; } };
+$('btn-tele').onclick = teleOuvrir;
 
 /* v49 : histoires fabriquées sur le serveur pendant que l'app dormait */
 reprendreTravaux().catch(() => {});
