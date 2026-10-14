@@ -546,6 +546,51 @@
   nav button { color: var(--bois-txt); opacity: .6; }
   nav button.on { color: var(--bois-txt); opacity: 1; text-shadow: var(--bois-lueur); }
   html[data-look="doudou"] nav { background: linear-gradient(var(--bois1), var(--bois2)); }
+
+  /* ═══════════════ v45 : une image toujours à l'écran + la fabrication en pourcentages ═══════════════ */
+  .story figure.illus { display: none !important; }      /* repères seulement : l'image s'affiche dans #ecran-image */
+  .ecran-image { display: none; position: sticky; top: 0; z-index: 3; margin: 12px -14px 0; padding: calc(6px + env(safe-area-inset-top)) 14px 10px; background: var(--surface-pleine); }
+  .ecran-image.on { display: block; }
+  .ecran-image .cadre-img { position: relative; height: 36vh; max-height: 360px; min-height: 180px; border-radius: var(--r); overflow: hidden; background: var(--surface2); }
+  .ecran-image img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; transition: opacity .7s ease; }
+  .ecran-image img.flou { object-fit: cover; filter: blur(18px) brightness(.55); transform: scale(1.15); }
+  .ecran-image img.bas { opacity: 0; }
+  .ecran-image img.haut { opacity: 1; }
+  .ecran-image img:not([src]), .ecran-image img[src=""] { display: none; }
+  .ecran-attente { display: none; position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); white-space: nowrap; padding: 4px 11px; border-radius: 999px;
+    background: rgba(0,0,0,.55); color: #fff; font: 700 .74rem var(--f-texte); }
+  .ecran-image.attente .ecran-attente { display: block; }
+  .ecran-image.vide .cadre-img { height: 22vh; min-height: 130px; display: grid; place-items: center; }
+  .ecran-image.vide .cadre-img::after { content: "🎨 La première image arrive…"; color: var(--doux); font: 700 .9rem var(--f-texte); animation: respire 2s ease-in-out infinite; }
+  @keyframes respire { 50% { opacity: .45; } }
+  body.nuit .ecran-image { background: #000; }
+  body.nuit .ecran-image img:not(.flou) { opacity: .3; } body.nuit .ecran-image img.bas { opacity: 0; }
+  body.nuit .ecran-image img.flou { display: none; }
+  body.nuit .ecran-attente { display: none !important; }
+
+  .fabrication { position: fixed; left: 10px; right: 10px; bottom: calc(70px + env(safe-area-inset-bottom)); z-index: 30; padding: 10px 12px 8px; border-radius: 16px;
+    background: linear-gradient(var(--meuble1), var(--meuble2)); color: var(--meuble-txt); border: 1px solid var(--meuble-bord); box-shadow: 0 10px 30px rgba(0,0,0,.45); }
+  .fabrication[hidden] { display: none; }
+  .fab-tete { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .fab-tete b { font: 800 .78rem var(--f-texte); letter-spacing: .08em; text-transform: uppercase; color: var(--bois-txt); text-shadow: var(--bois-lueur); }
+  #fab-x { border: 0; background: var(--meuble-creux); color: var(--meuble-txt); width: 30px; height: 26px; border-radius: 8px; cursor: pointer; transition: transform .2s; }
+  .fabrication.reduit #fab-x { transform: rotate(180deg); }
+  .fab-ligne { display: grid; grid-template-columns: 26px 1fr 1.1fr 46px; align-items: center; gap: 8px; padding: 5px 0; }
+  .fab-ligne[hidden] { display: none; }
+  .fab-ic { font-size: 1.15rem; text-align: center; }
+  .fab-nom { font-weight: 800; font-size: .9rem; line-height: 1.15; min-width: 0; }
+  .fab-det { display: block; font-weight: 600; font-size: .7rem; color: var(--doux); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fab-barre { height: 10px; border-radius: 6px; background: var(--meuble-creux); overflow: hidden; border: 1px solid var(--meuble-bord); }
+  .fab-barre i { display: block; height: 100%; width: 0; border-radius: 6px; background: var(--accent-grad); transition: width .4s ease; }
+  .fab-pct { text-align: right; font: 800 .95rem var(--f-texte); font-variant-numeric: tabular-nums; color: var(--accent); }
+  .fab-ligne[data-etat="fini"] .fab-pct { color: var(--ok); }
+  .fab-ligne[data-etat="fini"] .fab-barre i { background: var(--ok); }
+  .fab-ligne[data-etat="err"] .fab-pct, .fab-ligne[data-etat="err"] .fab-det { color: var(--err); }
+  .fab-ligne[data-etat="attente"] { opacity: .6; }
+  .fabrication.reduit .fab-det { display: none; }
+  .fabrication.reduit .fab-ligne { padding: 2px 0; }
+  .fabrication.reduit .fab-tete { margin-bottom: 2px; }
+  body.nuit .fabrication { display: none; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 </head>
@@ -554,7 +599,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v44</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v45</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -774,6 +819,7 @@
       </div>
     </details>
 
+    <div class="ecran-image" id="ecran-image" aria-hidden="true"><div class="cadre-img"><img class="flou" alt=""><img class="bas" alt=""><img class="haut" alt=""></div><span class="ecran-attente">🎨 La prochaine image arrive…</span></div>
     <div class="story hide-tags" id="s-text" style="margin-top:16px"></div>
     <div id="choix-zone" style="display:none">
       <div class="actions" id="choix-btns"></div>
@@ -997,6 +1043,12 @@
   </div>
 </section>
 
+<div class="fabrication" id="fabrication" hidden aria-live="polite">
+  <div class="fab-tete"><b id="fab-titre">Fabrication de l'histoire</b><button type="button" id="fab-x" title="Réduire / agrandir">▾</button></div>
+  <div class="fab-ligne" data-ph="histoire"><span class="fab-ic">📝</span><span class="fab-nom">Histoire<small class="fab-det"></small></span><span class="fab-barre"><i></i></span><span class="fab-pct"></span></div>
+  <div class="fab-ligne" data-ph="images"><span class="fab-ic">🎨</span><span class="fab-nom">Images<small class="fab-det"></small></span><span class="fab-barre"><i></i></span><span class="fab-pct"></span></div>
+  <div class="fab-ligne" data-ph="voix"><span class="fab-ic">🔊</span><span class="fab-nom">Voix<small class="fab-det"></small></span><span class="fab-barre"><i></i></span><span class="fab-pct"></span></div>
+</div>
 <div id="etg-voile"></div>
 <div class="etg-feuille" id="etg-feuille" role="dialog" aria-modal="true"></div>
 <div class="etg-feuille mini" id="etg-mini" role="dialog" aria-modal="true"></div>
@@ -1700,11 +1752,13 @@ function enregistrerArbre(s, moteur) {
   const chemin = s.chemin || '';
   const ordre = Object.keys(s.arbre).sort((a, b) => (chemin.startsWith(a) ? 0 : 1) - (chemin.startsWith(b) ? 0 : 1) || a.length - b.length || a.localeCompare(b));
   const total = ordre.length;
+  const faits = () => Object.keys(s.audioNoeuds || {}).length;
+  if (ordre.some(c => !s.audioNoeuds?.[c])) fabMaj('voix', { etat: 'actif', fn: null, pct: faits() / total * 100, det: `${NOMS_VOIX[moteur]} · ${faits()} / ${total} morceaux` });
   let chaine = Promise.resolve();
   for (const c of ordre) {
     if (s.audioNoeuds?.[c] || p[c]) continue;
     p[c] = chaine = chaine.catch(() => {}).then(async () => {
-      const r = await enregistrer(s.arbre[c].texte, () => {}, () => {}, moteur);
+      const r = await enregistrer(s.arbre[c].texte, () => {}, f => fabMaj('voix', { pct: (faits() + f) / total * 100 }), moteur);
       if (!r.blob) throw new Error('voix sans enregistrement');
       s.audioNoeuds = s.audioNoeuds || {};
       s.audioNoeuds[c] = r.blob;
@@ -1712,10 +1766,11 @@ function enregistrerArbre(s, moteur) {
       if (c === '') { s.vitMoteur = r.moteur; s.vitNeutre = r.neutre; }
       await DB.put(s);
       const fait = Object.keys(s.audioNoeuds).length;
+      fabMaj('voix', fait < total ? { pct: fait / total * 100, det: `${NOMS_VOIX[moteur]} · ${fait} / ${total} morceaux` } : { etat: 'fini', det: `${total} morceaux` });
       if (current?.id === s.id) status($('choix-status'), fait < total ? `🎙️ Les autres choix s'enregistrent pendant l'écoute… ${fait}/${total}` : '✔ Tous les choix sont prêts : plus aucune attente', fait < total ? '' : 'ok');
       return r.blob;
     });
-    p[c].catch(e => { delete p[c]; if (current?.id === s.id) status($('choix-status'), 'Enregistrement des choix : ' + esc(e.message), 'err'); });
+    p[c].catch(e => { delete p[c]; fabMaj('voix', { etat: 'err', det: e.message.slice(0, 90) }); if (current?.id === s.id) status($('choix-status'), 'Enregistrement des choix : ' + esc(e.message), 'err'); });
   }
   return p;
 }
@@ -1924,10 +1979,14 @@ const illustrationsEnCours = new Set();
 function illustrer(s, forcer) {
   if (illustrationsEnCours.has(s.id) && !forcer) return;
   illustrationsEnCours.add(s.id);
+  majEcran();
   const etat = m => { if (current?.id === s.id) $('illus-status').innerHTML = m; };
+  const tPlan = Date.now(), enDessin = new Map();          // clé → [début, durée attendue] : pour le pourcentage
+  fabMaj('images', { etat: 'actif', fn: () => fabEstime(tPlan, 9000) * .1, det: 'en file d’attente' });
   fileDessins = fileDessins.catch(() => {}).then(async () => {
     try {
       if (!s.illus?.scenes?.length) {
+        fabMaj('images', { det: 'Gemini choisit les scènes…' });
         etat('<span class="spin"></span>🎨 Préparation des illustrations…');
         s.illus = await planifierImages(s);
         s.illusImages = s.illusImages || {};
@@ -1938,12 +1997,18 @@ function illustrer(s, forcer) {
       const base = hashTexte(s.id) % 90000;
       const total = s.illus.scenes.length;
       s.illusImages = s.illusImages || {};
-      const fait = () => Object.keys(s.illusImages).length;
+      const fait = () => s.illus.scenes.filter(x => s.illusImages[x.cle]).length;
+      fabMaj('images', { fn: () => 10 + 90 * (fait() + [...enDessin.values()].reduce((a, [d, att]) => a + Math.min(.9, (Date.now() - d) / att), 0)) / total, det: `${fait()} / ${total} images` });
+      const dessinerSuivi = async (cle, att, faire) => {
+        enDessin.set(cle, [Date.now(), att]);
+        try { return await faire(); } finally { enDessin.delete(cle); }
+      };
       const ranger = async (sc, i, blob) => {
         s.illusImages[sc.cle] = blob;
         const couverture = !s.image && i === 0;
         if (couverture) { s.image = blob; if (current?.id === s.id) afficherCouverture(s); }
         await DB.put(s);
+        fabMaj('images', { det: `${fait()} / ${total} images` });
         if (current?.id === s.id) couverture ? placerIllustrations(s) : majIllustrations(s);
       };
       // Le chemin que l'enfant suit est dessiné en premier
@@ -1960,7 +2025,7 @@ function illustrer(s, forcer) {
           const premier = restants.find(o => o.i === 0);
           if (premier) {
             etat(`<span class="spin"></span>🎨 Couverture (Gemini)…`);
-            await ranger(premier.sc, 0, await dessinerGemini(s, premier.sc, await refsCouverture(s)));
+            await ranger(premier.sc, 0, await dessinerSuivi(premier.sc.cle, 15000, async () => dessinerGemini(s, premier.sc, await refsCouverture(s))));
           }
           let k = 0;
           const autres = restants.filter(o => o.i !== 0);
@@ -1969,7 +2034,7 @@ function illustrer(s, forcer) {
               const o = autres[k++];
               etat(`<span class="spin"></span>🎨 Illustrations (Gemini)… ${fait()}/${total}`);
               const ref = modele();
-              await ranger(o.sc, o.i, await dessinerGemini(s, o.sc, ref ? [ref] : []));
+              await ranger(o.sc, o.i, await dessinerSuivi(o.sc.cle, 15000, () => dessinerGemini(s, o.sc, ref ? [ref] : [])));
             }
           };
           await Promise.all([travailleur(), travailleur(), travailleur()]);      // 3 à la fois
@@ -1985,15 +2050,17 @@ function illustrer(s, forcer) {
           if (s.illusImages[sc.cle]) continue;
           etat(`<span class="spin"></span>🎨 Illustration ${fait() + 1} sur ${total}…`);
           const prompt = `${avant}: ${sc.description} ${s.illus.fiche} ${apres} No text.`;
-          const blob = await dessiner(prompt, base + i * 101, () => etat(`<span class="spin"></span>🎨 Illustration ${fait() + 1} sur ${total} : le dessinateur gratuit est occupé, on patiente…`));
+          const blob = await dessinerSuivi(sc.cle, 90000, () => dessiner(prompt, base + i * 101, () => etat(`<span class="spin"></span>🎨 Illustration ${fait() + 1} sur ${total} : le dessinateur gratuit est occupé, on patiente…`)));
           await ranger(sc, i, blob);
         }
       }
       etat(`🎨 ${total} illustration${total > 1 ? 's' : ''}`);
+      fabMaj('images', { etat: 'fini', fn: null, det: `${total} image${total > 1 ? 's' : ''}` });
       srvSauver(s);
     } catch (e) {
       etat(`🎨 Illustrations interrompues : ${esc(e.message)}`);
-    } finally { illustrationsEnCours.delete(s.id); if (current?.id === s.id) majBoutonIllustrer(s); }
+      fabMaj('images', { etat: 'err', fn: null, det: e.message.slice(0, 90) });
+    } finally { illustrationsEnCours.delete(s.id); if (current?.id === s.id) { majBoutonIllustrer(s); majEcran(); } }
   });
 }
 /* Où va chaque image dans le texte affiché */
@@ -2030,6 +2097,7 @@ function majIllustrations(s) {
     if (b) { f.classList.remove('attente'); f.innerHTML = `<img src="${urlIllus(b)}" alt="">`; }
     else { f.classList.add('attente'); f.textContent = '🎨 Le dessin arrive…'; }
   });
+  majEcran();
 }
 function majBoutonIllustrer(s) {
   const complet = s.illus?.scenes?.length && s.illus.scenes.every(x => s.illusImages?.[x.cle]);
@@ -2038,6 +2106,106 @@ function majBoutonIllustrer(s) {
   if (!illustrationsEnCours.has(s.id)) $('illus-status').textContent = complet ? `🎨 ${s.illus.scenes.length} illustration${s.illus.scenes.length > 1 ? 's' : ''}` : '';
 }
 $('btn-illustrer').onclick = () => { if (current) { illustrer(current, true); majBoutonIllustrer(current); } };
+
+/* ==================== UNE IMAGE TOUJOURS À L'ÉCRAN (v45) ====================
+   Demandé par Jonathan le 2026-10-14 : pendant l'histoire, une image doit TOUJOURS être visible en haut,
+   EN ENTIER (avant, la couverture était rognée au format paysage et on n'en voyait que la moitié),
+   jusqu'à ce que la suivante arrive et la remplace. Les <figure> du texte ne servent plus que de repères :
+   l'image s'affiche dans #ecran-image, collé en haut de l'écran, qui suit le paragraphe lu (ou, sans
+   lecture, le paragraphe au milieu de l'écran). Une image pas encore dessinée laisse la précédente. */
+let ecranBlob = null;
+function imagePourParagraphe(s, i) {
+  const cles = clesParParagraphe(s);
+  let n0 = -1, blob = null;
+  for (const [n, c] of Object.entries(cles)) if (+n <= i && +n > n0 && s.illusImages?.[c]) { n0 = +n; blob = s.illusImages[c]; }
+  if (!blob) blob = s.image || null;
+  const attente = Object.entries(cles).some(([n, c]) => +n <= i && +n > n0 && c !== '__couverture' && !s.illusImages?.[c]);
+  return { blob, attente };
+}
+function paragrapheVisible() {
+  if (litIdx >= 0) return litIdx;
+  const ligne = innerHeight * .6;
+  let k = 0;
+  for (const p of document.querySelectorAll('#s-text p[data-i]')) { if (p.getBoundingClientRect().top < ligne) k = +p.dataset.i; else break; }
+  return k;
+}
+function majEcran() {
+  const e = $('ecran-image');
+  if (!current || $('story-card').style.display === 'none') { e.classList.remove('on'); return; }
+  const { blob, attente } = imagePourParagraphe(current, paragrapheVisible());
+  const premiere = !blob && illustrationsEnCours.has(current.id);      // rien encore dessiné : un cadre d'attente
+  e.classList.toggle('on', !!blob || premiere);
+  e.classList.toggle('vide', premiere);
+  e.classList.toggle('attente', !!blob && attente);
+  if (premiere) { ecranBlob = null; e.querySelectorAll('img').forEach(i => i.removeAttribute('src')); return; }
+  if (!blob || blob === ecranBlob) return;
+  ecranBlob = blob;
+  const u = urlIllus(blob), haut = e.querySelector('img.haut'), bas = e.querySelector('img.bas');
+  bas.src = u; e.querySelector('img.flou').src = u;
+  bas.classList.add('haut'); bas.classList.remove('bas');          // fondu : la nouvelle passe devant
+  haut.classList.add('bas'); haut.classList.remove('haut');
+}
+let ecranRaf = 0;
+addEventListener('scroll', () => { if (!ecranRaf) ecranRaf = requestAnimationFrame(() => { ecranRaf = 0; majEcran(); }); }, { passive: true });
+
+/* ==================== LA FABRICATION, EN POURCENTAGES (v45) ====================
+   Un panneau en bas montre les trois parties : 📝 l'histoire, 🎨 les images, 🔊 la voix.
+   Gemini ne dit pas où il en est pendant qu'il écrit : le pourcentage de l'histoire est ESTIMÉ d'après la
+   durée des fois précédentes (même longueur, même format), et s'arrête à 98 % jusqu'à la vraie fin.
+   Images : celles qui sont finies + l'avancement estimé de celles en cours. Voix : les vrais morceaux enregistrés. */
+const FAB = { histoire: null, images: null, voix: null };
+let fabFin = null, fabReduit = false;
+const fabEstime = (t0, attendu) => { const f = (Date.now() - t0) / attendu; return f < 1 ? 90 * f : 90 + 8 * (1 - Math.exp(-(f - 1) * 2)); };
+function fabMaj(ph, o) { FAB[ph] = o === null ? null : { ...(FAB[ph] || {}), ...o }; fabDessiner(); }
+function fabDessiner() {
+  const el = $('fabrication');
+  const lignes = Object.entries(FAB).filter(([, x]) => x);
+  if (!lignes.length) { el.hidden = true; return; }
+  el.hidden = false; el.classList.toggle('reduit', fabReduit);
+  for (const ph of Object.keys(FAB)) {
+    const x = FAB[ph], row = el.querySelector(`[data-ph="${ph}"]`);
+    row.hidden = !x; if (!x) continue;
+    const pct = x.etat === 'fini' ? 100 : x.etat === 'attente' ? 0 : Math.max(0, Math.min(99, Math.round(x.fn ? x.fn() : x.pct || 0)));
+    row.dataset.etat = x.etat;
+    row.querySelector('i').style.width = pct + '%';
+    row.querySelector('.fab-pct').textContent = x.etat === 'err' ? '✖' : x.etat === 'attente' ? '…' : pct + ' %';
+    row.querySelector('.fab-det').textContent = x.det || '';
+  }
+  const actif = lignes.some(([, x]) => x.etat === 'actif' || x.etat === 'attente');
+  $('fab-titre').textContent = actif ? 'Fabrication de l\'histoire' : lignes.some(([, x]) => x.etat === 'err') ? 'Fabrication : un souci' : '✔ Tout est prêt';
+  clearTimeout(fabFin);
+  if (!actif) fabFin = setTimeout(() => { FAB.histoire = FAB.images = FAB.voix = null; fabDessiner(); }, 8000);
+}
+$('fab-x').onclick = () => { fabReduit = !fabReduit; fabDessiner(); };
+setInterval(() => { if (!$('fabrication').hidden && Object.values(FAB).some(x => x?.etat === 'actif' && x.fn)) fabDessiner(); }, 400);
+
+/* La voix s'enregistre toute seule dès que le texte est prêt (sans jouer) : « Raconter » joue alors tout de suite. */
+const voixEnCours = new Map();
+async function voixAuto(s) {
+  try {
+    if (s.audio || (s.interactive && !s.arbre)) { fabMaj('voix', null); return; }
+    const total = s.arbre ? Object.values(s.arbre).reduce((n, x) => n + x.texte.length, 0) : s.histoire.length;
+    const { moteur } = await choisirMoteur(total);
+    if (moteur === 'phone') { fabMaj('voix', { etat: 'fini', det: 'la voix du téléphone lit en direct : rien à enregistrer' }); return; }
+    if (s.arbre) { enregistrerArbre(s, moteur); return; }
+    if (voixEnCours.has(s.id)) return;
+    const p = (async () => {
+      fabMaj('voix', { etat: 'actif', pct: 1, fn: null, det: NOMS_VOIX[moteur] + ' enregistre…' });
+      const st = m => { if (current?.id === s.id) status($('tts-status'), m); };
+      const r = await enregistrer(s.histoire, st, f => fabMaj('voix', { pct: Math.max(1, f * 100) }), moteur);
+      if (!r.blob) throw new Error('voix sans enregistrement');
+      s.audio = r.blob; s.vitMoteur = r.moteur; s.vitNeutre = r.neutre;
+      await DB.put(s); srvSauver(s);
+      fabMaj('voix', { etat: 'fini', det: NOMS_VOIX[r.moteur] });
+      if (current?.id === s.id) { setAudio(s); status($('tts-status'), '✔ La voix est prête : touche ▶️ Réécouter', 'ok'); }
+      return r;
+    })();
+    voixEnCours.set(s.id, p);
+    p.catch(e => { fabMaj('voix', { etat: 'err', det: e.message.slice(0, 90) }); if (current?.id === s.id) status($('tts-status'), esc(e.message), 'err'); })
+      .finally(() => voixEnCours.delete(s.id));
+  } catch (e) { fabMaj('voix', { etat: 'err', det: e.message.slice(0, 90) }); }
+}
+
 
 /* ==================== ELEVENLABS ==================== */
 async function tts(text) {
@@ -3033,6 +3201,7 @@ function showStory(s) {
   afficherCouverture(s);
   $('s-chap').textContent = s.chap > 1 ? `Chapitre ${s.chap}` : s.interactive ? '🔀 L\'enfant choisit la suite' : '';
   $('s-title').textContent = s.titre;
+  ecranBlob = null; litIdx = -1;
   $('s-text').innerHTML = paras(s.histoire).map((p, i) =>
     `<p data-i="${i}">${esc(p).replace(/\[([^\]\n]{1,40})\]\s*/g, '<span class="tag">$1 </span>')}</p>`).join('');
   placerIllustrations(s);
@@ -3103,6 +3272,7 @@ function eclairer(i) {
   if (i === litIdx) return;
   document.querySelectorAll('#s-text p.lit').forEach(p => p.classList.remove('lit'));
   litIdx = i;
+  majEcran();
   if (i < 0 || !$('opt-suivre').checked) return;
   const p = document.querySelector(`#s-text p[data-i="${i}"]`);
   if (!p) return;
@@ -3376,9 +3546,19 @@ async function creer(fn, extra = {}) {
   btn.disabled = $('btn-regen').disabled = $('btn-suite').disabled = true;
   const st = m => status($('gen-status'), m);
   st('<span class="spin"></span>Gemini écrit ton histoire…');
+  const cleDuree = 'duree-ecriture:' + chipVal('length') + ':' + (extra.interactive ? 'choix' : 'complete');
+  const attendu = +store.get(cleDuree, 0) || ({ court: 20000, moyen: 30000, long: 45000 }[chipVal('length')] || 30000) * (extra.interactive ? 2.2 : 1);
+  const t0 = Date.now();
+  FAB.images = FAB.voix = null;
+  fabMaj('histoire', { etat: 'actif', fn: () => fabEstime(t0, attendu), det: 'Gemini écrit…' });
+  if (imagesVoulues() && cleGemini()) fabMaj('images', { etat: 'attente', fn: null, det: 'dès que l’histoire est écrite' });
+  fabMaj('voix', { etat: 'attente', fn: null, det: 'dès que l’histoire est écrite' });
   try {
     await preparerEcriture(extra.interactive ? LONGUEUR_ESTIMEE[chipVal('length')] * 7 / 3 : 0);
     const j = await fn(st);
+    const duree = Date.now() - t0;
+    store.set(cleDuree, String(Math.round(+store.get(cleDuree, 0) ? +store.get(cleDuree) * .6 + duree * .4 : duree)));
+    fabMaj('histoire', { etat: 'fini', fn: null, det: `écrite en ${Math.round(duree / 1000)} s` });
     const s = {
       id: Date.now().toString(36), createdAt: Date.now(), titre: j.titre, histoire: j.histoire,
       meta: { name: consignesEnfants().noms.join(' et ') || $('name').value.trim(), friends: $('friends').value.trim(), mood: chipVal('mood') }, illusNb: imagesVoulues(), ...extra
@@ -3395,9 +3575,14 @@ async function creer(fn, extra = {}) {
     st('✔ Histoire prête !');
     $('gen-status').className = 'status ok';
     imageEnFond(s);
+    if (!s.illusNb || !cleGemini()) fabMaj('images', null);
+    voixAuto(s);
     extrairePersonnages(s).catch(() => {});                  // ses personnages, pour pouvoir les ramener plus tard
     $('story-card').scrollIntoView({ behavior: 'smooth' });
-  } catch (e) { status($('gen-status'), esc(e.message), 'err'); }
+  } catch (e) {
+    status($('gen-status'), esc(e.message), 'err');
+    fabMaj('histoire', { etat: 'err', fn: null, det: e.message.slice(0, 90) }); FAB.images = FAB.voix = null; fabDessiner();
+  }
   btn.disabled = $('btn-regen').disabled = $('btn-suite').disabled = false;
 }
 function onGenerate() {
@@ -3543,6 +3728,13 @@ $('btn-read').onclick = async () => {
   } else if (s.audio) {                                        // déjà enregistré : on réécoute sans rien dépenser
     setAudio(s); $('player').play().catch(() => {});
     return;
+  } else if (voixEnCours.has(s.id)) {                          // la voix s'enregistre déjà toute seule : on attend la fin
+    const btn = $('btn-read'); btn.disabled = true;
+    status($('tts-status'), '<span class="spin"></span>La voix finit de s’enregistrer (voir le pourcentage en bas)… elle partira toute seule.');
+    try { await voixEnCours.get(s.id); } catch {}
+    btn.disabled = false;
+    if (!s.audio) { const x = await DB.get(s.id).catch(() => null); if (x?.audio) Object.assign(s, { audio: x.audio, vitMoteur: x.vitMoteur, vitNeutre: x.vitNeutre }); }
+    if (s.audio) { if (current === s) { setAudio(s); $('player').play().catch(() => {}); } return; }
   }
   saveSettings();
   const btn = $('btn-read'); btn.disabled = true;
