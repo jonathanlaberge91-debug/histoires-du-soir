@@ -697,7 +697,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v60</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v61</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -943,7 +943,7 @@
     <div class="status" id="recup-status"></div>
   </div>
   <div id="lib-list"></div>
-  <p class="hint" style="text-align:center; margin-top:14px">Réécouter une histoire déjà enregistrée ne coûte aucun crédit.</p>
+  <p class="hint" style="text-align:center; margin-top:14px">Réécouter une histoire déjà enregistrée ne coûte aucun crédit. Les histoires faites sur tes autres appareils arrivent toutes seules (si l'app est connectée à Maison).</p>
 </section>
 
 <!-- ============ RÉGLAGES ============ -->
@@ -1581,7 +1581,7 @@ let fileIdx = 0;
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
   document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x === b));
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === b.dataset.v));
-  if (b.dataset.v === 'v-lib') renderLib();
+  if (b.dataset.v === 'v-lib') { renderLib(); if (srvActif()) srvRecuperer(true); }
   window.scrollTo(0, 0);
 });
 document.querySelectorAll('.chips').forEach(g => g.addEventListener('click', e => {
@@ -4521,9 +4521,20 @@ async function fichierServeur(rec, nom, jf) {
   if (!r.ok) throw new Error('fichier illisible sur le serveur (' + r.status + ')');
   return r.blob();
 }
-$('btn-drive-recup').onclick = async () => {
-  const st = (m, c) => status($('recup-status'), m, c);
-  if (!jetonMaison()) return st('Pas connecté : ' + MSG_CONNEXION + '.', 'err');
+/* v61 : la récupération est AUTOMATIQUE (à l'ouverture, et à chaque visite de Histoires, au plus une fois par 2 min) :
+   avant, un appareil ne voyait les histoires faites sur l'autre qu'en touchant ☁️ (signalé par Jonathan le 2026-10-14).
+   Le bouton ☁️ reste pour forcer. */
+let recupEnCours = null, recupLe = 0;
+function srvRecuperer(silencieux) {
+  if (recupEnCours) return recupEnCours;
+  if (silencieux && Date.now() - recupLe < 120000) return Promise.resolve();
+  recupLe = Date.now();
+  return recupEnCours = srvRecupererFaire(silencieux).finally(() => { recupEnCours = null; });
+}
+$('btn-drive-recup').onclick = () => srvRecuperer(false);
+async function srvRecupererFaire(silencieux) {
+  const st = (m, c) => { if (!silencieux || c === 'ok' && /récupérée/.test(m)) status($('recup-status'), m, c); };
+  if (!jetonMaison()) return silencieux ? undefined : st('Pas connecté : ' + MSG_CONNEXION + '.', 'err');
   try {
     st('<span class="spin"></span>Lecture de ton serveur…');
     const { items } = await (await apiMaison(`/api/collections/${COL_HIST}/records?perPage=500&fields=id,hid,titre&sort=-creeLe`)).json();
@@ -4554,8 +4565,9 @@ $('btn-drive-recup').onclick = async () => {
       renderLib();
     }
     st(`✔ ${manquent.length} histoire(s) récupérée(s) de ton serveur.`, 'ok');
-  } catch (e) { st('Erreur : ' + esc(e.message), 'err'); }
-};
+    majRecentes?.(); majPersonnages?.();
+  } catch (e) { if (!silencieux) st('Erreur : ' + esc(e.message), 'err'); }
+}
 async function srvSupprimer(sid) {
   if (!jetonMaison()) return;
   const rid = await srvIdDe(sid);
@@ -4669,7 +4681,7 @@ $('k-gcloud').addEventListener('change', () => { saveSettings(); if ($('k-gcloud
 /* Histoires pas encore sauvegardées sur le serveur (hors ligne, erreur) : on réessaie à l'ouverture.
    Les histoires d'avant le serveur n'y vont que si on le demande (« Tout envoyer maintenant »). */
 majCompteServeur();
-rafraichirSession().then(() => { majCompteServeur(); majResumes?.(); });
+rafraichirSession().then(() => { majCompteServeur(); majResumes?.(); if (srvActif()) srvRecuperer(true); });
 if (srvActif()) setTimeout(async () => { for (const s of await DB.all()) if (s.srvAttente) await srvSauver(s); }, 3000);
 
 /* ==================== INTERFACE : thèmes, choix qui s'ouvrent, réglages ==================== */
