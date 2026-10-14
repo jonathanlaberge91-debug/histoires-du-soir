@@ -352,6 +352,7 @@ async function enParallele(n, total, faire) {
   await Promise.all(Array.from({ length: n }, async () => { while (k < total) { const i = k++; out[i] = await faire(i); } }));
   return out;
 }
+const court = v => v.replace(/^fr-(CA|FR)-(Chirp3-HD-|Neural2-|Studio-)?/, '').replace(/Neural$/, '');
 async function voixMicrosoft(texte, V, prog, etape = () => {}) {
   const base = V.neutre ? -10 : (parseInt(V.msRate, 10) || 0);
   if (V.multivoix) {
@@ -366,6 +367,7 @@ async function voixMicrosoft(texte, V, prog, etape = () => {}) {
         const b = await edgeMorceau(segs[i].t, r.voix, base + r.vitesse, r.hauteur);
         prog(++fait / segs.length); return b;
       });
+      V.multiFait = true;
       return Buffer.concat(out);
     } catch (e) { if (/injoignable|HTTP 5/.test(e.message)) throw e; log('une voix par personnage impossible :', e.message); }
   }
@@ -474,12 +476,12 @@ async function voixGoogle(texte, V, prog, enPanne, etape = () => {}) {
           const b = await gcMorceau(segs[i].t, pl, r ? r.voix : narr, vit, r && pl.id !== 'chirp' ? r.base : null);
           prog(++fait / segs.length); return b;
         });
-        return { buf: Buffer.concat(out), palier: pl.nom };
+        return { buf: Buffer.concat(out), palier: pl, narr, multi: true };
       } catch (e) { if (e.palier) throw e; log('une voix Google par personnage impossible :', e.message); }
     }
     const morceaux = chunk(pourVoixGoogle(texte), pl.id === 'chirp' ? 1500 : 1100), out = [];
     for (let i = 0; i < morceaux.length; i++) { out.push(await gcMorceau(morceaux[i], pl, narr, vitesse)); prog((i + 1) / morceaux.length); }
-    return { buf: Buffer.concat(out), palier: pl.nom };
+    return { buf: Buffer.concat(out), palier: pl, narr, multi: false };
   } catch (e) {
     if (e.palier && !e.quota) { enPanne.add(pl.id); return voixGoogle(texte, V, prog, enPanne, etape); }   // ce palier refuse : le suivant
     throw e;
@@ -488,10 +490,16 @@ async function voixGoogle(texte, V, prog, enPanne, etape = () => {}) {
 /* Un texte → MP3 : Google d'abord (mode auto ou Google), puis Microsoft */
 async function enregistrer(texte, V, prog, etape) {
   if (V.moteur !== 'edge' && CLE_TTS && V.gcVoix && Object.values(V.gcVoix).some(Boolean)) {
-    try { const r = await voixGoogle(texte, V, prog, new Set(), etape); return { buf: r.buf, moteur: 'gcloud', nom: 'la voix Google ' + r.palier }; }
+    try {
+      const r = await voixGoogle(texte, V, prog, new Set(), etape);
+      // nom et clé comme ceux de l'app (v50, plusieurs voix par histoire)
+      return { buf: r.buf, moteur: 'gcloud', nom: `Google ${r.palier.nom} · ${court(r.narr)}${r.multi ? ' · une voix par personnage' : ''}`, cle: ['gcloud', r.palier.id, r.narr, r.multi ? 'multi' : ''].join(':') };
+    }
     catch (e) { log('voix Google impossible, Microsoft prend le relais :', e.message); }
   }
-  return { buf: await voixMicrosoft(texte, V, prog, etape), moteur: 'edge', nom: 'la voix québécoise Microsoft' };
+  V.multiFait = false;
+  const buf = await voixMicrosoft(texte, V, prog, etape);
+  return { buf, moteur: 'edge', nom: `Microsoft · ${court(V.msVoix)}${V.multiFait ? ' · une voix par personnage' : ''}`, cle: ['edge', '', V.msVoix, V.multiFait ? 'multi' : ''].join(':') };
 }
 async function raconter(t, s) {
   const V = t.recette.voix;
@@ -504,7 +512,7 @@ async function raconter(t, s) {
       const r = await enregistrer(s.arbre[c].texte, V, f => avance(t, 'voix', { pct: (k + f) / ordre.length * 100 }));
       await fs.writeFile(path.join(t.dossier, 'noeud-' + (c || 'debut')), r.buf);
       t.resultat.noeuds.push(c); t.resultat.vitNoeuds[c] = { m: r.moteur, n: V.neutre };
-      if (c === '') { t.resultat.vitMoteur = r.moteur; t.resultat.vitNeutre = V.neutre; }
+      if (c === '') { t.resultat.vitMoteur = r.moteur; t.resultat.vitNeutre = V.neutre; t.resultat.voixNom = r.nom; t.resultat.voixCle = r.cle; }
       avance(t, 'voix', { pct: (k + 1) / ordre.length * 100, det: `${r.nom} · ${k + 1} / ${ordre.length} morceaux` });
     }
     avance(t, 'voix', { etat: 'fini', pct: 100, det: `${ordre.length} morceaux` });
@@ -521,7 +529,7 @@ async function raconter(t, s) {
   try { r = await enregistrer(s.histoire, V, f => avance(t, 'voix', { pct: base + (100 - base) * f, det: 'la voix enregistre…' }), etape); }
   finally { clearInterval(minuterie); }
   await fs.writeFile(path.join(t.dossier, 'audio'), r.buf);
-  t.resultat.audio = true; t.resultat.vitMoteur = r.moteur; t.resultat.vitNeutre = V.neutre;
+  t.resultat.audio = true; t.resultat.vitMoteur = r.moteur; t.resultat.vitNeutre = V.neutre; t.resultat.voixNom = r.nom; t.resultat.voixCle = r.cle;
   avance(t, 'voix', { etat: 'fini', pct: 100, det: r.nom });
 }
 

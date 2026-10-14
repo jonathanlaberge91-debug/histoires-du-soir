@@ -593,6 +593,25 @@
   .fabrication.reduit .fab-ligne { padding: 2px 0; }
   .fabrication.reduit .fab-tete { margin-bottom: 2px; }
   body.nuit .fabrication { display: none; }
+
+  /* ═══════════════ v50 : plusieurs voix par histoire ═══════════════ */
+  .versions, .modeles { display: flex; flex-direction: column; gap: 8px; margin: 10px 0 4px; }
+  .version { display: flex; align-items: stretch; gap: 6px; }
+  .v-jouer { flex: 1; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--r-petit); border: 2px solid var(--ligne);
+    background: var(--surface2); color: var(--texte); font: inherit; text-align: left; cursor: pointer; }
+  .version.on .v-jouer { border-color: var(--accent); background: var(--lu); }
+  .v-jouer b { display: block; font-size: .95rem; } .v-jouer small { color: var(--doux); font-size: .78rem; }
+  .v-ic { font-size: 1.3rem; }
+  .v-oublier { width: 46px; border-radius: var(--r-petit); border: 1px solid var(--ligne); background: var(--surface2); cursor: pointer; }
+  .modele { display: block; margin: 0; padding: 11px 12px; border-radius: var(--r-petit); border: 2px solid var(--ligne); background: var(--surface2); color: var(--texte); cursor: pointer; }
+  .modele.on { border-color: var(--accent); background: var(--lu); }
+  .modele input[type=radio] { display: none; }
+  .m-tete { display: flex; align-items: center; gap: 10px; }
+  .m-tete b { display: block; font-size: .95rem; } .m-tete small { display: block; color: var(--doux); font-size: .76rem; font-weight: 600; }
+  .modele .m-ic { font-size: 1.3rem; width: 28px; text-align: center; }
+  .modele select { margin-top: 8px; padding: 9px 12px; }
+  .modele:not(.on) select { display: none; }
+  #etg-feuille .big { margin-top: 14px; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 </head>
@@ -601,7 +620,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v49</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v50</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -773,6 +792,7 @@
       <button class="sec" id="btn-nuit" title="Mode nuit">🌙</button>
     </div>
     <div class="petites">
+      <button class="sec" id="btn-voix">🎙️ Autre voix</button>
       <button class="sec" id="btn-suite">📖 La suite</button>
       <button class="sec" id="btn-regen">🔁 Une autre</button>
       <button class="sec" id="btn-partager">🔗 Partager</button>
@@ -1655,7 +1675,7 @@ function enregistrerArbre(s, moteur) {
       s.audioNoeuds = s.audioNoeuds || {};
       s.audioNoeuds[c] = r.blob;
       s.vitNoeuds = s.vitNoeuds || {}; s.vitNoeuds[c] = { m: r.moteur, n: r.neutre };
-      if (c === '') { s.vitMoteur = r.moteur; s.vitNeutre = r.neutre; }
+      if (c === '') { s.vitMoteur = r.moteur; s.vitNeutre = r.neutre; Object.assign(s, etiquetteVoix(r.moteur)); }
       await DB.put(s);
       const fait = Object.keys(s.audioNoeuds).length;
       fabMaj('voix', fait < total ? { pct: fait / total * 100, det: `${NOMS_VOIX[moteur]} · ${fait} / ${total} morceaux` } : { etat: 'fini', det: `${total} morceaux` });
@@ -2096,7 +2116,7 @@ async function voixAuto(s) {
       const st = m => { if (current?.id === s.id) status($('tts-status'), m); };
       const r = await enregistrer(s.histoire, st, f => fabMaj('voix', { pct: Math.max(1, f * 100) }), moteur);
       if (!r.blob) throw new Error('voix sans enregistrement');
-      s.audio = r.blob; s.vitMoteur = r.moteur; s.vitNeutre = r.neutre;
+      s.audio = r.blob; s.vitMoteur = r.moteur; s.vitNeutre = r.neutre; Object.assign(s, etiquetteVoix(r.moteur));
       await DB.put(s); srvSauver(s);
       fabMaj('voix', { etat: 'fini', det: NOMS_VOIX[r.moteur] });
       if (current?.id === s.id) { setAudio(s); status($('tts-status'), '✔ La voix est prête : touche ▶️ Réécouter', 'ok'); }
@@ -2287,7 +2307,7 @@ async function rangerTravail(suivi, v) {
   if (R.audio && !s.audio) {
     try {
       const audio = await fichierTravail(v.id, 'audio');
-      await majHistoire(suivi, { audio, vitMoteur: R.vitMoteur, vitNeutre: R.vitNeutre }, 'voix');
+      await majHistoire(suivi, { audio, vitMoteur: R.vitMoteur, vitNeutre: R.vitNeutre, voixNom: R.voixNom || '', voixCle: R.voixCle || '', voixCree: Date.now() }, 'voix');
       suivi.voixFin?.ok();
     } catch {}
   }
@@ -2297,7 +2317,7 @@ async function rangerTravail(suivi, v) {
     try {
       const b = await fichierTravail(v.id, 'noeud-' + (c || 'debut'));
       await majHistoire(suivi, { audioNoeuds: { ...(s.audioNoeuds || {}), [c]: b }, vitNoeuds: { ...(s.vitNoeuds || {}), ...(R.vitNoeuds || {}) },
-        ...(c === '' ? { vitMoteur: R.vitMoteur, vitNeutre: R.vitNeutre } : {}) });
+        ...(c === '' ? { vitMoteur: R.vitMoteur, vitNeutre: R.vitNeutre, voixNom: R.voixNom || '', voixCle: R.voixCle || '', voixCree: Date.now() } : {}) });
       if (s.arbre && Object.keys(s.audioNoeuds).length === Object.keys(s.arbre).length) {
         s.partAudio = audioChemin(s); if (current?.id === s.id && current !== s) current.partAudio = audioChemin(current);
         suivi.voixFin?.ok();
@@ -2330,6 +2350,180 @@ async function reprendreTravaux() {
   try { const r = await fabFetch('/travaux'); if (r.ok) ids = [...new Set([...ids, ...(await r.json()).travaux.map(t => t.id)])]; } catch {}
   for (const id of ids) suivreTravail(id);
 }
+
+/* ==================== PLUSIEURS VOIX PAR HISTOIRE (v50) ====================
+   Demandé par Jonathan le 2026-10-14 : refaire une histoire avec une autre voix, et GARDER toutes les voix
+   enregistrées. Une histoire qui en a plusieurs demande laquelle écouter avant de commencer.
+   La voix ACTIVE reste où le reste de l'app la lit (s.audio, ou s.audioNoeuds pour une histoire à choix,
+   avec s.vitMoteur / s.vitNeutre / s.vitNoeuds) + son nom (s.voixNom) et sa clé (s.voixCle). Les AUTRES voix
+   sont dans s.autresVoix : [{ nom, cle, audio | audioNoeuds, vitMoteur, vitNeutre, vitNoeuds, cree }].
+   Changer de voix = échanger. Sur le serveur Maison, seule la voix active est sauvegardée (les autres restent
+   sur l'appareil). Histoires à choix de l'ancienne façon (parties écrites une à une) : pas de voix multiples. */
+let palierImpose = null;                  // enregistrement d'une voix précise : ce palier Google seulement
+const voixChoisie = new Set();            // histoires pour lesquelles on a déjà choisi la voix depuis qu'on l'a ouverte
+const NOMS_MOTEURS_COURTS = { gcloud: 'Google', edge: 'Microsoft', gemini: 'Gemini', eleven: 'ElevenLabs', phone: 'Téléphone' };
+const aUneVoix = s => !!(s && (s.arbre ? Object.keys(s.audioNoeuds || {}).length === Object.keys(s.arbre).length : s.audio));
+const nomVoix = (nom, moteur) => nom || (NOMS_MOTEURS_COURTS[moteur] ? 'Voix ' + NOMS_MOTEURS_COURTS[moteur] : 'Voix enregistrée');
+/* Nom et clé de la voix qu'on vient d'enregistrer avec les réglages (mêmes noms que « Autre voix ») */
+function etiquetteVoix(moteur) {
+  const multi = $('opt-multivoix').checked && moteur !== 'gemini' && !!cleGemini();
+  const fin = multi ? ' · une voix par personnage' : '';
+  if (moteur === 'gcloud') { const pl = gcPalier(0) || GC_PALIERS[0], v = gcVoixDe(pl); return { voixNom: `Google ${pl.nom} · ${nomCourtVoix('gcloud', v)}${fin}`, voixCle: ['gcloud', pl.id, v, multi ? 'multi' : ''].join(':'), voixCree: Date.now() }; }
+  if (moteur === 'edge') { const v = $('ms-voice').value; return { voixNom: `Microsoft · ${nomCourtVoix('edge', v)}${fin}`, voixCle: ['edge', '', v, multi ? 'multi' : ''].join(':'), voixCree: Date.now() }; }
+  if (moteur === 'gemini') { const v = $('g-voice').value; return { voixNom: `Gemini · ${v}`, voixCle: ['gemini', '', v, ''].join(':'), voixCree: Date.now() }; }
+  return { voixCree: Date.now() };
+}
+const versionsPossibles = s => !!s && !(s.interactive && !s.arbre);
+function versionsDe(s) {
+  const l = aUneVoix(s) ? [{ actif: true, nom: nomVoix(s.voixNom, s.vitMoteur), cle: s.voixCle || '', cree: s.voixCree || s.createdAt }] : [];
+  (s.autresVoix || []).forEach((v, i) => l.push({ ...v, i, nom: nomVoix(v.nom, v.vitMoteur) }));
+  return l;
+}
+function versionActuelle(s) {
+  if (!aUneVoix(s)) return null;
+  return { nom: s.voixNom || '', cle: s.voixCle || '', cree: s.voixCree || s.createdAt, vitMoteur: s.vitMoteur, vitNeutre: s.vitNeutre, vitNoeuds: s.vitNoeuds,
+    ...(s.arbre ? { audioNoeuds: s.audioNoeuds } : { audio: s.audio }) };
+}
+function poserVersion(s, v) {
+  Object.assign(s, { voixNom: v.nom || '', voixCle: v.cle || '', voixCree: v.cree, vitMoteur: v.vitMoteur, vitNeutre: v.vitNeutre, vitNoeuds: v.vitNoeuds });
+  if (s.arbre) { s.audioNoeuds = v.audioNoeuds || {}; s.partAudio = audioChemin(s); s.audio = null; }
+  else s.audio = v.audio;
+}
+async function activerVersion(s, i) {
+  const v = s.autresVoix[i], actuelle = versionActuelle(s);
+  s.autresVoix.splice(i, 1);
+  if (actuelle) s.autresVoix.unshift(actuelle);
+  poserVersion(s, v);
+  if (s.arbre && s.parts?.length === NB_PARTIES && s.partAudio.every(Boolean)) { try { s.audio = await concatAudio(s.partAudio); } catch {} }
+  await DB.put(s); srvSauver(s);
+}
+
+/* La feuille : choisir la voix avant d'écouter */
+function feuille(html) { const f = $('etg-feuille'); f.innerHTML = '<div class="poignee"></div>' + html; f.scrollTop = 0; document.body.classList.add('etg-ouvert'); return f; }
+const fermerFeuille = () => document.body.classList.remove('etg-ouvert');
+function choisirVoix(s) {
+  const l = versionsDe(s);
+  const f = feuille(`<h3>Quelle voix ce soir ?</h3><p class="hint" style="margin-top:0">« ${esc(s.titre)} » a ${l.length} voix enregistrées. Réécouter ne coûte rien.</p>
+    <div class="versions">${l.map(v => `<div class="version ${v.actif ? 'on' : ''}">
+      <button type="button" class="v-jouer" data-v="${v.actif ? 'a' : v.i}"><span class="v-ic">▶️</span><span><b>${esc(v.nom)}</b><small>${v.actif ? 'la dernière écoutée · ' : ''}${new Date(v.cree || s.createdAt).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long' })}</small></span></button>
+      ${v.actif ? '' : `<button type="button" class="v-oublier" data-x="${v.i}" title="Effacer cette voix">🗑️</button>`}</div>`).join('')}</div>
+    <button type="button" class="sec etg-retirer" id="v-autre">🎙️ Enregistrer avec une autre voix</button>`);
+  f.onclick = async e => {
+    const j = e.target.closest('[data-v]'), x = e.target.closest('[data-x]');
+    if (x) {
+      const v = s.autresVoix[+x.dataset.x];
+      if (!confirm(`Effacer la voix « ${nomVoix(v.nom, v.vitMoteur)} » de cette histoire ?`)) return;
+      s.autresVoix.splice(+x.dataset.x, 1); await DB.put(s);
+      return versionsDe(s).length > 1 ? choisirVoix(s) : (fermerFeuille(), majBoutonVoix(s));
+    }
+    if (e.target.closest('#v-autre')) return feuilleAutreVoix(s);
+    if (!j) return;
+    f.onclick = null; fermerFeuille();
+    if (j.dataset.v !== 'a') await activerVersion(s, +j.dataset.v);
+    voixChoisie.add(s.id);
+    if (current === s) { setAudio(s); majBoutonVoix(s); $('btn-read').click(); }
+  };
+}
+
+/* La feuille : enregistrer avec une autre voix */
+const nomCourtVoix = (moteur, v) => moteur === 'gcloud' ? v.replace(/^fr-(CA|FR)-(Chirp3-HD-|Neural2-|Studio-)?/, '') : moteur === 'edge' ? v.replace(/^fr-CA-|Neural$/g, '') : v;
+function modelesVoix() {
+  const liste = id => { try { return JSON.parse(store.get('gc:liste:' + id, '[]')).map(x => x.n); } catch { return []; } };
+  const options = id => [...$(id).options].map(o => o.value).filter(Boolean);
+  return [
+    ...GC_PALIERS.map(pl => ({ moteur: 'gcloud', palier: pl.id, titre: 'Google ' + pl.nom, ic: '☁️', voix: liste(pl.id), defaut: gcVoixDe(pl), multi: true,
+      aide: pl.id === 'chirp' ? 'la plus naturelle' : pl.id === 'neural' ? 'accent d\'ici, plus posée' : 'voix de France' })),
+    { moteur: 'edge', titre: 'Microsoft', ic: '🍁', voix: options('ms-voice'), defaut: $('ms-voice').value, multi: true, aide: 'québécoise, gratuite' },
+    { moteur: 'gemini', titre: 'Gemini', ic: '♊', voix: options('g-voice'), defaut: $('g-voice').value, multi: false, aide: 'expressive, plus lente à enregistrer' }
+  ].filter(m => m.voix.length);
+}
+const cleVoix = (m, voix, multi) => [m.moteur, m.palier || '', voix, multi ? 'multi' : ''].join(':');
+function feuilleAutreVoix(s) {
+  const ms = modelesVoix();
+  const deja = new Set(versionsDe(s).map(v => v.cle).filter(Boolean));
+  const f = feuille(`<h3>Une autre voix</h3><p class="hint" style="margin-top:0">La nouvelle voix s'ajoute : celles déjà enregistrées restent dans l'histoire.</p>
+    <div class="modeles">${ms.map((m, k) => `<label class="modele" data-k="${k}"><input type="radio" name="modele" value="${k}" ${k === 0 ? 'checked' : ''}>
+      <span class="m-tete"><span class="m-ic">${m.ic}</span><span><b>${esc(m.titre)}</b><small>${esc(m.aide)}</small></span></span>
+      <select data-k="${k}">${m.voix.map(v => `<option value="${esc(v)}" ${v === m.defaut ? 'selected' : ''}>${esc(nomCourtVoix(m.moteur, v))}</option>`).join('')}</select></label>`).join('')}</div>
+    ${ms.length ? '' : '<p class="hint">Aucune voix chargée : va dans ⚙️ Réglages → Qui raconte, et touche ↻ pour les voix Google.</p>'}
+    <label class="check"><input type="checkbox" id="v-multi" ${$('opt-multivoix').checked ? 'checked' : ''}>Une voix par personnage</label>
+    <p class="hint" id="v-deja"></p>
+    <button type="button" class="big" id="v-go">🎙️ Enregistrer cette voix</button>`);
+  const choix = () => {
+    const k = +f.querySelector('input[name="modele"]:checked').value, m = ms[k], voix = f.querySelector(`select[data-k="${k}"]`).value;
+    const multi = m.multi && $('v-multi').checked;
+    return { m, voix, multi, cle: cleVoix(m, voix, multi), nom: `${m.titre} · ${nomCourtVoix(m.moteur, voix)}${multi ? ' · une voix par personnage' : ''}` };
+  };
+  const maj = () => {
+    if (!ms.length) return;
+    const c = choix();
+    f.querySelectorAll('.modele').forEach(l => l.classList.toggle('on', l.querySelector('input').checked));
+    $('v-multi').closest('label').style.display = c.m.multi ? '' : 'none';
+    $('v-deja').textContent = deja.has(c.cle) ? '✓ Cette voix est déjà enregistrée : elle sera refaite.' : '';
+  };
+  f.onchange = maj; f.onclick = e => { if (e.target.closest('select')) { const l = e.target.closest('.modele'); l.querySelector('input').checked = true; maj(); } };
+  maj();
+  $('v-go').onclick = () => { if (!ms.length) return; const c = choix(); fermerFeuille(); enregistrerVersion(s, c); };
+}
+function assurerOption(sel, v) { if (![...sel.options].some(o => o.value === v)) sel.add(new Option(v, v)); }
+/* Enregistre une nouvelle voix : réglages imposés le temps de l'enregistrement, puis remis comme avant */
+async function enregistrerVersion(s, c) {
+  const btn = $('btn-voix'), lire = $('btn-read');
+  btn.disabled = lire.disabled = true;
+  const st = m => status($('tts-status'), m);
+  const avant = { engine: $('engine').value, ms: $('ms-voice').value, g: $('g-voice').value, multi: $('opt-multivoix').checked, gc: GC_PALIERS.map(pl => $(pl.champ).value) };
+  FAB.histoire = FAB.images = null;
+  fabMaj('voix', { etat: 'actif', pct: 1, fn: null, det: c.nom + '…' });
+  let v;
+  try {
+    $('engine').value = c.m.moteur; $('opt-multivoix').checked = c.multi;
+    if (c.m.moteur === 'edge') $('ms-voice').value = c.voix;
+    if (c.m.moteur === 'gemini') $('g-voice').value = c.voix;
+    if (c.m.moteur === 'gcloud') { palierImpose = c.m.palier; const sel = $(GC_PALIERS.find(p => p.id === c.m.palier).champ); assurerOption(sel, c.voix); sel.value = c.voix; }
+    if (s.arbre) {
+      const ordre = Object.keys(s.arbre).sort((a, b) => a.length - b.length || a.localeCompare(b));
+      const noeuds = {}, vitNoeuds = {}; let r;
+      for (let k = 0; k < ordre.length; k++) {
+        r = await enregistrer(s.arbre[ordre[k]].texte, st, f => fabMaj('voix', { pct: (k + f) / ordre.length * 100, det: `${c.nom} · ${k + 1} / ${ordre.length} morceaux` }), c.m.moteur);
+        if (!r.blob) throw new Error('cette voix n\'enregistre pas');
+        noeuds[ordre[k]] = r.blob; vitNoeuds[ordre[k]] = { m: r.moteur, n: r.neutre };
+      }
+      v = { audioNoeuds: noeuds, vitNoeuds, vitMoteur: r.moteur, vitNeutre: r.neutre };
+    } else {
+      const r = await enregistrer(s.histoire, st, f => fabMaj('voix', { pct: Math.max(1, f * 100) }), c.m.moteur);
+      if (!r.blob) throw new Error('cette voix n\'enregistre pas');
+      v = { audio: r.blob, vitMoteur: r.moteur, vitNeutre: r.neutre };
+    }
+  } catch (e) {
+    fabMaj('voix', { etat: 'err', det: e.message.slice(0, 90) });
+    status($('tts-status'), 'Nouvelle voix : ' + esc(e.message), 'err');
+    return;
+  } finally {
+    palierImpose = null;
+    $('engine').value = avant.engine; $('ms-voice').value = avant.ms; $('g-voice').value = avant.g; $('opt-multivoix').checked = avant.multi;
+    GC_PALIERS.forEach((pl, k) => { $(pl.champ).value = avant.gc[k]; });
+    btn.disabled = lire.disabled = false;
+  }
+  Object.assign(v, { nom: c.nom, cle: c.cle, cree: Date.now() });
+  const actuelle = versionActuelle(s);
+  s.autresVoix = (s.autresVoix || []).filter(x => x.cle !== c.cle);           // même voix refaite : remplacée
+  if (actuelle && actuelle.cle !== c.cle) s.autresVoix.unshift(actuelle);
+  poserVersion(s, v);
+  await DB.put(s); srvSauver(s);
+  fabMaj('voix', { etat: 'fini', det: c.nom });
+  voixChoisie.add(s.id);
+  if (current?.id !== s.id) return;
+  if (current !== s) poserVersion(current, v), current.autresVoix = s.autresVoix;
+  setAudio(current); majBoutonVoix(current);
+  status($('tts-status'), `✔ Nouvelle voix : ${esc(c.nom)}. Les autres restent gardées.`, 'ok');
+  $('btn-read').click();
+}
+function majBoutonVoix(s) {
+  $('btn-voix').style.display = versionsPossibles(s) && (s.arbre || s.histoire) ? '' : 'none';
+  const n = versionsDe(s).length;
+  if (n > 1 && aUneVoix(s)) $('btn-read').textContent = `▶️ Écouter (${n} voix)`;
+}
+$('btn-voix').onclick = () => { if (current) feuilleAutreVoix(current); };
 
 /* ==================== VOIX QUÉBÉCOISE MICROSOFT (relais du serveur) ==================== */
 const URL_TTS_EDGE = location.hostname === '95.groupelaberge.ca' ? '/histoires/tts' : 'https://95.groupelaberge.ca/histoires/tts';
@@ -2902,7 +3096,10 @@ const gcVoix = () => GC_PALIERS.map(gcVoixDe).find(Boolean) || '';
 /* Le palier qui peut lire ce texte maintenant (ou null si tous sont pleins) */
 /* Palier qui a échoué pendant cet enregistrement (autre chose que le quota) : on passe au suivant */
 const gcPaliersEnPanne = new Set();
-function gcPalier(nb = 0) { return GC_PALIERS.find(pl => gcVoixDe(pl) && !gcPaliersEnPanne.has(pl.id) && gcUtilise(pl.id) + nb <= gcPlafond()) || null; }
+function gcPalier(nb = 0) {
+  if (palierImpose) { const pl = GC_PALIERS.find(p => p.id === palierImpose); return pl && gcVoixDe(pl) && !gcPaliersEnPanne.has(pl.id) && gcUtilise(pl.id) + nb <= gcPlafond() ? pl : null; }   // v50 : une voix précise
+  return GC_PALIERS.find(pl => gcVoixDe(pl) && !gcPaliersEnPanne.has(pl.id) && gcUtilise(pl.id) + nb <= gcPlafond()) || null;
+}
 function gcAfficher() {
   const pc = gcPalier();
   $('gc-quota').innerHTML = GC_PALIERS.map(pl => `${pl === pc ? '▶ ' : ''}<b>${pl.nom}</b> : ${fmt(gcUtilise(pl.id))} / ${fmt(gcPlafond())}${gcVoixDe(pl) ? '' : ' (aucune voix)'}`).join('<br>') +
@@ -3354,6 +3551,7 @@ function setAudio(s) {
   $('btn-dl').textContent = blob?.type === 'audio/wav' ? '⬇️ Télécharger l\'audio (WAV)' : '⬇️ Télécharger MP3';
   const pret = blob || (s.interactive && s.partAudio?.[s.parts.length - 1]);
   $('btn-read').textContent = pret ? '▶️ Réécouter' : '🔊 Raconter';
+  majBoutonVoix(s);
   file = []; fileIdx = 0;
   if (blob) {
     file = [{ url: audioUrl, blob, debut: 0, fin: paras(s.histoire).length, texte: s.histoire }];
@@ -3791,6 +3989,7 @@ $('btn-read').onclick = async () => {
     if (current !== s) return;
     if (s.audio) setAudio(s);
   }
+  if (!voixChoisie.has(s.id) && versionsDe(s).length > 1) return choisirVoix(s);   // v50 : quelle voix ce soir ?
   const plages = plagesParties(s);
   const interactifEnCours = s.interactive && s.parts.length < NB_PARTIES;
   const segPart = k => ({ url: URL.createObjectURL(s.partAudio[k]), blob: s.partAudio[k], debut: plages[k][0], fin: plages[k][1], texte: s.parts[k].texte, noeud: s.arbre ? (s.chemin || '').slice(0, k) : null });
@@ -3869,7 +4068,7 @@ $('btn-read').onclick = async () => {
       setAudio(s);
       jouerFile([{ url: URL.createObjectURL(r.blob), blob: r.blob, debut: plages[iPart][0], fin: plages[iPart][1], texte }]);
     } else {
-      s.audio = r.blob; s.vitMoteur = r.moteur; s.vitNeutre = r.neutre;
+      s.audio = r.blob; s.vitMoteur = r.moteur; s.vitNeutre = r.neutre; Object.assign(s, etiquetteVoix(r.moteur));
       await DB.put(s);
       srvSauver(s);
       if (ailleurs) return;
@@ -4085,7 +4284,7 @@ async function renderLib() {
     if (s.image) { const u = URL.createObjectURL(s.image); vignettes.push(u); couv = `<img class="vign" src="${u}" alt="">`; }
     const quand = new Date(s.createdAt).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long' });
     const det = [quand, s.chap > 1 ? `chap. ${s.chap}` : '', s.interactive ? (s.parts?.length < NB_PARTIES ? 'à choix (pas finie)' : 'à choix') : '',
-      s.meta?.name ? esc(s.meta.name) : '', s.audio ? '🎧' : '', s.srv && !s.srvAttente ? '☁️' : ''].filter(Boolean).join(' · ');
+      s.meta?.name ? esc(s.meta.name) : '', s.autresVoix?.length ? `🎙️ ${s.autresVoix.length + 1} voix` : s.audio ? '🎧' : '', s.srv && !s.srvAttente ? '☁️' : ''].filter(Boolean).join(' · ');
     return `<div class="lib-item" data-id="${esc(s.id)}" role="button" tabindex="0">${couv}
       <div class="t">${esc(s.titre)}<small>${det}</small></div>
       <button class="star ${s.fav ? 'on' : ''}" data-fav="${esc(s.id)}" title="Favori">⭐</button>
@@ -4123,6 +4322,7 @@ $('lib-list').addEventListener('click', async e => {
     return;
   }
   const item = e.target.closest('.lib-item'); if (!item) return;
+  voixChoisie.delete(item.dataset.id);
   showStory(await DB.get(item.dataset.id));
   status($('gen-status'), '');
   document.querySelector('nav button[data-v="v-create"]').click();

@@ -146,3 +146,10 @@ Astuce : `…/#gemini=CLÉ&eleven=CLÉ&voice=VOICE_ID` enregistre les clés en u
 - Notification « 🌙 Ton histoire est prête » : Web Push SANS contenu (rien à chiffrer), clés VAPID créées par le serveur (`vapid.json`), abonnement demandé au premier « Raconte-moi » ; pas de notification si l'app est à l'écran.
 - Sans session Maison : l'ancienne façon (tout dans l'app). La logique copiée dans la fabrique (plan des images, SSML Google, voix par personnage) doit rester pareille à celle d'index.html.
 - Déployer la fabrique : `bash serveur/fabrique/deployer.sh`. Tests : scratchpad `test_fabrique.mjs` (google | microsoft | arbre), `test_v49.js` (app + fabrique locale, app fermée puis rouverte), `essai_reel.sh` (vrai Google sur le serveur, jeton par impersonation, travail effacé).
+
+## v50 — plusieurs voix par histoire (2026-10-14)
+- « 🎙️ Autre voix » (sous Raconter) : choisir un modèle (Google Chirp 3 HD / Neural2 / Studio, Microsoft, Gemini) et une voix, avec ou sans « une voix par personnage ». L'enregistrement se fait dans l'app, réglages imposés le temps de l'enregistrement puis remis (`palierImpose` pour un palier Google précis).
+- Toutes les voix restent : la voix ACTIVE est dans `s.audio` (ou `s.audioNoeuds` pour une histoire à choix) + `voixNom`/`voixCle`, les autres dans `s.autresVoix`. Changer de voix = échanger (`activerVersion`). Même clé refaite = remplacée.
+- Une histoire qui a plusieurs voix : « Écouter (N voix) » ouvre d'abord « Quelle voix ce soir ? » (une fois par ouverture depuis Histoires) ; 🗑️ efface une voix. Histoires affiche « 🎙️ N voix ».
+- Le serveur Maison ne garde que la voix active ; les autres restent sur l'appareil. La fabrique donne aussi le nom et la clé de sa voix. Pas de voix multiples pour les histoires à choix de l'ancienne façon (parties écrites une à une).
+- Test : scratchpad `test_v50.js`.
