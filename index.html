@@ -697,13 +697,13 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v59</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v60</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
 <section id="v-create" class="view on">
   <div id="form-card">
-    <p class="etg-intro">Allume les livres de ton histoire. Une tablette déborde ? Glisse-la vers la droite.</p>
+    <p class="etg-intro">Allume les livres de ton histoire. Une tablette déborde ? Glisse-la vers la droite. Ce que tu écris avec « ✏️ Choisir » devient un livre pour toujours (garde le doigt dessus pour le retirer).</p>
     <div id="etageres">
       <section id="etg-qui"></section>
       <p class="etg-aide" id="etg-qui-aide"></p>
@@ -4800,6 +4800,38 @@ if (!cleGemini()) document.querySelector('#res-cles').closest('details').open = 
   const chip = (g, v) => document.querySelector(`.chips[data-group="${g}"] .chip[data-v="${v}"]`);
   const chipTxt = c => ({ e: c.querySelector('.ico')?.textContent || '', t: (c.querySelector('.ico') ? c.lastElementChild.textContent : c.textContent).trim() });
 
+  /* ---------- livres ajoutés par le parent (v60) ----------
+     Tout ce qu'on écrit via « ✏️ Choisir » devient un livre PERMANENT de sa tablette, pour tous les enfants, avec un emoji
+     trouvé par Gemini (⭐ en attendant). Gardé sur l'appareil (localStorage « livres:<tablette> »). Garder le doigt = retirer. */
+  const livresPerso = k => { try { const l = JSON.parse(store.get('livres:' + k, '[]')); return Array.isArray(l) ? l : []; } catch { return []; } };
+  const livresPersoTxt = k => livresPerso(k).map(x => (x.e || '⭐') + ' ' + x.t);      // au format des listes d'idées (« 🔦 lampe de poche »)
+  const emojiCache = {};
+  async function emojiPour(t) {
+    if (emojiCache[t]) return emojiCache[t];
+    if (!cleGemini()) return '';
+    const j = await appelGemini(`Donne UN seul emoji qui représente le mieux « ${t} » dans un livre pour enfants. Réponds en JSON : {"emoji": "…"}.`,
+      { type: 'OBJECT', properties: { emoji: { type: 'STRING' } }, required: ['emoji'] }, () => {}, { system: 'Tu choisis des emojis pour une app d\'histoires pour enfants. Tu réponds en JSON.', temperature: 0.2 });
+    const m = EMOJI.exec(String(j.emoji || '').trim());
+    return emojiCache[t] = m ? m[1].trim() : '';
+  }
+  let redessinerFeuille = null;                 // la feuille d'un enfant, pour la rafraîchir quand l'emoji arrive
+  const toutRedessiner = () => { tout(); redessinerFeuille?.(); };
+  function ajouterLivre(k, t) {
+    t = String(t || '').trim(); if (!t) return;
+    const l = livresPerso(k);
+    if (l.some(x => egal(x.t, t))) return;
+    l.push({ t, e: '' }); store.set('livres:' + k, JSON.stringify(l));
+    emojiPour(t).catch(() => '').then(e => {
+      const l2 = livresPerso(k), x = l2.find(y => egal(y.t, t));
+      if (x) { x.e = e || '⭐'; store.set('livres:' + k, JSON.stringify(l2)); toutRedessiner(); }
+    });
+  }
+  function retirerLivre(k, t, apres) {
+    if (!confirm(`Retirer « ${t} » de cette tablette ?`)) return;
+    store.set('livres:' + k, JSON.stringify(livresPerso(k).filter(x => !egal(x.t, t))));
+    apres?.(); toutRedessiner();
+  }
+
   /* ---------- une tablette ---------- */
   function etagere(el, { nom, opt, livres, dernier, onLivre, onDernier, onLong }) {
     if (!el.querySelector('.livres')) {
@@ -4910,6 +4942,7 @@ if (!cleGemini()) document.querySelector('#res-cles').closest('details').open = 
       <button type="button" class="big" id="fe-ok">C'est bon</button>
       ${i ? '<button type="button" class="sec etg-retirer" id="fe-retirer">✖ Retirer cet enfant</button>' : ''}`,
       () => {           // feuille fermée (bouton, voile ou Échap) : on garde ce qui a été fait
+        redessinerFeuille = null;
         lire();
         if (i && !e.nom && !CHOIX.some(c => e.choix[c.k]) && enfants[i] === e) enfants.splice(i, 1);   // enfant ajouté puis laissé vide
         sauverEnfants(); tout();
@@ -4921,16 +4954,19 @@ if (!cleGemini()) document.querySelector('#res-cles').closest('details').open = 
     const dessiner = () => {
       CHOIX.forEach((c, ci) => {
         const sec = secs[ci];
-        const v = e.choix[c.k] || '', libre = v && !c.idees.some(x => egal(txt(x), v));
+        const idees = [...c.idees, ...livresPersoTxt(c.k)];           // les idées de l'app + les livres ajoutés par le parent
+        const v = e.choix[c.k] || '', libre = v && !idees.some(x => egal(txt(x), v));
         etagere(sec, {
           nom: txt(c.l),
-          livres: c.idees.map(x => ({ e: emo(x), t: cap(txt(x)), on: egal(txt(x), v) })),
+          livres: idees.map(x => ({ e: emo(x), t: cap(txt(x)), on: egal(txt(x), v) })),
           dernier: { t: libre ? v : 'Choisir', on: !!libre },
-          onLivre: k => { e.choix[c.k] = egal(txt(c.idees[k]), v) ? '' : txt(c.idees[k]); dessiner(); },
-          onDernier: () => demander(txt(c.l) + ' : à toi de choisir', libre ? v : '', c.ph, w => { e.choix[c.k] = w; dessiner(); })
+          onLivre: k => { e.choix[c.k] = egal(txt(idees[k]), v) ? '' : txt(idees[k]); dessiner(); },
+          onLong: k => { if (k >= c.idees.length) retirerLivre(c.k, txt(idees[k]), () => { if (egal(e.choix[c.k], txt(idees[k]))) e.choix[c.k] = ''; }); },
+          onDernier: () => demander(txt(c.l) + ' : à toi de choisir', libre ? v : '', c.ph, w => { e.choix[c.k] = w; ajouterLivre(c.k, w); dessiner(); })
         });
       });
     };
+    redessinerFeuille = dessiner;
     dessiner();
     $('fe-nom').addEventListener('input', () => { lire(); document.querySelector('#etg-feuille h3').textContent = e.nom || 'Un enfant'; });
     $('fe-ok').onclick = fermer;
@@ -4943,7 +4979,8 @@ if (!cleGemini()) document.querySelector('#res-cles').closest('details').open = 
 
   /* ---------- tablettes faites d'une liste « a, b, c » dans un champ (avec qui, sa journée, la leçon) ---------- */
   const morceaux = id => $(id).value.split(/\s*,\s*/).map(x => x.trim()).filter(Boolean);
-  function etgListe(el, id, nom, presets, ph, apres) {
+  function etgListe(el, id, nom, presetsApp, ph, apres, cle) {
+    const presets = [...presetsApp, ...livresPersoTxt(cle)];          // les idées de l'app + les livres ajoutés par le parent
     const cur = morceaux(id), estPreset = x => presets.some(p => egal(txt(p), x));
     const libres = cur.filter(x => !estPreset(x));
     etagere(el, {
@@ -4955,34 +4992,46 @@ if (!cleGemini()) document.querySelector('#res-cles').closest('details').open = 
         if (k >= 0) l.splice(k, 1); else l.push(v);
         $(id).value = l.join(', '); apres?.(); tout();
       },
+      onLong: i => { if (i >= presetsApp.length) { const v = txt(presets[i]); retirerLivre(cle, v, () => { $(id).value = morceaux(id).filter(x => !egal(x, v)).join(', '); apres?.(); }); } },
       onDernier: () => demander(nom.replace(/\s*\?$/, '') + ' : à toi de choisir', libres.join(', '), ph, v => {
-        $(id).value = [...morceaux(id).filter(estPreset), ...(v ? [v] : [])].join(', '); apres?.(); tout();
+        const nouveaux = v.split(/\s*,\s*/).map(x => x.trim()).filter(Boolean);
+        nouveaux.forEach(x => ajouterLivre(cle, x));                    // chaque morceau devient un livre
+        $(id).value = [...morceaux(id).filter(estPreset), ...nouveaux.filter(x => !estPreset(x))].join(', '); apres?.(); tout();
       })
     });
   }
 
   /* ---------- tablettes faites des pastilles d'avant (ambiance, petit souci) ---------- */
   function etgGenre() {
-    const l = chips('mood').filter(c => c.dataset.v !== 'autre'), autre = chipVal('mood') === 'autre';
+    const l = chips('mood').filter(c => c.dataset.v !== 'autre'), autre = chipVal('mood') === 'autre', texte = $('mood-autre').value.trim();
+    const perso = livresPerso('genre'), dansPerso = autre && perso.some(x => egal(x.t, texte));
     etagere($('etg-genre'), {
       nom: 'Quelle ambiance ?',
-      livres: l.map(c => ({ ...chipTxt(c), on: c.classList.contains('on') })),
-      dernier: { t: autre && $('mood-autre').value.trim() ? $('mood-autre').value.trim() : 'Choisir', on: autre },
-      onLivre: i => { l[i].click(); tout(); },
-      onDernier: () => demander('Ton ambiance', $('mood-autre').value, 'ex. une course de bateaux au bord de la mer', v => {
-        $('mood-autre').value = v; chip('mood', v ? 'autre' : 'dodo').click(); tout();
+      livres: [...l.map(c => ({ ...chipTxt(c), on: c.classList.contains('on') })), ...perso.map(x => ({ e: x.e || '⭐', t: cap(x.t), on: autre && egal(x.t, texte) }))],
+      dernier: { t: autre && texte && !dansPerso ? texte : 'Choisir', on: autre && !dansPerso },
+      onLivre: i => { if (i < l.length) l[i].click(); else { $('mood-autre').value = perso[i - l.length].t; chip('mood', 'autre').click(); } tout(); },
+      onLong: i => { if (i >= l.length) retirerLivre('genre', perso[i - l.length].t, () => { if (autre && egal(texte, perso[i - l.length].t)) chip('mood', 'dodo').click(); }); },
+      onDernier: () => demander('Ton ambiance', autre && !dansPerso ? texte : '', 'ex. une course de bateaux au bord de la mer', v => {
+        $('mood-autre').value = v; chip('mood', v ? 'autre' : 'dodo').click(); if (v) ajouterLivre('genre', v); tout();
       })
     });
   }
   function etgSouci() {
-    const l = chips('souci').filter(c => c.dataset.v && c.dataset.v !== 'autre'), autre = chipVal('souci') === 'autre';
+    const l = chips('souci').filter(c => c.dataset.v && c.dataset.v !== 'autre'), autre = chipVal('souci') === 'autre', texte = $('souci-autre').value.trim();
+    const perso = livresPerso('souci'), dansPerso = autre && perso.some(x => egal(x.t, texte));
     etagere($('etg-souci'), {
       nom: 'Un petit souci ?', opt: true,
-      livres: l.map(c => ({ ...chipTxt(c), on: c.classList.contains('on') })),
-      dernier: { t: autre && $('souci-autre').value.trim() ? $('souci-autre').value.trim() : 'Choisir', on: autre },
-      onLivre: i => { (l[i].classList.contains('on') ? chip('souci', '') : l[i]).click(); tout(); },
-      onDernier: () => demander('Un petit souci : à toi de choisir', $('souci-autre').value, 'ex. il ne veut pas se brosser les dents', v => {
-        $('souci-autre').value = v; chip('souci', v ? 'autre' : '').click(); tout();
+      livres: [...l.map(c => ({ ...chipTxt(c), on: c.classList.contains('on') })), ...perso.map(x => ({ e: x.e || '⭐', t: cap(x.t), on: autre && egal(x.t, texte) }))],
+      dernier: { t: autre && texte && !dansPerso ? texte : 'Choisir', on: autre && !dansPerso },
+      onLivre: i => {
+        if (i < l.length) (l[i].classList.contains('on') ? chip('souci', '') : l[i]).click();
+        else if (autre && egal(texte, perso[i - l.length].t)) chip('souci', '').click();
+        else { $('souci-autre').value = perso[i - l.length].t; chip('souci', 'autre').click(); }
+        tout();
+      },
+      onLong: i => { if (i >= l.length) retirerLivre('souci', perso[i - l.length].t, () => { if (autre && egal(texte, perso[i - l.length].t)) chip('souci', '').click(); }); },
+      onDernier: () => demander('Un petit souci : à toi de choisir', autre && !dansPerso ? texte : '', 'ex. il ne veut pas se brosser les dents', v => {
+        $('souci-autre').value = v; chip('souci', v ? 'autre' : '').click(); if (v) ajouterLivre('souci', v); tout();
       })
     });
   }
@@ -5063,11 +5112,11 @@ if (!cleGemini()) document.querySelector('#res-cles').closest('details').open = 
   /* ---------- tout redessiner ---------- */
   function tout() {
     etgQui(); etgGenre();
-    etgListe($('etg-avec'), 'friends', 'Avec qui d\'autre ?', AVEC, 'ex. son chien Biscuit, sa cousine Léa');
+    etgListe($('etg-avec'), 'friends', 'Avec qui d\'autre ?', AVEC, 'ex. son chien Biscuit, sa cousine Léa', null, 'avec');
     etgPersos();
-    etgListe($('etg-journee'), 'journee', 'Sa journée', JOURNEE, 'ex. elle a perdu sa mitaine rouge au parc');
+    etgListe($('etg-journee'), 'journee', 'Sa journée', JOURNEE, 'ex. elle a perdu sa mitaine rouge au parc', null, 'journee');
     etgSouci();
-    etgListe($('etg-lecon'), 'moral', 'Une leçon ?', LECONS, 'ex. dire bonjour aux voisins', majLecons);
+    etgListe($('etg-lecon'), 'moral', 'Une leçon ?', LECONS, 'ex. dire bonjour aux voisins', majLecons, 'lecon');
     etgChevet();
     store.set('set:mood', chipVal('mood')); store.set('set:mood-autre', $('mood-autre').value);
   }
