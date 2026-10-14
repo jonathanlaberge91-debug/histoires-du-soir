@@ -701,7 +701,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v63</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v64</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -1293,7 +1293,7 @@ function pourVoixSimple(t) { return pourVoixMicrosoft(stripTags(t)); }
 /* v63 : pour les voix Google (Chirp 3 HD, Neural2, Studio), le texte part TEL QUEL : les sons étirés (« vrooooom »)
    et les MAJUSCULES sont justement ce qui fait bien jouer les onomatopées (conseil de Gemini, appliqué le 2026-10-14).
    L'ancien nettoyage reste pour la voix Microsoft et celle du téléphone (pourVoixSimple). */
-function pourVoixGoogle(t) { return t; }
+function pourVoixGoogle(t) { return t.replace(/([bcdfghjklmnpqrstvwxzçBCDFGHJKLMNPQRSTVWXZ])\1{2,}/g, '$1$1'); }   // v64 : « grrrr » → « grr » (les voyelles étirées restent)
 function pourVoixMicrosoft(t) {
   return t
     .replace(/(\p{L})\1{2,}/gu, '$1')
@@ -1820,7 +1820,7 @@ const CONSIGNE_VOIX_GOOGLE = CONSIGNE_VOIX_SIMPLE
   .replace('- Aucun mot en MAJUSCULES.',
     '- Les MAJUSCULES servent à l\'emphase, sur un bruit ou UN mot fort par paragraphe au plus (« POUF ! », « BOUM ! ») ; jamais sur une phrase entière.')
   .replace('- Onomatopées courtes, connues, qui se prononcent comme elles s\'écrivent : vroum, plouf, boum, crac, toc toc, miaou, ouaf, atchoum. Pas de lettres répétées, pas d\'onomatopée inventée imprononçable.',
-    '- Onomatopées connues et prononçables (vroum, plouf, boum, crac, toc, miaou, ouaf, atchoum), étirées comme à la règle 1 ; pas d\'onomatopée inventée imprononçable (pas de suite de consonnes).')
+    '- Onomatopées connues et prononçables (vroum, plouf, boum, crac, toc, miaou, ouaf, atchoum), étirées comme à la règle 1. INTERDIT : une onomatopée faite de consonnes seules (grrr, brrr, pfff, chhh, crrr, vrrr) : la voix l\'épelle lettre par lettre. Un grognement s\'écrit « Rhaaa ! » ou se raconte (« grogna le loup ») ; un frisson : « Brouuu ! » ; un souffle : « Pfouuu ! ».')
   .replace('- AUCUNE balise entre crochets, nulle part.',
     '- Balises permises, et SEULEMENT celles-ci, en anglais entre crochets, juste avant la phrase ou la réplique qu\'elles colorent, avec parcimonie (une toutes les deux ou trois phrases au plus) : émotions [whispers] [softly] [excited] [happy] [sad] [scared] [surprised] [amazed] [grumpy] ; manière [slowly] [quickly] [mysteriously] [dramatically] [warmly] [sleepy] ; voix d\'un personnage juste avant sa réplique entre guillemets [deep voice] [squeaky voice] [tiny voice] [old voice] [booming voice] (chaque personnage garde toujours la même) ; [pause] pour un vrai silence. Aucune autre balise, jamais de réaction comme [laughs] ou [sighs] : écris-la avec des mots.');
 /* v57 : sans idée du parent, des graines tirées au sort (une liste fixe d'exemples donnait 3 fois la même histoire :
@@ -5290,7 +5290,7 @@ function teleMaj() {
   }
   // le sous-titre : le paragraphe lu (sinon le titre)
   const p = litIdx >= 0 ? document.querySelector(`#s-text p[data-i="${litIdx}"]`) : null;
-  const txt = p ? stripTags(p.textContent).trim() : '';
+  const txt = p ? [...p.childNodes].filter(n => !(n.classList && n.classList.contains('tag'))).map(n => n.textContent).join('').replace(/\s+/g, ' ').trim() : '';   // v64 : sans les mots des balises (« whispers »…), qui ne sont pas lus
   if (txt !== tele.txt) { tele.txt = txt; $('t-sous').textContent = txt; $('t-sous').classList.toggle('vide', !txt); }
   $('t-titre').textContent = current.titre || '';
   // les choix d'une histoire à choix, quand la partie est finie (ou pas encore commencée)

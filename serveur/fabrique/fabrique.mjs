@@ -46,7 +46,7 @@ const log = (...a) => console.log(new Date().toISOString(), ...a);
 const paras = t => t.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
 const stripTags = t => t.replace(/\[[^\]\n]{1,40}\]\s*/g, '');
 /* v63 : les voix Google lisent le texte TEL QUEL (sons étirés, majuscules = onomatopées bien jouées) ; Microsoft garde le nettoyage */
-function pourVoixGoogle(t) { return t; }
+function pourVoixGoogle(t) { return t.replace(/([bcdfghjklmnpqrstvwxzçBCDFGHJKLMNPQRSTVWXZ])\1{2,}/g, '$1$1'); }   // v64 : « grrrr » → « grr » (les voyelles étirées restent)
 function pourVoixMicrosoft(t) {
   return t
     .replace(/(\p{L})\1{2,}/gu, '$1')
