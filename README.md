@@ -199,3 +199,7 @@ Astuce : `…/#gemini=CLÉ&eleven=CLÉ&voice=VOICE_ID` enregistre les clés en u
 
 ## v62 — fermer la fiche de l'histoire (2026-10-14)
 - Bouton ✕ en haut à droite de la fiche (`fermerHistoire`) : arrête la lecture (voix enregistrée ou du téléphone), vide le lecteur, cache la fiche, le petit lecteur et l'image en haut, remonte en haut de Créer. L'histoire reste dans Histoires. Caché en mode nuit. Test : scratchpad `test_v62.js`.
+
+## v63 — onomatopées écrites pour Chirp (2026-10-14)
+- Conseil de Gemini relayé par Jonathan : Chirp 3 HD lit exactement ce qui est écrit. Avant, l'app faisait l'inverse pour Google : la consigne interdisait les sons étirés et les MAJUSCULES, et `pourVoixGoogle` effaçait les lettres répétées et les majuscules avant l'envoi.
+- Maintenant, pour les voix Google seulement : `CONSIGNE_VOIX_GOOGLE` demande (1) d'étirer les voyelles des onomatopées (« vrooooom ! »), (2) d'isoler chaque bruit par la ponctuation (« Et... POUF ! »), (3) une virgule entre les bruits répétés (« Toc, toc, toc ! »), majuscules pour l'emphase sur un bruit ; `pourVoixGoogle` laisse le texte tel quel (app et fabrique) ; le découpage « une voix par personnage » pour Google ne nettoie plus non plus. Microsoft et la voix du téléphone gardent l'ancien nettoyage (`pourVoixMicrosoft`, `pourVoixSimple`).

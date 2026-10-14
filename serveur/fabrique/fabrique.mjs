@@ -45,7 +45,9 @@ const log = (...a) => console.log(new Date().toISOString(), ...a);
 /* ==================== petits outils de texte (copies d'index.html) ==================== */
 const paras = t => t.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
 const stripTags = t => t.replace(/\[[^\]\n]{1,40}\]\s*/g, '');
-function pourVoixGoogle(t) {
+/* v63 : les voix Google lisent le texte TEL QUEL (sons étirés, majuscules = onomatopées bien jouées) ; Microsoft garde le nettoyage */
+function pourVoixGoogle(t) { return t; }
+function pourVoixMicrosoft(t) {
   return t
     .replace(/(\p{L})\1{2,}/gu, '$1')
     .replace(/(?<!\p{L})\p{Lu}{3,}(?!\p{L})/gu, (mot, pos, tout) => {
@@ -54,7 +56,7 @@ function pourVoixGoogle(t) {
       return !avant || /[.!?…«»—\n]$/.test(avant) ? bas[0].toUpperCase() + bas.slice(1) : bas;
     });
 }
-const pourVoixSimple = t => pourVoixGoogle(stripTags(t));
+const pourVoixSimple = t => pourVoixMicrosoft(stripTags(t));
 function chunk(text, max = 2500) {
   const parts = [];
   let cur = '';
@@ -310,8 +312,8 @@ const SCHEMA_VOIX = {
   },
   required: ['personnages', 'segments']
 };
-async function distribuerRoles(texte, modeles) {
-  const propre = paras(pourVoixSimple(texte)).join('\n\n');
+async function distribuerRoles(texte, modeles, google) {
+  const propre = paras(google ? stripTags(texte) : pourVoixSimple(texte)).join('\n\n');
   const user = [
     'Voici une histoire pour enfants. Découpe-la en morceaux pour une lecture à plusieurs voix.',
     '- Recopie TOUT le texte, mot pour mot, sans rien ajouter, enlever ni corriger, dans l\'ordre.',
@@ -462,7 +464,7 @@ async function voixGoogle(texte, V, prog, enPanne, etape = () => {}) {
     if (V.multivoix) {
       try {
         etape('roles');
-        const j = await distribuerRoles(texte, V.modeles).finally(() => etape('voix'));
+        const j = await distribuerRoles(texte, V.modeles, true).finally(() => etape('voix'));
         const liste = await listeGoogle(pl, narr.slice(0, 5));
         const pool = g => liste.filter(v => v.g === g && v.n !== narr).map(v => v.n);
         const F = pool('FEMALE'), M = pool('MALE'), roles = {};

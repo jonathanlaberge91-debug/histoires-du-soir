@@ -701,7 +701,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v62</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v63</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -1288,9 +1288,13 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 const stripTags = t => t.replace(/\[[^\]\n]{1,40}\]\s*/g, '');
 /* Texte écrit avec des balises et des effets, lu par une voix simple : on enlève ce qu'elle prononcerait mal.
    « Ouuuuh » → « Ouh », « Crrrac » → « Crac », « Trèèès » → « Très », « BRILLANTE » → « brillante ». */
-function pourVoixSimple(t) { return pourVoixGoogle(stripTags(t)); }
+function pourVoixSimple(t) { return pourVoixMicrosoft(stripTags(t)); }
 /* Même nettoyage, mais en gardant les balises de jeu (les voix Google les traduisent) */
-function pourVoixGoogle(t) {
+/* v63 : pour les voix Google (Chirp 3 HD, Neural2, Studio), le texte part TEL QUEL : les sons étirés (« vrooooom »)
+   et les MAJUSCULES sont justement ce qui fait bien jouer les onomatopées (conseil de Gemini, appliqué le 2026-10-14).
+   L'ancien nettoyage reste pour la voix Microsoft et celle du téléphone (pourVoixSimple). */
+function pourVoixGoogle(t) { return t; }
+function pourVoixMicrosoft(t) {
   return t
     .replace(/(\p{L})\1{2,}/gu, '$1')
     .replace(/(?<!\p{L})\p{Lu}{3,}(?!\p{L})/gu, (mot, pos, tout) => {
@@ -1806,9 +1810,17 @@ const CONSIGNE_VOIX_SIMPLE = `TRÈS IMPORTANT — VOIX DE SYNTHÈSE SIMPLE. Cett
 - Garde des dialogues vivants avec une incise claire pour savoir qui parle : chaque personnage peut être lu par une voix différente.`;
 
 /* Voix Google : comme la voix simple, mais avec quelques balises qu'elle sait jouer (vitesse, hauteur, volume, silences) */
+/* v63 : pour les voix Google, les onomatopées sont ÉCRITES pour être bien jouées (conseil de Gemini pour Chirp 3 HD) :
+   voyelles étirées, bruit isolé par la ponctuation, MAJUSCULES pour l'emphase, virgules entre les bruits répétés. */
 const CONSIGNE_VOIX_GOOGLE = CONSIGNE_VOIX_SIMPLE
   .replace('TRÈS IMPORTANT — VOIX DE SYNTHÈSE SIMPLE. Cette histoire sera lue par une voix qui NE comprend PAS les balises audio et prononce mal les effets écrits.',
-    'TRÈS IMPORTANT — VOIX GOOGLE. Cette histoire sera lue par une voix de synthèse qui comprend SEULEMENT quelques balises et prononce mal les effets écrits.')
+    'TRÈS IMPORTANT — VOIX GOOGLE. Cette histoire sera lue par une voix de synthèse Google (Chirp 3 HD) qui comprend SEULEMENT quelques balises et qui lit EXACTEMENT ce qui est écrit : les effets passent par l\'écriture.')
+  .replace('- Aucun son étiré : jamais « Ouuuuh », « Trèèès », « Crrrac », « Vrouuum ». Écris « Ouh », « très », « crac », « vroum ».',
+    '- Les ONOMATOPÉES, trois règles : (1) étire toi-même les voyelles, car la voix lit ce qu\'elle voit : « La voiture fait... vrooooom ! », « Baaaam ! », « Splaaash ! » ; (2) isole chaque bruit par la ponctuation pour que la voix prenne son souffle avant : « Le loup souffle sur la maison. Et... POUF ! Elle s\'envole. » ; (3) une virgule entre les bruits répétés : « Toc, toc, toc ! Y a quelqu\'un ? ». Les mots ordinaires, eux, ne sont jamais étirés (« très », pas « trèèès »).')
+  .replace('- Aucun mot en MAJUSCULES.',
+    '- Les MAJUSCULES servent à l\'emphase, sur un bruit ou UN mot fort par paragraphe au plus (« POUF ! », « BOUM ! ») ; jamais sur une phrase entière.')
+  .replace('- Onomatopées courtes, connues, qui se prononcent comme elles s\'écrivent : vroum, plouf, boum, crac, toc toc, miaou, ouaf, atchoum. Pas de lettres répétées, pas d\'onomatopée inventée imprononçable.',
+    '- Onomatopées connues et prononçables (vroum, plouf, boum, crac, toc, miaou, ouaf, atchoum), étirées comme à la règle 1 ; pas d\'onomatopée inventée imprononçable (pas de suite de consonnes).')
   .replace('- AUCUNE balise entre crochets, nulle part.',
     '- Balises permises, et SEULEMENT celles-ci, en anglais entre crochets, juste avant la phrase ou la réplique qu\'elles colorent, avec parcimonie (une toutes les deux ou trois phrases au plus) : émotions [whispers] [softly] [excited] [happy] [sad] [scared] [surprised] [amazed] [grumpy] ; manière [slowly] [quickly] [mysteriously] [dramatically] [warmly] [sleepy] ; voix d\'un personnage juste avant sa réplique entre guillemets [deep voice] [squeaky voice] [tiny voice] [old voice] [booming voice] (chaque personnage garde toujours la même) ; [pause] pour un vrai silence. Aucune autre balise, jamais de réaction comme [laughs] ou [sighs] : écris-la avec des mots.');
 /* v57 : sans idée du parent, des graines tirées au sort (une liste fixe d'exemples donnait 3 fois la même histoire :
@@ -2918,8 +2930,8 @@ const SCHEMA_VOIX = {
   required: ['personnages', 'segments']
 };
 const MS_HOMMES = ['fr-CA-JeanNeural', 'fr-CA-AntoineNeural', 'fr-CA-ThierryNeural'];
-async function distribuerRoles(texte, onStatus) {
-  const propre = paras(pourVoixSimple(texte)).join('\n\n');
+async function distribuerRoles(texte, onStatus, google) {
+  const propre = paras(google ? stripTags(texte) : pourVoixSimple(texte)).join('\n\n');
   const user = [
     'Voici une histoire pour enfants. Découpe-la en morceaux pour une lecture à plusieurs voix.',
     '- Recopie TOUT le texte, mot pour mot, sans rien ajouter, enlever ni corriger, dans l\'ordre.',
@@ -3560,7 +3572,7 @@ async function ttsGcloudMulti(texte, onStatus, prog, neutre) {
   if (!gcCle() || !gcVoix()) throw new Error('voix Google pas choisies');
   const pl = gcPalierOuErreur(texte);
   onStatus('<span class="spin"></span>Gemini distribue les rôles…');
-  const j = await distribuerRoles(texte, onStatus);
+  const j = await distribuerRoles(texte, onStatus, true);
   const narr = gcVoixDe(pl), liste = await gcListe(pl);
   const pool = g => liste.filter(v => v.g === g && v.n !== narr).map(v => v.n);
   const F = pool('FEMALE'), M = pool('MALE');
