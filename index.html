@@ -601,7 +601,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v47</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v48</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -1522,9 +1522,26 @@ $('btn-preview-p').onclick = () => { saveSettings(); nouvelExtrait();
   status($('set-status'), '✔ Lecture de l’extrait (voix du téléphone, gratuite)', 'ok'); parler([stripTags(EXTRAIT())], () => {}, () => {}); };
 
 /* Réessaie automatiquement si le service est surchargé (429 / 5xx) */
+/* Connexion coupée (« Failed to fetch » : réseau perdu, écran éteint, passage Wi-Fi ↔ cellulaire) :
+   on réessaie jusqu'à 3 fois en attendant que le réseau revienne, au lieu d'abandonner tout de suite.
+   Avant (jusqu'à v47), seules les erreurs RENVOYÉES par le serveur étaient réessayées. Signalé le 2026-10-14. */
+const MSG_RESEAU = 'La connexion avec le serveur a coupé (réseau perdu ou écran éteint), même après 3 essais. Vérifie le réseau et réessaie.';
+const estCoupure = e => e instanceof TypeError || /failed to fetch|network|load failed|fetch failed/i.test(e?.message || '');
+async function reseau(fn, onCoupure) {
+  for (let i = 1; ; i++) {
+    try { return await fn(); }
+    catch (e) {
+      if (!estCoupure(e)) throw e;
+      if (i > 3) throw new Error(MSG_RESEAU);
+      onCoupure?.(i);
+      if (!navigator.onLine) await new Promise(ok => { const f = () => { removeEventListener('online', f); ok(); }; addEventListener('online', f); setTimeout(f, 30000); });
+      await sleep(3000 * i);
+    }
+  }
+}
 async function withRetry(fn, onRetry) {
   for (let i = 1; ; i++) {
-    const r = await fn();
+    const r = await reseau(fn, n => onRetry?.(n, true));
     if (r.ok || i > 2 || !(r.status === 429 || r.status >= 500)) return r;
     onRetry?.(i);
     await sleep(2000 * 2 ** (i - 1));
@@ -1617,7 +1634,7 @@ async function appelGemini(user, schema, onStatus, opts = {}) {
   for (const model of models) {
     r = await withRetry(() => gFetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, body
-    }), n => onStatus(`<span class="spin"></span>Gemini est occupé, nouvel essai (${n}/2)…`));
+    }), (n, coupure) => onStatus(coupure ? `<span class="spin"></span>📶 Connexion coupée, nouvel essai (${n}/3)… garde l’écran allumé` : `<span class="spin"></span>Gemini est occupé, nouvel essai (${n}/2)…`));
     if (r.ok || !(r.status === 404 || r.status === 429 || r.status >= 500)) break;
     onStatus(`<span class="spin"></span>${model} indisponible, essai d'un autre modèle…`);
   }
@@ -1947,10 +1964,10 @@ async function dessinerGemini(s, sc, refs) {
   let derniere = '';
   for (const model of IMAGE_MODELS) {
     for (let essai = 1; essai <= 3; essai++) {
-      const r = await gFetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+      const r = await reseau(() => gFetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
         body: JSON.stringify({ contents: [{ parts }], generationConfig: { responseModalities: ['TEXT', 'IMAGE'] } })
-      });
+      }));
       if (r.ok) {
         const d = await r.json();
         const im = (d.candidates?.[0]?.content?.parts || []).find(x => x.inlineData?.data);
@@ -2156,6 +2173,15 @@ addEventListener('scroll', () => { if (!ecranRaf) ecranRaf = requestAnimationFra
    durée des fois précédentes (même longueur, même format), et s'arrête à 98 % jusqu'à la vraie fin.
    Images : celles qui sont finies + l'avancement estimé de celles en cours. Voix : les vrais morceaux enregistrés. */
 const FAB = { histoire: null, images: null, voix: null };
+/* Pendant la fabrication, l'écran reste allumé : un écran qui s'éteint coupe souvent les longues attentes (« Failed to fetch »). */
+let verrouFab = null, veutAllume = false;
+async function ecranAllume(oui) {
+  veutAllume = oui;
+  if (oui && !verrouFab && document.visibilityState === 'visible') {
+    try { verrouFab = await navigator.wakeLock?.request('screen'); verrouFab?.addEventListener('release', () => { verrouFab = null; }); } catch {}
+  } else if (!oui && verrouFab) { try { verrouFab.release(); } catch {} verrouFab = null; }
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && veutAllume) ecranAllume(true); });
 let fabFin = null, fabReduit = false;
 const fabEstime = (t0, attendu) => { const f = (Date.now() - t0) / attendu; return f < 1 ? 90 * f : 90 + 8 * (1 - Math.exp(-(f - 1) * 2)); };
 function fabMaj(ph, o) { FAB[ph] = o === null ? null : { ...(FAB[ph] || {}), ...o }; fabDessiner(); }
@@ -2174,6 +2200,7 @@ function fabDessiner() {
     row.querySelector('.fab-det').textContent = x.det || '';
   }
   const actif = lignes.some(([, x]) => x.etat === 'actif' || x.etat === 'attente');
+  ecranAllume(actif);
   $('fab-titre').textContent = actif ? 'Fabrication de l\'histoire' : lignes.some(([, x]) => x.etat === 'err') ? 'Fabrication : un souci' : '✔ Tout est prêt';
   clearTimeout(fabFin);
   if (!actif) fabFin = setTimeout(() => { FAB.histoire = FAB.images = FAB.voix = null; fabDessiner(); }, 8000);
