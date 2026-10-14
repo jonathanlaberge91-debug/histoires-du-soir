@@ -196,3 +196,6 @@ Astuce : `…/#gemini=CLÉ&eleven=CLÉ&voice=VOICE_ID` enregistre les clés en u
 
 ## v61 — les histoires des autres appareils arrivent toutes seules (2026-10-14)
 - Constat : chaque appareil a sa propre copie (IndexedDB) ; Maison n'est que la sauvegarde, et la récupération ne se faisait qu'en touchant ☁️. Maintenant `srvRecuperer(true)` tourne à l'ouverture (après `rafraichirSession`) et à chaque visite de Histoires (au plus une fois par 2 min, jamais deux en même temps). ☁️ reste pour forcer. Non synchronisé : les suppressions, et les histoires d'avant le 13 oct. (Google Drive). Test : scratchpad `test_v61.js`.
+
+## v62 — fermer la fiche de l'histoire (2026-10-14)
+- Bouton ✕ en haut à droite de la fiche (`fermerHistoire`) : arrête la lecture (voix enregistrée ou du téléphone), vide le lecteur, cache la fiche, le petit lecteur et l'image en haut, remonte en haut de Créer. L'histoire reste dans Histoires. Caché en mode nuit. Test : scratchpad `test_v62.js`.

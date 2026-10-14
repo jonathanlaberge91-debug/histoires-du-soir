@@ -538,6 +538,10 @@
   .reglages { gap: 14px; }
 
   /* ───── l'histoire ouverte : posée sous une tablette ───── */
+  .fermer-histoire { position: absolute; top: 10px; right: 10px; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--meuble-bord); background: var(--surface2); color: var(--doux); font: 800 1rem var(--f-texte); cursor: pointer; z-index: 2; }
+  .fermer-histoire:hover { color: var(--texte); }
+  #s-title { padding-right: 44px; }
+  body.nuit .fermer-histoire { display: none; }
   #story-card { position: relative; margin-top: 34px; background: var(--surface-pleine); border-color: var(--meuble-bord); border-top: 0; border-radius: 0 0 var(--r) var(--r); }
   #story-card::before { content: ""; position: absolute; left: -6px; right: -6px; top: -16px; height: 16px; border-radius: 6px 6px 2px 2px; background: linear-gradient(var(--bois1), var(--bois2)); }
   #story-card .chap { display: inline-block; color: var(--bois-txt); text-shadow: var(--bois-lueur); }
@@ -697,7 +701,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v61</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v62</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -860,6 +864,7 @@
 
   <div class="card" id="story-card" style="display:none">
     <img id="cover" class="cover" alt="" style="display:none">
+    <button type="button" class="fermer-histoire" id="btn-fermer-histoire" title="Fermer (l'histoire reste dans Histoires)">✕</button>
     <div class="chap" id="s-chap"></div>
     <h2 id="s-title"></h2>
     <div class="hint" id="drive-info" style="margin-top:0"></div>
@@ -4521,6 +4526,21 @@ async function fichierServeur(rec, nom, jf) {
   if (!r.ok) throw new Error('fichier illisible sur le serveur (' + r.status + ')');
   return r.blob();
 }
+/* v62 : fermer la fiche de l'histoire (elle reste dans Histoires). Demandé par Jonathan le 2026-10-14 :
+   une histoire finie restait collée en bas de la page Créer. */
+function fermerHistoire() {
+  arreterParole();
+  const pl = $('player'); try { pl.pause(); } catch {} pl.removeAttribute('src'); pl.style.display = 'none';
+  if (audioUrl) { URL.revokeObjectURL(audioUrl); audioUrl = null; }
+  file = []; fileIdx = 0; lectureEnFile = false;
+  current = null; litIdx = -1;
+  $('story-card').style.display = 'none';
+  $('s-text').innerHTML = ''; $('choix-zone').style.display = 'none';
+  status($('gen-status'), ''); status($('tts-status'), '');
+  ecranBlob = null; majEcran(); majMiniLecteur();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+$('btn-fermer-histoire').onclick = fermerHistoire;
 /* v61 : la récupération est AUTOMATIQUE (à l'ouverture, et à chaque visite de Histoires, au plus une fois par 2 min) :
    avant, un appareil ne voyait les histoires faites sur l'autre qu'en touchant ☁️ (signalé par Jonathan le 2026-10-14).
    Le bouton ☁️ reste pour forcer. */
