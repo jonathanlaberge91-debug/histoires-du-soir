@@ -164,3 +164,7 @@ Astuce : `…/#gemini=CLÉ&eleven=CLÉ&voice=VOICE_ID` enregistre les clés en u
 - Bug : au DERNIER choix d'une histoire à choix, « Raconter » voyait que toutes les parties avaient un son et rejouait l'histoire depuis le début. Maintenant `lirePartieChoisie(s)` joue seulement la partie choisie (repli sur « Raconter » si son son manque, si la voix arrive du serveur ou s'il faut choisir une voix).
 - Une nouvelle version de l'app ne recharge plus la page au milieu d'une histoire (en pause comprise), quand des choix attendent, pendant la voix du téléphone ou une fabrication suivie.
 - Test : scratchpad `test_v52.js` (choix, rechargement = « téléphone fermé », second choix).
+
+## v53-v54 (2026-10-14)
+- v53 : RÉÉCOUTER une histoire à choix la recommence au début, et les choix reviennent (avant : le chemin déjà choisi rejouait sans rien demander). Pas quand l'app lit elle-même la partie qu'on vient de choisir (`lectureApresChoix`).
+- v54 : 8 musiques de fond FABRIQUÉES par l'app (aucun fichier, aucun droit d'auteur) : boîte à musique (celle d'avant), Berceuse de Brahms, Au clair de la lune, Frère Jacques (domaine public), piano doux, harpe (corde pincée Karplus-Strong), nappes étoilées, carillon du vent. Boucles sans coupure, même volume ressenti (`normaliser`, énergie moyenne visée). Choix `set:musique-choix` ('' = aucune ; l'ancienne case « musique douce » cochée = boîte à musique) + volume 0 à 80 %, dans Réglages (avec « ▶️ Essayer ») et dans ⚙️ du petit lecteur (change en pleine écoute). Tests : scratchpad `test_v52.js`, `test_v54.js`.

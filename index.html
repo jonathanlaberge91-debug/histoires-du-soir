@@ -639,6 +639,10 @@
   body.mini-on .raconte { bottom: calc(136px + env(safe-area-inset-bottom)); }
   body.nuit .mini-lecteur { bottom: calc(12px + env(safe-area-inset-bottom)); opacity: .45; background: #111; border-color: #222; }
   body.nuit #ml-jouer { background: #3a2c1a; color: #e0b878; }
+
+  /* ═══════════════ v54 : musiques de fond ═══════════════ */
+  .mr-musiques button { flex: 1 1 45%; text-align: left; padding: 0 10px; font-size: .8rem; }
+  #mr-vol { width: 100%; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 </head>
@@ -647,7 +651,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v53</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v54</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -1019,9 +1023,12 @@
             </select></div>
         </div>
         <p class="hint">Le nombre d'images se choisit à la création de chaque histoire. Dessinées par Gemini (quelques secondes chacune, environ 4 ¢ l'image, la couverture sert de modèle aux autres). Si Gemini refuse, le dessinateur gratuit Pollinations prend le relais (1 à 3 min par image).</p>
-        <label class="check"><input type="checkbox" id="opt-musique">Musique douce en fond</label>
+        <label class="check" hidden><input type="checkbox" id="opt-musique">Musique douce en fond</label>
+        <label for="musique-choix">Musique de fond</label>
+        <div class="avec-micro"><select id="musique-choix"></select><button type="button" class="sec" id="btn-essai-musique" style="height:46px">▶️ Essayer</button></div>
         <div class="regle"><label for="musique-vol">Volume de la musique</label><output data-pour="musique-vol"></output></div>
-        <input id="musique-vol" type="range" min="0.05" max="0.6" step="0.05" value="0.2">
+        <input id="musique-vol" type="range" min="0" max="0.8" step="0.05" value="0.2">
+        <p class="hint">Aussi pendant l'histoire : ⚙️ du petit lecteur en bas. Toutes les musiques sont faites par l'app (sans réseau, sans droits d'auteur).</p>
         <label for="lang">Langue de l'histoire</label>
         <select id="lang">
           <option value="fr-qc">Français (Québec)</option>
@@ -1338,14 +1345,131 @@ function genererMusique() {
   basse.forEach((m, i) => note(m, i * temps * 4, .16, 1.8));
   return wavFromFloat(f, RATE_FOND);
 }
+/* ==================== MUSIQUES DE FOND (v54) ====================
+   Demandé par Jonathan le 2026-10-14 : choisir la musique et son volume. Toutes sont FABRIQUÉES ici (aucun
+   fichier, aucun droit d'auteur : airs du domaine public ou inventés), en boucle sans coupure (les notes qui
+   dépassent la fin reviennent au début), et toutes au même niveau sonore. */
+const MUSIQUES = {
+  boite: { nom: '🎶 Boîte à musique', aide: 'la berceuse de toujours' },
+  brahms: { nom: '🌙 Berceuse de Brahms', aide: 'boîte à musique' },
+  lune: { nom: '🌝 Au clair de la lune', aide: 'célesta' },
+  jacques: { nom: '🛎️ Frère Jacques', aide: 'boîte à musique, tout doux' },
+  piano: { nom: '🎹 Piano doux', aide: 'arpèges lents' },
+  harpe: { nom: '🪕 Harpe', aide: 'cordes pincées' },
+  etoiles: { nom: '🌌 Nappes étoilées', aide: 'ambiance qui flotte' },
+  carillon: { nom: '🎐 Carillon du vent', aide: 'petites clochettes au hasard' }
+};
+const hz = m => 440 * Math.pow(2, (m - 69) / 12);
+/* Une note qui sonne puis s'éteint ; harm = poids des harmoniques ; les débordements reviennent au début (boucle) */
+function noteBoucle(f, midi, debut, amp, decay, harm = [1, .28, .08], attaque = 80) {
+  const n = f.length, fr = hz(midi), d = Math.round(debut * RATE_FOND), long = Math.min(n, Math.round(RATE_FOND * decay * 5));
+  for (let k = 0; k < long; k++) {
+    const t = k / RATE_FOND, e = amp * Math.exp(-t / decay) * Math.min(1, k / attaque);
+    let v = 0;
+    for (let h = 0; h < harm.length; h++) v += harm[h] * Math.sin(2 * Math.PI * fr * (h + 1) * t);
+    f[(d + k) % n] += e * v;
+  }
+}
+/* Corde pincée (Karplus-Strong) */
+function cordeBoucle(f, midi, debut, amp, tenue = .996) {
+  const n = f.length, p = Math.max(2, Math.round(RATE_FOND / hz(midi))), d = Math.round(debut * RATE_FOND), long = Math.min(n, RATE_FOND * 4);
+  const buf = new Float32Array(p); let x = 0;
+  for (let i = 0; i < p; i++) buf[i] = Math.random() * 2 - 1;
+  for (let k = 0; k < long; k++) {
+    const i = k % p, j = (k + 1) % p, v = buf[i];
+    buf[i] = tenue * .5 * (buf[i] + buf[j]);
+    x += .5 * (v - x);                                        // un peu moins brillant
+    f[(d + k) % n] += amp * x * Math.min(1, k / 40);
+  }
+}
+/* Une mélodie [[note MIDI ou 0, durée en temps], …] */
+function melodie(f, notes, temps, depart, fn) { let t = depart; for (const [m, d] of notes) { if (m) fn(m, t, d); t += d * temps; } return t; }
+const dureeMel = notes => notes.reduce((a, [, d]) => a + d, 0);
+/* Même volume RESSENTI pour toutes (énergie moyenne visée), sans dépasser un pic de 0,85 */
+function normaliser(f, rmsCible = .13, picMax = .85) {
+  let pic = 0, e = 0; for (const v of f) { pic = Math.max(pic, Math.abs(v)); e += v * v; }
+  const rms = Math.sqrt(e / f.length); if (!pic || !rms) return f;
+  const g = Math.min(rmsCible / rms, picMax / pic); for (let i = 0; i < f.length; i++) f[i] *= g; return f;
+}
+/* Hasard qui donne toujours la même musique */
+const hasard = graine => () => { graine = (graine * 1103515245 + 12345) & 0x7fffffff; return graine / 0x7fffffff; };
+const C5 = 72, D5 = 74, E5 = 76, F5 = 77, G5 = 79, A5 = 81, B5 = 83, C6 = 84, G4 = 67, A4 = 69, B4 = 71;
+const AIRS = {
+  // Brahms, « Wiegenlied » (1868, domaine public), en do
+  brahms: [[E5, .5], [E5, .5], [G5, 2], [E5, .5], [E5, .5], [G5, 2], [E5, .5], [G5, .5], [C6, 1], [B5, 1.5], [A5, .5], [A5, 1], [G5, 1],
+    [D5, .5], [E5, .5], [F5, 1], [D5, 1], [D5, .5], [E5, .5], [F5, 2], [D5, .5], [F5, .5], [B5, .5], [A5, .5], [G5, 1], [B5, 1], [C6, 2],
+    [C5, .5], [C5, .5], [C6, 2], [A5, .5], [F5, .5], [G5, 2], [E5, .5], [C5, .5], [F5, 1], [G5, 1], [A5, 1], [G5, 2],
+    [C5, .5], [C5, .5], [C6, 2], [A5, .5], [F5, .5], [G5, 2], [E5, .5], [C5, .5], [F5, 1], [E5, 1], [D5, 1], [C5, 3]],
+  // « Au clair de la lune » (traditionnel)
+  lune: [[C5, 1], [C5, 1], [C5, 1], [D5, 1], [E5, 2], [D5, 2], [C5, 1], [E5, 1], [D5, 1], [D5, 1], [C5, 4],
+    [C5, 1], [C5, 1], [C5, 1], [D5, 1], [E5, 2], [D5, 2], [C5, 1], [E5, 1], [D5, 1], [D5, 1], [C5, 4],
+    [D5, 1], [D5, 1], [D5, 1], [D5, 1], [A4, 2], [A4, 2], [D5, 1], [C5, 1], [B4, 1], [A4, 1], [G4, 4],
+    [C5, 1], [C5, 1], [C5, 1], [D5, 1], [E5, 2], [D5, 2], [C5, 1], [E5, 1], [D5, 1], [D5, 1], [C5, 4]],
+  // « Frère Jacques » (traditionnel)
+  jacques: [[C5, 1], [D5, 1], [E5, 1], [C5, 1], [C5, 1], [D5, 1], [E5, 1], [C5, 1], [E5, 1], [F5, 1], [G5, 2], [E5, 1], [F5, 1], [G5, 2],
+    [G5, .5], [A5, .5], [G5, .5], [F5, .5], [E5, 1], [C5, 1], [G5, .5], [A5, .5], [G5, .5], [F5, .5], [E5, 1], [C5, 1],
+    [C5, 1], [G4, 1], [C5, 2], [C5, 1], [G4, 1], [C5, 2]]
+};
+function genererMusiqueFond(k) {
+  if (k === 'boite') return genererMusique();                 // la berceuse d'avant, inchangée
+  let f;
+  if (AIRS[k]) {
+    const temps = k === 'jacques' ? .72 : k === 'lune' ? .62 : .55, air = AIRS[k];
+    f = new Float32Array(Math.round(RATE_FOND * temps * (dureeMel(air) + 2)));       // 2 temps de silence avant de reprendre
+    const timbre = k === 'lune' ? [1, .18, .1, .04] : [1, .28, .08];
+    melodie(f, air, temps, 0, (m, t) => noteBoucle(f, m, t, .22, k === 'lune' ? .7 : .9, timbre));
+    // une basse douce sur chaque mesure (do / fa / sol)
+    const mesure = (k === 'brahms' ? 3 : 4) * temps, nb = Math.floor(f.length / RATE_FOND / mesure);
+    for (let i = 0; i < nb; i++) noteBoucle(f, [48, 48, 53, 55][i % 4], i * mesure, .12, 1.6);
+  } else if (k === 'piano') {
+    const accords = [[48, 55, 60, 64, 67, 64, 60, 55], [45, 52, 57, 60, 64, 60, 57, 52], [41, 48, 53, 57, 60, 57, 53, 48], [43, 50, 55, 59, 62, 59, 55, 50]];
+    const pas = .46; f = new Float32Array(Math.round(RATE_FOND * pas * 8 * 2 * accords.length));
+    accords.forEach((a, i) => { for (let r = 0; r < 2; r++) a.forEach((m, j) => noteBoucle(f, m + 12, (i * 16 + r * 8 + j) * pas, j === 0 ? .2 : .13, 1.4, [1, .5, .22, .1, .04], 300)); });
+  } else if (k === 'harpe') {
+    const accords = [[53, 57, 60, 65, 69, 65, 60, 57], [48, 55, 60, 64, 67, 64, 60, 55], [50, 57, 62, 65, 69, 65, 62, 57], [46, 53, 58, 62, 65, 62, 58, 53]];
+    const pas = .4; f = new Float32Array(Math.round(RATE_FOND * pas * 16 * accords.length));
+    accords.forEach((a, i) => { for (let r = 0; r < 2; r++) a.forEach((m, j) => cordeBoucle(f, m + 12, (i * 16 + r * 8 + j) * pas, .35)); });
+  } else if (k === 'etoiles') {
+    const accords = [[48, 55, 59, 64], [45, 52, 55, 60], [41, 48, 52, 57], [43, 50, 55, 62]], tenue = 7;
+    const n = Math.round(RATE_FOND * tenue * accords.length); f = new Float32Array(n);
+    accords.forEach((a, i) => a.forEach(m => {
+      for (const ecart of [-.35, 0, .4]) {
+        const fr = hz(m + 12) + ecart, d = Math.round(i * tenue * RATE_FOND), long = Math.round((tenue + 3) * RATE_FOND);
+        for (let s = 0; s < long; s++) {
+          const t = s / RATE_FOND, env = Math.min(1, t / 2.2) * Math.min(1, Math.max(0, (tenue + 3 - t) / 3));
+          f[(d + s) % n] += .05 * env * (1 + .25 * Math.sin(2 * Math.PI * .15 * t)) * Math.sin(2 * Math.PI * fr * t);
+        }
+      }
+    }));
+  } else {                                                    // carillon : clochettes au hasard sur la gamme pentatonique
+    const r = hasard(7), gamme = [84, 86, 88, 91, 93, 96]; f = new Float32Array(RATE_FOND * 30);
+    for (let t = .3; t < 29; t += .55 + r() * 1.4) noteBoucle(f, gamme[Math.floor(r() * gamme.length)], t, .1 + r() * .08, 2.6, [1, 0, .35, 0, .15], 30);
+    for (let i = 0; i < 4; i++) noteBoucle(f, [60, 57, 53, 55][i], i * 7.5, .07, 3);
+  }
+  return wavFromFloat(normaliser(f), RATE_FOND);
+}
+
 const fonds = {};   // cache des fichiers générés
-const urlFond = k => fonds[k] || (fonds[k] = URL.createObjectURL(k === 'musique' ? genererMusique() : genererBruit(k)));
+const urlFond = k => fonds[k] || (fonds[k] = URL.createObjectURL(k.startsWith('m:') ? genererMusiqueFond(k.slice(2)) : k === 'musique' ? genererMusique() : genererBruit(k)));
 
 /* Musique douce pendant la narration */
 const musique = new Audio(); musique.loop = true;
+/* v54 : quelle musique (set:musique-choix ; '' = aucune). Avant : une case « musique douce » = la boîte à musique. */
+const musiqueChoix = () => { const c = store.get('set:musique-choix', null); return c !== null ? c : (store.get('set:opt-musique') === '1' ? 'boite' : ''); };
+function choisirMusique(c) {
+  store.set('set:musique-choix', c);
+  $('opt-musique').checked = !!c; store.set('set:opt-musique', c ? '1' : '0');
+  if ($('musique-choix')) $('musique-choix').value = c;
+  const joue = !musique.paused;
+  if (!c) { musique.pause(); majResumes?.(); return; }
+  if (musique.dataset.k !== c) { musique.src = urlFond('m:' + c); musique.dataset.k = c; }
+  if (joue || lectureEnCours?.()) musique.play().catch(() => {});
+  majResumes?.();
+}
 function musiqueJouer() {
-  if (!$('opt-musique').checked) return;
-  if (!musique.src) musique.src = urlFond('musique');
+  const c = musiqueChoix();
+  if (!c) return;
+  if (musique.dataset.k !== c) { musique.src = urlFond('m:' + c); musique.dataset.k = c; }
   musique.volume = parseFloat($('musique-vol').value);
   musique.play().catch(() => {});
 }
@@ -1422,7 +1546,19 @@ function saveSettings() {
   CHECKS.forEach(id => store.set('set:' + id, $(id).checked ? '1' : '0'));
 }
 $('btn-save').onclick = () => { saveSettings(); status($('set-status'), '✔ Réglages enregistrés', 'ok'); };
-$('musique-vol').oninput = () => { musique.volume = parseFloat($('musique-vol').value); };
+$('musique-vol').oninput = () => { musique.volume = parseFloat($('musique-vol').value); if ($('mr-vol')) $('mr-vol').value = $('musique-vol').value; };
+$('musique-choix').innerHTML = '<option value="">Aucune</option>' + Object.entries(MUSIQUES).map(([k, m]) => `<option value="${k}">${m.nom} — ${m.aide}</option>`).join('');
+$('musique-choix').value = musiqueChoix();
+$('musique-choix').onchange = () => choisirMusique($('musique-choix').value);
+let essaiMusique = null;
+$('btn-essai-musique').onclick = () => {
+  if (essaiMusique) { clearTimeout(essaiMusique); essaiMusique = null; musique.pause(); $('btn-essai-musique').textContent = '▶️ Essayer'; return; }
+  const c = $('musique-choix').value || 'boite';
+  if (musique.dataset.k !== c) { musique.src = urlFond('m:' + c); musique.dataset.k = c; }
+  musique.volume = parseFloat($('musique-vol').value); musique.currentTime = 0; musique.play().catch(() => {});
+  $('btn-essai-musique').textContent = '⏹️ Arrêter';
+  essaiMusique = setTimeout(() => $('btn-essai-musique').click(), 20000);
+};
 CHECKS.forEach(id => $(id).onchange = () => { store.set('set:' + id, $(id).checked ? '1' : '0'); if (id === 'opt-musique' && !$(id).checked) musiquePause(); });
 
 const EXTRAIT = () => $('lang').value === 'en'
@@ -4498,7 +4634,7 @@ function majCurseurs() { document.querySelectorAll('output[data-pour]').forEach(
 /* Résumés sous chaque section, et ✓ sur les clés remplies */
 function majResumes() {
   majMoteur(); majCurseurs();
-  const p = [$('opt-suivre').checked && 'texte qui suit', 'images ' + $('img-style').selectedOptions[0].text.toLowerCase(), $('opt-musique').checked && 'musique'].filter(Boolean);
+  const p = [$('opt-suivre').checked && 'texte qui suit', 'images ' + $('img-style').selectedOptions[0].text.toLowerCase(), MUSIQUES[musiqueChoix()]?.nom.replace(/^\S+\s/, '').toLowerCase()].filter(Boolean);
   $('res-pendant').textContent = (p.join(' · ') || 'rien de plus') + ' · ' + $('lang').selectedOptions[0].text;
   $('res-drive').textContent = !$('opt-drive').checked ? 'Désactivée' : jetonMaison() ? 'Activée' : 'Connecte-toi à l\'app Maison';
   const cles = ['k-gemini', 'k-gcloud'];
@@ -4887,20 +5023,27 @@ $('ml-reglages').onclick = () => {
     <p class="etg-sous" style="margin-top:4px">Vitesse <small>· pour toutes les voix</small></p>
     <div class="ml-choix">${VITESSES.map(v => `<button type="button" data-vit="${v}" class="${v === vitesseLecture() ? 'on' : ''}">${fmtVitesse(v)}</button>`).join('')}</div>
     <label class="check"><input type="checkbox" id="mr-suivre" ${$('opt-suivre').checked ? 'checked' : ''}>Le texte suit la lecture</label>
-    <label class="check"><input type="checkbox" id="mr-musique" ${$('opt-musique').checked ? 'checked' : ''}>Musique douce en fond</label>
+    <p class="etg-sous">Musique de fond</p>
+    <div class="ml-choix mr-musiques"><button type="button" data-mus="" class="${musiqueChoix() ? '' : 'on'}">Aucune</button>${Object.entries(MUSIQUES).map(([k, m]) => `<button type="button" data-mus="${k}" class="${musiqueChoix() === k ? 'on' : ''}">${m.nom}</button>`).join('')}</div>
+    <div class="regle"><label for="mr-vol">Volume de la musique</label></div>
+    <input id="mr-vol" type="range" min="0" max="0.8" step="0.05" value="${$('musique-vol').value}">
     <label for="mr-son">Après l'histoire, un son pour s'endormir</label>
     <select id="mr-son">${[...$('sl-son').options].map(o => `<option value="${o.value}" ${o.value === $('sl-son').value ? 'selected' : ''}>${esc(o.text)}</option>`).join('')}</select>
     <div class="actions"><button type="button" class="sec" id="mr-nuit">🌙 Mode nuit</button><button type="button" class="sec" id="mr-arreter">⏹️ Arrêter la lecture</button></div>
     <button type="button" class="big" id="mr-ok">C'est bon</button>`;
   document.body.classList.add('etg-ouvert');
-  f.onclick = e => { const b = e.target.closest('[data-vit]'); if (b) poserVitesse(+b.dataset.vit); };
+  f.onclick = e => {
+    const b = e.target.closest('[data-vit]'); if (b) poserVitesse(+b.dataset.vit);
+    const m = e.target.closest('[data-mus]');
+    if (m) { choisirMusique(m.dataset.mus); f.querySelectorAll('[data-mus]').forEach(x => x.classList.toggle('on', x === m)); }
+  };
+  f.oninput = e => { if (e.target.id === 'mr-vol') { $('musique-vol').value = e.target.value; musique.volume = parseFloat(e.target.value); store.set('set:musique-vol', e.target.value); majCurseurs?.(); } };
   f.onchange = e => {
     const fixe = (id, src) => { $(id).checked = $(src).checked; $(id).dispatchEvent(new Event('change', { bubbles: true })); };
     if (e.target.id === 'mr-suivre') { fixe('opt-suivre', 'mr-suivre'); if ($('opt-suivre').checked) revenirAuTexte(); }
-    if (e.target.id === 'mr-musique') fixe('opt-musique', 'mr-musique');
     if (e.target.id === 'mr-son') { $('sl-son').value = $('mr-son').value; $('sl-son').dispatchEvent(new Event('change')); }
   };
-  const fermer = () => { f.onclick = f.onchange = null; document.body.classList.remove('etg-ouvert'); };
+  const fermer = () => { f.onclick = f.onchange = f.oninput = null; document.body.classList.remove('etg-ouvert'); };
   $('mr-ok').onclick = fermer;
   $('mr-nuit').onclick = () => { fermer(); $('btn-nuit').click(); };
   $('mr-arreter').onclick = () => { fermer(); $('player').pause(); $('player').currentTime = 0; arreterParole(); eclairer(-1); majMiniLecteur(); };
