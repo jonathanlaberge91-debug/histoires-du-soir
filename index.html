@@ -431,7 +431,9 @@
   .etg-choix:empty { display: none; }
   .ses-choix { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 14px; border-radius: var(--r-petit); border: 1px solid var(--meuble-bord);
     background: linear-gradient(var(--meuble1), var(--meuble2)); color: var(--meuble-txt); font: inherit; text-align: left; cursor: pointer; }
-  .ses-choix b { flex: 1; } .ses-choix small { color: var(--doux); font-weight: 700; }
+  .ses-choix .sc-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+  .ses-choix b, .ses-choix small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ses-choix small { color: var(--doux); font-weight: 700; font-size: .78rem; }
   .ses-choix::after { content: "›"; color: var(--bois-txt); font-size: 1.2rem; }
 
   /* ───── le carnet de l'idée ───── */
@@ -599,7 +601,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v45</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v46</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -4282,7 +4284,7 @@ if (!cleGemini()) document.querySelector('#res-cles').closest('details').open = 
     $('etg-choix').innerHTML = enfants.map((e, i) => {
       if (e.absent) return '';
       const n = CHOIX.filter(c => (e.choix || {})[c.k]).length;
-      return `<button type="button" class="ses-choix" data-enfant="${i}"><span>🎨</span><b>${e.nom ? 'Les choix de ' + esc(e.nom) : 'Ses choix'}</b><small>${n ? n + ' choisi' + (n > 1 ? 's' : '') : 'objet, animal, méchant…'}</small></button>`;
+      return `<button type="button" class="ses-choix" data-enfant="${i}"><span>🎨</span><span class="sc-txt"><b>${e.nom ? 'Les choix de ' + esc(e.nom) : 'Ses choix'}</b><small>${n ? n + ' choisi' + (n > 1 ? 's' : '') : 'objet, animal, méchant…'}</small></span></button>`;
     }).join('');
   }
   $('etg-choix').onclick = e => { const b = e.target.closest('[data-enfant]'); if (b) feuilleEnfant(+b.dataset.enfant); };
