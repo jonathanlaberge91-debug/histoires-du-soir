@@ -189,6 +189,7 @@ async function planifier(t, s) {
     I.persoRepris?.length ? `- Ces personnages reviennent d'histoires déjà illustrées : mets-les dans la fiche avec EXACTEMENT cette description : ${I.persoRepris.map(x => x.nom + ': ' + x.visuel).join(' ')}` : '',
     I.dessin ? '- L\'enfant a fait un dessin pour cette histoire : décris les personnages comme dans son dessin.' : '',
     `- « scenes » : ${combien}. Chaque « description » est une seule phrase visuelle et courte : qui (par leur nom, et ce qu'ils sont : « Abby and her puppy Biscuit »), fait quoi, où, l'heure. Les objets importants sont nommés avec leur couleur. Rien d'effrayant.`,
+    '- La saison, la météo et les vêtements viennent de l’histoire : pas de neige, de tuque, de mitaines ni de manteau d’hiver si l’histoire n’en parle pas.',
     '---', morceaux
   ].filter(Boolean).join('\n');
   const sys = 'Tu es directeur artistique de livres pour enfants. Tu réponds en JSON.';

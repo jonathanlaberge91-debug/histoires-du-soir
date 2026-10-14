@@ -685,7 +685,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v55</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v56</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -1242,7 +1242,9 @@ async function majModeles() {
 const LENGTHS = { court: 'environ 350 mots', moyen: 'environ 700 mots', long: 'environ 1200 mots' };
 const LENGTHS_PART = { court: 'environ 150 mots', moyen: 'environ 250 mots', long: 'environ 400 mots' };
 const LANGS = {
-  'fr-qc': `Écris en français avec une saveur québécoise chaleureuse : quelques mots et images d'ici (la cabane à sucre, la tuque, la poudrerie, les bleuets, « mon trésor ») tout en restant un français clair et bien prononçable par une voix de synthèse — pas de joual écrit phonétiquement.`,
+  // v56 : les exemples « cabane à sucre, tuque, poudrerie » mettaient de la NEIGE dans toutes les histoires (et donc les images),
+  // même en ambiance magique ou aventure (vérifié le 2026-10-14). La saveur d'ici passe par la façon de parler, pas par le décor.
+  'fr-qc': `Écris en français avec une saveur québécoise chaleureuse DANS LA FAÇON DE PARLER : des mots tendres et des expressions d'ici dans les dialogues (« mon trésor », « mon cœur », « mon p'tit loup »), tout en restant un français clair et bien prononçable par une voix de synthèse — pas de joual écrit phonétiquement. Le décor et la saison viennent de l'ambiance et de l'idée de l'histoire : n'ajoute JAMAIS de neige, d'hiver, de tuque, de mitaines ni de cabane à sucre si rien ne le demande.`,
   'fr-fr': `Écris en français standard, clair et chaleureux.`,
   'en': `Write the story in English (tags stay in English too). Le JSON garde les clés "titre" et "histoire".`
 };
@@ -2020,6 +2022,7 @@ async function planifierImages(s) {
     s.persoRepris?.length ? `- Ces personnages reviennent d'histoires déjà illustrées : mets-les dans la fiche avec EXACTEMENT cette description : ${s.persoRepris.map(x => x.nom + ': ' + x.visuel).join(' ')}` : '',
     s.dessin ? '- L\'enfant a fait un dessin pour cette histoire : décris les personnages comme dans son dessin.' : '',
     `- « scenes » : ${combien}. Chaque « description » est une seule phrase visuelle et courte : qui (par leur nom, et ce qu'ils sont : « Abby and her puppy Biscuit »), fait quoi, où, l'heure. Les objets importants sont nommés avec leur couleur. Rien d'effrayant.`,
+    '- La saison, la météo et les vêtements viennent de l’histoire : pas de neige, de tuque, de mitaines ni de manteau d’hiver si l’histoire n’en parle pas.',
     '---', morceaux
   ].filter(Boolean).join('\n');
   const sys = 'Tu es directeur artistique de livres pour enfants. Tu réponds en JSON.';
@@ -2456,6 +2459,7 @@ async function suivreTravail(id, { afficher = false } = {}) {
         if (!r.ok) throw new Error('HTTP ' + r.status);
         v = await r.json();
       } catch { await sleep(4000); continue; }
+      if (v.resultat?.info?.essai) { oublierTravail(id); break; }   // essai lancé par Claude sur le serveur : jamais dans la bibliothèque
       for (const ph of ['histoire', 'images', 'voix']) {
         const x = v.phases?.[ph];
         fabMaj(ph, x ? { etat: x.etat, pct: x.pct || 0, fn: null, det: x.det || '' } : null);
