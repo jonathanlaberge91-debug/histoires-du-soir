@@ -170,7 +170,11 @@ const STYLES_GEMINI = {
   aquarelle: 'soft watercolor children\'s picture book style, gentle pastel colors, warm light',
   crayons: 'colored pencil children\'s picture book style, textured paper, warm colors',
   anime: 'cute cartoon animation style, bright cheerful colors, rounded shapes',
-  papier: 'cut paper collage children\'s picture book style, layered paper, soft shadows'
+  papier: 'cut paper collage children\'s picture book style, layered paper, soft shadows',
+  cire: 'wax crayon children\'s drawing style, thick waxy strokes, bright simple colors, childlike',
+  pate: 'claymation plasticine style, modeling clay characters, soft rounded shapes, stop-motion look',
+  vitrail: 'stained glass picture book style, bold black outlines, glowing colored glass panels',
+  bd: 'comic book style for children, clean ink outlines, flat bright colors, friendly cartoon'
 };
 async function planifier(t, s) {
   const I = t.recette.images, nb = I.nb;
@@ -188,6 +192,7 @@ async function planifier(t, s) {
     I.ficheAvant ? `- Ces personnages ont déjà été dessinés dans les chapitres précédents : reprends EXACTEMENT cette fiche, en ajoutant seulement les nouveaux : ${I.ficheAvant}` : '',
     I.persoRepris?.length ? `- Ces personnages reviennent d'histoires déjà illustrées : mets-les dans la fiche avec EXACTEMENT cette description : ${I.persoRepris.map(x => x.nom + ': ' + x.visuel).join(' ')}` : '',
     I.dessin ? '- L\'enfant a fait un dessin pour cette histoire : décris les personnages comme dans son dessin.' : '',
+    I.lumiere === 'doux' ? '- Toutes les scènes sont dans une lumière douce et chaude (fin de journée, lampe, feu, soleil doré), même si l\'histoire se passe la nuit : jamais de scène sombre.' : I.lumiere === 'nuit' ? '- Toutes les scènes se passent la nuit, sous un ciel étoilé, avec une lumière douce (lune, lampions, lucioles), même si l\'histoire se passe le jour.' : '',
     `- « scenes » : ${combien}. Chaque « description » est une seule phrase visuelle et courte : qui (par leur nom, et ce qu'ils sont : « Abby and her puppy Biscuit »), fait quoi, où, l'heure. Les objets importants sont nommés avec leur couleur. Rien d'effrayant.`,
     '- La saison, la météo et les vêtements viennent de l’histoire : pas de neige, de tuque, de mitaines ni de manteau d’hiver si l’histoire n’en parle pas.',
     '---', morceaux
@@ -214,7 +219,7 @@ async function planifier(t, s) {
     scenes.splice(0, scenes.length, ...scenes.filter((sc, k, l) => l.findIndex(x => x.cle === sc.cle) === k));
   }
   if (s.arbre && scenes[0].cle !== 'n') scenes[0].cle = 'n';
-  return { fiche: String(j.fiche || ''), style: I.style || 'aquarelle', scenes };
+  return { fiche: String(j.fiche || ''), style: I.style || 'aquarelle', lumiere: I.lumiere || 'histoire', scenes };
 }
 async function dessinerGemini(illus, sc, refs, modeles) {
   const texte = [
@@ -267,10 +272,10 @@ async function illustrer(t, s) {
     avance(t, 'images', { pct: 10, det: `0 / ${total} images` });
     const premiere = illus.scenes[0];
     enCours.set(premiere.cle, Date.now());
-    const refsCouv = I.dessin && I.refs?.length ? I.refs.slice(0, 1) : (I.refs || []).slice(0, 2);
+    const refsCouv = I.dessin && I.refs?.length ? I.refs.slice(0, 1) : I.memeLook === false ? [] : (I.refs || []).slice(0, 2);
     await ranger(premiere, await dessinerGemini(illus, premiere, refsCouv, I.modeles));
     enCours.delete(premiere.cle);
-    const modele = () => (I.dessin && I.refs?.length) ? I.refs[0] : t.couverture;
+    const modele = () => (I.dessin && I.refs?.length) ? I.refs[0] : I.memeLook === false ? null : t.couverture;
     let k = 1;
     const travailleur = async () => {
       while (k < total) {

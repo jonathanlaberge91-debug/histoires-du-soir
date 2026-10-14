@@ -677,6 +677,18 @@
     .t-choix { flex-direction: column; top: 66%; } .t-choix button { max-width: none; font-size: clamp(18px, 3vh, 30px); }
   }
   body.tele-on .mini-lecteur, body.tele-on .fabrication, body.tele-on nav { display: none !important; }
+
+  /* ═══════════════ v59 : style des histoires ═══════════════ */
+  details.sous-reglage { margin-top: 10px; border: 1px solid var(--meuble-bord); border-radius: var(--r-petit); background: var(--meuble-creux); }
+  details.sous-reglage > summary { list-style: none; cursor: pointer; padding: 11px 13px; font-weight: 800; display: flex; align-items: center; }
+  details.sous-reglage > summary::-webkit-details-marker { display: none; }
+  details.sous-reglage > summary::after { content: "›"; margin-left: auto; color: var(--accent); transition: transform .2s; }
+  details.sous-reglage[open] > summary::after { transform: rotate(90deg); }
+  details.sous-reglage .dedans { padding: 0 13px 13px; }
+  details.sous-reglage label.st-chg { color: var(--accent); }
+  details.sous-reglage label small { font-weight: 700; }
+  details.sous-reglage textarea { min-height: 0; }
+  .prompt-vue { white-space: pre-wrap; font: 500 .8rem/1.45 ui-monospace, Menlo, Consolas, monospace; background: var(--surface2); border-radius: var(--r-petit); padding: 12px; max-height: 38vh; overflow: auto; color: var(--texte); margin: 6px 0 0; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 </head>
@@ -685,7 +697,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v58</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v59</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -1055,6 +1067,10 @@
               <option value="crayons">Crayons de couleur</option>
               <option value="anime">Dessin animé</option>
               <option value="papier">Papier découpé</option>
+              <option value="cire">Crayons de cire</option>
+              <option value="pate">Pâte à modeler</option>
+              <option value="vitrail">Vitrail</option>
+              <option value="bd">Bande dessinée</option>
             </select></div>
         </div>
         <p class="hint">Le nombre d'images se choisit à la création de chaque histoire. Dessinées par Gemini (quelques secondes chacune, environ 4 ¢ l'image, la couverture sert de modèle aux autres). Si Gemini refuse, le dessinateur gratuit Pollinations prend le relais (1 à 3 min par image).</p>
@@ -1070,6 +1086,15 @@
           <option value="fr-fr">Français (France)</option>
           <option value="en">English</option>
         </select>
+      </div>
+    </details>
+
+    <details class="reglage">
+      <summary><span class="r-ic">✍️</span><span class="r-txt"><b>Style des histoires</b><small id="res-style">Comme au départ</small></span></summary>
+      <div class="dedans">
+        <p class="hint" style="margin-top:12px">Chaque réglage change une phrase de la consigne donnée à Gemini. Rien à casser : au pire l'histoire est moins bonne, et « Tout remettre » revient au départ. Le format, les balises pour la voix et la sécurité pour enfants ne se règlent pas.</p>
+        <div id="style-groupes"></div>
+        <div class="actions"><button type="button" class="sec" id="btn-style-voir">👁️ Voir le prompt complet</button><button type="button" class="sec" id="btn-style-reset">↺ Tout remettre comme au départ</button></div>
       </div>
     </details>
 
@@ -1145,23 +1170,9 @@
 
 <script>
 /* ==================== PROMPT GEMINI ==================== */
-const SYSTEM_PROMPT = `Tu es un auteur primé d'histoires pour enfants ET un directeur artistique pour la narration audio.
-Ton texte sera lu à voix haute par une voix de synthèse qui peut comprendre des BALISES AUDIO entre crochets.
-Ton objectif : une histoire captivante, chaleureuse, adaptée à l'âge, ET un texte écrit pour l'OREILLE, qui sonne comme un vrai conteur passionné.
-
-## 1. Qualité de l'histoire
-- L'OUVERTURE : entre directement dans une scène, par un bruit, une réplique, une question ou un geste (« Toc, toc, toc. Qui frappe à la fenêtre en pleine nuit ? »). INTERDIT : « Il était une fois », « C'était un beau jour », et commencer par présenter le héros, ses vêtements ou ses affaires. Le prénom arrive dans l'action, pas dans une présentation.
-- Structure : un problème ou un désir clair, des péripéties (règle de trois quand c'est possible), UN REBONDISSEMENT INATTENDU au milieu (ce que le héros croyait est faux, l'aide vient de là où on ne l'attendait pas, le petit devient grand), un moment fort, une résolution rassurante, une fin douce qui fait un clin d'œil à l'ouverture.
-- Le héros est attachant ET imparfait : donne-lui une envie ou un petit défaut (pressé, peureux des araignées, veut toujours gagner, parle trop) qui joue dans l'histoire. Si un prénom d'enfant est fourni, l'enfant est le héros et c'est LUI qui sauve la situation au moment fort, par sa propre idée.
-- Deux ou trois personnages secondaires au plus, chacun avec UN trait reconnaissable ET une façon de parler à lui (le grognon dit « Bof » à chaque phrase, la farceuse finit ses phrases par une devinette, le vieux hibou parle lentement en répétant « vois-tu »). La voix doit pouvoir les jouer. Leurs noms sont inventés à partir du décor ou de leur manie (Tic-Tac la pendule, Grignote la souris), jamais les mêmes d'une histoire à l'autre.
-- Des dialogues vivants : au moins une réplique dans chaque groupe de trois paragraphes, et de vrais échanges (question, réponse, désaccord), pas des phrases isolées. Les incises sont courtes et variées (« grogna l'ours », « demanda Abby ») ou absentes quand on sait qui parle ; jamais « dit-il d'une petite voix douce ».
-- Des détails CONCRETS qu'on entend, sent, goûte ou touche (l'odeur du pain chaud, le froid de la rivière sur les orteils, le craquement de la branche) plutôt que des adjectifs. MOTS À RATIONNER, deux fois au plus chacun dans toute l'histoire : petit, petite, doux, douce, joli, jolie, magique, doucement, merveilleux, tout à coup. Jamais « tout doux ».
-- Des sons et onomatopées amusants (« Plouf ! », « Toc, toc, toc… », « Crrrac ! ») et, si ça s'y prête, une petite formule répétée que l'enfant peut anticiper.
-- Phrases courtes et rythmées, en variant la longueur pour la musicalité ; le vocabulaire suit les consignes d'âge données plus bas.
-- Rien d'effrayant pour de vrai : les méchants deviennent gentils ou ridicules ; jamais de violence, de mort ou de peur non résolue.
-- La leçon, s'il y en a une, se montre par l'action. INTERDIT : une phrase qui explique la morale (« Abby avait compris que… », « Et c'est ainsi qu'elle apprit… »), un sermon d'un adulte, une conclusion qui résume l'histoire.
-
-## 2. Écrire pour la voix (TRÈS IMPORTANT)
+/* v59 : le prompt système est maintenant ASSEMBLÉ par promptSysteme() selon les réglages « Style des histoires ».
+   Ici, seulement les parties verrouillées (voix, format) : les changer casse la lecture de la réponse. */
+const PROMPT_VOIX_FORMAT = `## 2. Écrire pour la voix (TRÈS IMPORTANT)
 Balises audio — toujours EN ANGLAIS, entre crochets, placées JUSTE AVANT la phrase qu'elles colorent :
 - Émotions : [excited] [happy] [curious] [surprised] [sad] [nervous] [scared] [relieved] [proud] [amazed] [mischievously] [grumpy] [warmly] [tenderly]
 - Manière de dire : [whispers] [softly] [shouting] [dramatically] [slowly] [quickly] [playfully] [mysteriously] [sleepy]
@@ -1241,12 +1252,15 @@ async function majModeles() {
   remplacer(TTS_MODELS, recents(noms.filter(n => /tts/.test(n))).sort((a, b) => /flash/.test(b) - /flash/.test(a)));
   remplacer(IMAGE_MODELS, recents(noms.filter(n => /image/.test(n) && !/imagen|pro/.test(n))).sort((a, b) => /flash/.test(b) - /flash/.test(a)));
 }
-const LENGTHS = { court: 'environ 350 mots', moyen: 'environ 700 mots', long: 'environ 1200 mots' };
-const LENGTHS_PART = { court: 'environ 150 mots', moyen: 'environ 250 mots', long: 'environ 400 mots' };
+/* v59 : nombre de mots réglable (Style des histoires) ; les parties d'une histoire à choix font ~38 % d'une histoire entière */
+const motsDe = l => parseInt(styleVal('mots-' + l), 10) || { court: 350, moyen: 700, long: 1200 }[l];
+const LENGTHS = { get court() { return `environ ${motsDe('court')} mots`; }, get moyen() { return `environ ${motsDe('moyen')} mots`; }, get long() { return `environ ${motsDe('long')} mots`; } };
+const LENGTHS_PART = { get court() { return `environ ${Math.round(motsDe('court') * .43)} mots`; }, get moyen() { return `environ ${Math.round(motsDe('moyen') * .36)} mots`; }, get long() { return `environ ${Math.round(motsDe('long') * .33)} mots`; } };
 const LANGS = {
   // v56 : les exemples « cabane à sucre, tuque, poudrerie » mettaient de la NEIGE dans toutes les histoires (et donc les images),
   // même en ambiance magique ou aventure (vérifié le 2026-10-14). La saveur d'ici passe par la façon de parler, pas par le décor.
   'fr-qc': `Écris en français avec une saveur québécoise chaleureuse DANS LA FAÇON DE PARLER : des mots tendres et des expressions d'ici dans les dialogues (« mon trésor », « mon cœur », « mon p'tit loup »), tout en restant un français clair et bien prononçable par une voix de synthèse — pas de joual écrit phonétiquement. Le décor et la saison viennent de l'ambiance et de l'idée de l'histoire : n'ajoute JAMAIS de neige, d'hiver, de tuque, de mitaines ni de cabane à sucre si rien ne le demande.`,
+  'fr-qc-decor': `Écris en français avec une saveur québécoise chaleureuse, dans la façon de parler (des mots tendres et des expressions d'ici dans les dialogues : « mon trésor », « mon cœur », « mon p'tit loup ») ET dans le décor quand ça s'y prête (l'érable, le lac, le chalet, la cabane à sucre, le dépanneur, la ruelle), tout en restant un français clair et bien prononçable par une voix de synthèse — pas de joual écrit phonétiquement. La saison suit l'ambiance et l'idée de l'histoire : pas de neige ni d'hiver si rien ne le demande.`,
   'fr-fr': `Écris en français standard, clair et chaleureux.`,
   'en': `Write the story in English (tags stay in English too). Le JSON garde les clés "titre" et "histoire".`
 };
@@ -1739,7 +1753,7 @@ async function appelGemini(user, schema, onStatus, opts = {}) {
   if (!key) throw new Error('Ajoute ta clé Gemini dans ⚙️ Réglages.');
   const models = [...new Set([$('m-gemini').value.trim() || 'gemini-flash-latest', ...FALLBACK_MODELS])];
   const body = JSON.stringify({
-    systemInstruction: { parts: [{ text: opts.system || SYSTEM_PROMPT }] },
+    systemInstruction: { parts: [{ text: opts.system || promptSysteme() }] },
     contents: [{ role: 'user', parts: [{ text: user }, ...(opts.images || []).map(im => ({ inlineData: { mimeType: im.type, data: im.b64 } }))] }],
     generationConfig: { temperature: opts.temperature ?? 1.0, responseMimeType: 'application/json', responseSchema: schema }
   });
@@ -1768,7 +1782,7 @@ const SCHEMA_CHOIX = { type: 'OBJECT', properties: { titre: { type: 'STRING' }, 
    la voix Google a sa propre direction de jeu (balises permises) ; les autres voix lisent un texte simple.
    (ElevenLabs, seul à comprendre toutes les balises, est retiré de l'app depuis le 2026-10-14.) */
 let voixSimple = false, voixGoogle = false;
-const LONGUEUR_ESTIMEE = { court: 2600, moyen: 5000, long: 8500 };
+const LONGUEUR_ESTIMEE = { get court() { return motsDe('court') * 7.3; }, get moyen() { return motsDe('moyen') * 7.1; }, get long() { return motsDe('long') * 7; } };
 async function preparerEcriture(nbCaracteres) {
   try {
     const { moteur } = await choisirMoteur(nbCaracteres || LONGUEUR_ESTIMEE[chipVal('length')] || 5000);
@@ -1802,7 +1816,6 @@ const GRAINES = ['un garage la nuit', 'un bateau-lavoir', 'une fourmilière', 'u
   'une chaussette perdue', 'un parapluie qui veut voyager', 'une clé qui n\'ouvre rien', 'une boîte aux lettres bavarde', 'un ballon qui refuse d\'éclater', 'un réveil qui a peur du matin',
   'un robot qui apprend à rire', 'une tortue pressée', 'un orignal timide', 'une mouffette parfumeuse', 'un castor architecte', 'une pie collectionneuse',
   'un concours de grimaces', 'une panne d\'électricité', 'un déménagement de fourmis', 'une course d\'escargots', 'un pique-nique sur la lune', 'un anniversaire oublié'];
-const graines = () => { const l = [...GRAINES]; const out = []; while (out.length < 3 && l.length) out.push(l.splice(Math.floor(Math.random() * l.length), 1)[0]); return out; };
 /* v57 : les dernières histoires de cet enfant, pour que Gemini ne refasse pas les mêmes idées, titres et animaux */
 let recentes = [];
 async function majRecentes() {
@@ -1813,7 +1826,7 @@ async function majRecentes() {
   } catch {}
 }
 function consigneRecentes(noms) {
-  const l = recentes.filter(r => !noms.length || noms.some(n => (r.nom || '').toLowerCase().includes(n.toLowerCase()))).slice(0, 6);
+  const l = recentes.filter(r => !noms.length || noms.some(n => (r.nom || '').toLowerCase().includes(n.toLowerCase()))).slice(0, parseInt(styleVal('memoire'), 10) || 0);
   if (!l.length) return '';
   const nomsPris = [...new Set(l.flatMap(r => r.persos || []))].filter(n => !persosPourHistoire().some(x => x.nom === n)).slice(0, 12);   // sauf ceux qu'on fait exprès revenir
   return `Les dernières histoires de cet enfant (NE REFAIS PAS ces idées, ces titres, ces animaux ni ces débuts ; change de décor et de personnages) :\n` + l.map(r => `- « ${r.titre} » : ${r.debut}…`).join('\n')
@@ -1830,14 +1843,15 @@ function consignes(opts = {}) {
     ...enf.lignes,
     ...consignesPersos(),
     friends ? `Autres héros de l'histoire, aussi importants que le héros principal (chacun a son rôle, ses répliques et un moment où il aide) : ${friends}.` : '',
-    opts.sansIdee ? '' : (idea ? `Idée de départ : ${idea}` : `Surprends-moi avec une idée originale et inattendue : pas de forêt enchantée, de lapin ni de renard par défaut. Pour t'inspirer, trois graines tirées au sort (prends-en UNE, mélange-les, ou invente mieux) : ${graines().join(' ; ')}.`),
+    opts.sansIdee ? '' : (idea ? `Idée de départ : ${idea}` : (styleVal('graines') === 'oui' ? `Surprends-moi avec une idée originale et inattendue : pas de forêt enchantée, de lapin ni de renard par défaut. Pour t'inspirer, trois graines tirées au sort (prends-en UNE, mélange-les, ou invente mieux) : ${graines().join(' ; ')}.` : `Surprends-moi avec une idée originale et inattendue : pas de forêt enchantée, de lapin ni de renard par défaut.`)),
     opts.sansIdee ? '' : consigneRecentes(enf.noms),
     souciTxt ? `Petit défi de la vraie vie à apprivoiser : ${souciTxt}. Le héros vit une situation semblable, ressent la même émotion (nommée simplement, sans en faire un drame), découvre un ou deux trucs concrets qu'un enfant peut vraiment utiliser, et réussit. Ton rassurant, jamais moralisateur ; l'enfant doit se reconnaître et se sentir capable.` : '',
     moral ? `Valeur à transmettre subtilement : ${moral}.` : '',
     !opts.sansIdee && $('journee').value.trim() ? `Ce qui s'est VRAIMENT passé aujourd'hui dans la vie de l'enfant : ${$('journee').value.trim()}. Transforme ces vrais moments en aventure : l'enfant doit les reconnaître (mêmes lieux, mêmes objets, mêmes personnes), mais tout devient extraordinaire et se termine bien.` : '',
     !opts.sansIdee && dessin ? `L'enfant a fait le DESSIN joint en image. L'histoire raconte CE dessin : ses personnages, ses couleurs, ses détails (même un gribouillis devient quelque chose de magique). Décris-les pour que l'enfant reconnaisse son dessin et soit fier.` : '',
     `Ambiance : ${mood === 'autre' ? ($('mood-autre').value.trim() || MOODS.dodo) : MOODS[mood]}`,
-    LANGS[lang],
+    ...consignesStyle(),
+    LANGS[lang === 'fr-qc' ? ({ parler: 'fr-qc', decor: 'fr-qc-decor', aucune: 'fr-fr' }[styleVal('saveur')] || 'fr-qc') : lang],
     voixGoogle ? CONSIGNE_VOIX_GOOGLE : voixSimple ? CONSIGNE_VOIX_SIMPLE : ''
   ].filter(Boolean);
 }
@@ -1893,6 +1907,7 @@ function promptArbre() {
     `- « suiteA » et « suiteB » (${lg} chacune) : ce qui arrive si l'enfant choisit A ou B. Chacune commence en racontant ce choix comme une évidence joyeuse, emmène l'aventure ailleurs, et se termine par une NOUVELLE question à deux possibilités, avec ses propres « choixA » et « choixB ».`,
     `- Dans chaque suite, « finA » et « finB » (${lg} chacune) : la fin de l'histoire selon ce second choix, en commençant par raconter le choix. Les quatre fins sont vraiment différentes, et toutes finissent bien (selon l'ambiance).`,
     '- Chaque morceau se lit juste après le précédent : ne répète pas et ne résume pas ce qui a déjà été raconté. Garde les mêmes personnages, les mêmes noms et les mêmes voix partout.',
+    '- ' + CHOIX_STYLE[styleVal('choix-style')],
     '- Le « titre » est celui de toute l\'histoire.'
   ].join('\n');
 }
@@ -2027,8 +2042,14 @@ const STYLES_IMAGE = {
   aquarelle: ['Watercolor picture book illustration', 'Soft pastel watercolor, storybook art, not a photo.'],
   crayons: ['Colored pencil picture book illustration', 'Colored pencil drawing on textured paper, storybook art, not a photo.'],
   anime: ['Cute cartoon animation illustration', 'Bright cheerful cartoon style, rounded shapes, not a photo.'],
-  papier: ['Cut paper collage picture book illustration', 'Layered paper craft collage, soft shadows, storybook art, not a photo.']
+  papier: ['Cut paper collage picture book illustration', 'Layered paper craft collage, soft shadows, storybook art, not a photo.'],
+  cire: ['Wax crayon children\'s drawing illustration', 'Thick waxy crayon strokes, bright simple colors, childlike, not a photo.'],
+  pate: ['Claymation plasticine picture book illustration', 'Modeling clay characters, soft rounded shapes, stop-motion look, not a photo.'],
+  vitrail: ['Stained glass picture book illustration', 'Bold black outlines, glowing colored glass panels, not a photo.'],
+  bd: ['Comic book style children\'s illustration', 'Clean ink outlines, flat bright colors, friendly cartoon, not a photo.']
 };
+/* v59 : heure et lumière des images (Style des histoires) — en français pour le plan, Gemini traduit dans les descriptions */
+const LUMIERES = { histoire: '', doux: '- Toutes les scènes sont dans une lumière douce et chaude (fin de journée, lampe, feu, soleil doré), même si l\'histoire se passe la nuit : jamais de scène sombre.', nuit: '- Toutes les scènes se passent la nuit, sous un ciel étoilé, avec une lumière douce (lune, lampions, lucioles), même si l\'histoire se passe le jour.' };
 const SCHEMA_ILLUS = { type: 'OBJECT', properties: {
   fiche: { type: 'STRING' },
   scenes: { type: 'ARRAY', items: { type: 'OBJECT', properties: { ou: { type: 'STRING' }, description: { type: 'STRING' } }, required: ['ou', 'description'] } }
@@ -2051,6 +2072,7 @@ async function planifierImages(s) {
     ficheAvant ? `- Ces personnages ont déjà été dessinés dans les chapitres précédents : reprends EXACTEMENT cette fiche, en ajoutant seulement les nouveaux : ${ficheAvant}` : '',
     s.persoRepris?.length ? `- Ces personnages reviennent d'histoires déjà illustrées : mets-les dans la fiche avec EXACTEMENT cette description : ${s.persoRepris.map(x => x.nom + ': ' + x.visuel).join(' ')}` : '',
     s.dessin ? '- L\'enfant a fait un dessin pour cette histoire : décris les personnages comme dans son dessin.' : '',
+    LUMIERES[styleVal('lumiere')] || '',
     `- « scenes » : ${combien}. Chaque « description » est une seule phrase visuelle et courte : qui (par leur nom, et ce qu'ils sont : « Abby and her puppy Biscuit »), fait quoi, où, l'heure. Les objets importants sont nommés avec leur couleur. Rien d'effrayant.`,
     '- La saison, la météo et les vêtements viennent de l’histoire : pas de neige, de tuque, de mitaines ni de manteau d’hiver si l’histoire n’en parle pas.',
     '---', morceaux
@@ -2079,7 +2101,7 @@ async function planifierImages(s) {
     scenes.splice(0, scenes.length, ...scenes.filter((sc, k, t) => t.findIndex(x => x.cle === sc.cle) === k));
   }
   if (s.arbre && scenes[0].cle !== 'n') scenes[0].cle = 'n';
-  return { fiche: String(j.fiche || ''), style: $('img-style').value, scenes };
+  return { fiche: String(j.fiche || ''), style: $('img-style').value, lumiere: styleVal('lumiere'), scenes };
 }
 /* Un dessin Pollinations, logo coupé. Le service gratuit refuse (402/429) s'il est trop sollicité : on attend. */
 async function dessiner(prompt, graine, onAttente) {
@@ -2098,7 +2120,11 @@ const STYLES_GEMINI = {
   aquarelle: 'soft watercolor children\'s picture book style, gentle pastel colors, warm light',
   crayons: 'colored pencil children\'s picture book style, textured paper, warm colors',
   anime: 'cute cartoon animation style, bright cheerful colors, rounded shapes',
-  papier: 'cut paper collage children\'s picture book style, layered paper, soft shadows'
+  papier: 'cut paper collage children\'s picture book style, layered paper, soft shadows',
+  cire: 'wax crayon children\'s drawing style, thick waxy strokes, bright simple colors, childlike',
+  pate: 'claymation plasticine style, modeling clay characters, soft rounded shapes, stop-motion look',
+  vitrail: 'stained glass picture book style, bold black outlines, glowing colored glass panels',
+  bd: 'comic book style for children, clean ink outlines, flat bright colors, friendly cartoon'
 };
 async function dessinerGemini(s, sc, refs) {
   const key = cleGemini();
@@ -2189,7 +2215,7 @@ function illustrer(s, forcer) {
       let gemini = cleGemini() && Date.now() - Number(store.get('img-gemini-ko', '0')) > 3600000;
       if (gemini) {
         try {
-          const modele = () => (s.dessin && s.image) ? s.image : (s.illusImages[s.illus.scenes[0].cle] || null);
+          const modele = () => styleVal('memelook') === 'non' && !s.dessin ? null : (s.dessin && s.image) ? s.image : (s.illusImages[s.illus.scenes[0].cle] || null);
           const premier = restants.find(o => o.i === 0);
           if (premier) {
             etat(`<span class="spin"></span>🎨 Couverture (Gemini)…`);
@@ -2441,14 +2467,14 @@ async function creerServeur(fn, extra) {
     const nb = imagesVoulues();
     const repris = persosPourHistoire();
     const ficheAvant = extra.serie ? ((await DB.liste()).find(x => (x.serie || x.id) === extra.serie && x.illus?.fiche)?.illus.fiche || '') : '';
-    const refs = dessin ? [dessin.blob] : await refsCouverture({ persoRepris: repris });
+    const refs = dessin ? [dessin.blob] : styleVal('memelook') === 'non' ? [] : await refsCouverture({ persoRepris: repris });
     const moteur = $('engine').value;
     const recette = {
       type: r0.type, avecDessin: !!(extra.avecDessin && dessin),
-      texte: { system: SYSTEM_PROMPT, user: r0.user, schema: r0.schema, images: dessin ? [{ b64: dessin.b64, type: dessin.type }] : [],
+      texte: { system: promptSysteme(), user: r0.user, schema: r0.schema, images: dessin ? [{ b64: dessin.b64, type: dessin.type }] : [],
         modeles: [...new Set([$('m-gemini').value.trim() || 'gemini-flash-latest', ...FALLBACK_MODELS])],
         attendu: Math.round((LONGUEUR_ESTIMEE[chipVal('length')] || 5000) * (r0.type === 'arbre' ? 7 / 3 : 1) * 1.05) },
-      images: nb ? { nb, style: $('img-style').value, modeles: IMAGE_MODELS, ficheAvant, persoRepris: repris, dessin: !!dessin, refs: await Promise.all(refs.map(enB64)) } : { nb: 0 },
+      images: nb ? { nb, style: $('img-style').value, lumiere: styleVal('lumiere'), memeLook: styleVal('memelook') !== 'non', modeles: IMAGE_MODELS, ficheAvant, persoRepris: repris, dessin: !!dessin, refs: await Promise.all(refs.map(enB64)) } : { nb: 0 },
       voix: { moteur: moteur === 'gcloud' || moteur === 'edge' || moteur === 'phone' ? moteur : 'auto', multivoix: $('opt-multivoix').checked, neutre: vitesseALaLecture(),
         gcRate: $('gc-rate').value, msRate: $('ms-rate').value, msVoix: $('ms-voice').value, plafond: gcPlafond(), modeles: [...new Set(['gemini-flash-latest', ...FALLBACK_MODELS])],
         gcVoix: Object.fromEntries(GC_PALIERS.map(pl => [pl.id, gcVoixDe(pl)])) },
@@ -3201,6 +3227,10 @@ setTimeout(() => { try { if (parServeur() && !GC_PALIERS.some(gcVoixDe)) gcCharg
 const NOMS_CHOIX = { objet: 'son objet', animal: 'son animal', personnage: 'son personnage', couleur: 'sa couleur', mechant: 'son méchant', lieu: 'son lieu', pouvoir: 'son pouvoir magique' };
 /* v57 : des consignes concrètes par âge (avant : seulement « adapté à l'âge ») */
 function consigneAge(age) {
+  const vocab = { simple: ' Vocabulaire encore plus simple que d\'habitude pour cet âge : seulement des mots de tous les jours, aucun mot rare.', normal: '', riche: ' Vocabulaire un peu plus riche que d\'habitude pour cet âge : glisse trois ou quatre mots nouveaux, compris grâce au contexte.' }[styleVal('vocab')] || '';
+  return consigneAgeBase(age) + vocab;
+}
+function consigneAgeBase(age) {
   if (age <= 3) return `Pour ${age} ans : phrases de cinq à huit mots, un seul fil (pas de sous-intrigue), deux ou trois personnages au plus, une formule qui revient trois fois pour que l'enfant la dise avec toi, beaucoup de sons et de répétitions, des choses de son monde (le bain, le toutou, le chat, le lit).`;
   if (age <= 5) return `Pour ${age} ans : phrases courtes, un vrai problème que le héros règle lui-même, de l'humour simple (une chute, un animal qui fait une bêtise, un mot rigolo), des mots qu'il connaît ou qu'on comprend tout de suite dans le contexte, et un ou deux mots nouveaux expliqués par l'action.`;
   if (age <= 8) return `Pour ${age} ans : un vrai suspense (l'enfant doit se demander ce qui va arriver), un rebondissement qu'il n'avait pas vu venir, de l'humour plus fin (un personnage qui se trompe, un jeu de mots facile), des émotions nommées (jaloux, fier, gêné) et un héros qui réfléchit avant d'agir.`;
@@ -5225,6 +5255,185 @@ $('t-prec').onclick = () => teleSauter(-1);
 $('t-suiv').onclick = () => teleSauter(1);
 $('t-choix').onclick = e => { const b = e.target.closest('[data-k]'); if (b) { document.querySelectorAll('#choix-btns button')[+b.dataset.k]?.click(); tele.choix = null; } };
 $('btn-tele').onclick = teleOuvrir;
+
+/* ==================== STYLE DES HISTOIRES : LE PROMPT RÉGLABLE (v59) ====================
+   Demandé par Jonathan le 2026-10-14 : « plein d'options pour changer des choses au prompt ». Chaque option REMPLACE
+   une phrase du prompt (jamais un ajout par-dessus : aucune contradiction possible). Les parties qui font marcher
+   l'app restent verrouillées : le format JSON, les balises pour la voix, le découpage en paragraphes, la sécurité.
+   Les valeurs de départ (def) reproduisent exactement le prompt d'avant : ne rien toucher = rien ne change.
+   Réglages gardés dans localStorage « style:<clé> ». */
+const STYLE = [
+  { g: '🎙️ Le conteur', k: 'ton', t: 'Ton du conteur', o: [['chaleureux', 'Chaleureux et tendre'], ['drole', 'Drôle et énergique'], ['mystere', 'Mystérieux et feutré'], ['poetique', 'Poétique']], def: 'chaleureux' },
+  { g: '🎙️ Le conteur', k: 'narrateur', t: 'Narrateur', o: [['neutre', 'Neutre (raconte l’histoire)'], ['enfant', 'Parle à l’enfant (« Tu vois, Abby… »)'], ['personnage', 'Un personnage raconte (« je »)']], def: 'neutre' },
+  { g: '🎙️ Le conteur', k: 'humour', t: 'Humour', o: [['leger', 'Léger'], ['beaucoup', 'Beaucoup'], ['aucun', 'Aucun']], def: 'leger' },
+  { g: '🎙️ Le conteur', k: 'formule', t: 'Une formule répétée que l’enfant peut dire avec toi', o: [['oui', 'Oui, si ça s’y prête'], ['non', 'Non'], ['petits', 'Seulement pour 2-3 ans']], def: 'oui' },
+  { g: '🎙️ Le conteur', k: 'bruits', t: 'Onomatopées et bruits', o: [['beaucoup', 'Beaucoup'], ['peu', 'Un peu'], ['aucun', 'Aucun']], def: 'beaucoup' },
+
+  { g: '🏗️ La construction', k: 'ouverture', t: 'Ouverture', o: [['action', 'Dans l’action (un bruit, une réplique)'], ['classique', 'Classique « Il était une fois »'], ['question', 'Par une question à l’enfant']], def: 'action' },
+  { g: '🏗️ La construction', k: 'rebond', t: 'Un rebondissement inattendu au milieu', o: [['oui', 'Oui'], ['non', 'Non']], def: 'oui' },
+  { g: '🏗️ La construction', k: 'fin', t: 'La fin', o: [['apaisee', 'Apaisée, qui boucle sur le début'], ['fiere', 'Joyeuse et fière'], ['suite', 'Ouverte « à suivre »']], def: 'apaisee' },
+  { g: '🏗️ La construction', k: 'defaut', t: 'Le héros a un petit défaut ou une envie', o: [['oui', 'Oui'], ['non', 'Non']], def: 'oui' },
+  { g: '🏗️ La construction', k: 'resout', t: 'Qui règle le problème', o: [['seul', 'Le héros lui-même'], ['adulte', 'Avec l’aide d’un adulte'], ['deux', 'Les deux, ensemble']], def: 'seul' },
+  { g: '🏗️ La construction', k: 'secondaires', t: 'Personnages secondaires', o: [['1', 'Un seul'], ['2-3', 'Deux ou trois'], ['plus', 'Quatre ou cinq']], def: '2-3' },
+  { g: '🏗️ La construction', k: 'dialogues', t: 'Part de dialogues', o: [['peu', 'Peu'], ['normal', 'Normale'], ['beaucoup', 'Beaucoup']], def: 'normal' },
+  { g: '🏗️ La construction', k: 'mots-court', t: 'Mots d’une histoire courte', n: [100, 2000], def: '350' },
+  { g: '🏗️ La construction', k: 'mots-moyen', t: 'Mots d’une histoire moyenne', n: [100, 3000], def: '700' },
+  { g: '🏗️ La construction', k: 'mots-long', t: 'Mots d’une histoire longue', n: [100, 5000], def: '1200' },
+
+  { g: '🔤 Les mots', k: 'vocab', t: 'Vocabulaire', o: [['simple', 'Plus simple que pour l’âge'], ['normal', 'Normal pour l’âge'], ['riche', 'Un peu plus riche']], def: 'normal' },
+  { g: '🔤 Les mots', k: 'rationner', t: 'Mots à rationner (2 fois au plus chacun, séparés par des virgules)', x: 1, def: 'petit, petite, doux, douce, joli, jolie, magique, doucement, merveilleux, tout à coup' },
+  { g: '🔤 Les mots', k: 'utiliser', t: 'Mots ou expressions à utiliser', x: 1, ph: 'ex. mon trésor, Biscuit le chien, la cabane de grand-papa', def: '' },
+  { g: '🔤 Les mots', k: 'interdits', t: 'Mots interdits', x: 1, ph: 'ex. araignée, sorcière, piqûre', def: '' },
+  { g: '🔤 Les mots', k: 'saveur', t: 'Saveur québécoise', o: [['parler', 'Dans la façon de parler'], ['decor', 'Façon de parler ET décor d’ici'], ['aucune', 'Aucune (français standard)']], def: 'parler' },
+  { g: '🔤 Les mots', k: 'sensoriel', t: 'Détails sensoriels (odeurs, sons, textures)', o: [['oui', 'Oui'], ['non', 'Non']], def: 'oui' },
+
+  { g: '🛡️ Le contenu', k: 'emotion', t: 'Niveau d’émotion permis', o: [['age', 'Selon l’âge'], ['doux', 'Tout doux, jamais de frisson'], ['frisson', 'Un petit frisson vite résolu'], ['suspense', 'Un vrai suspense (fin rassurante)']], def: 'age' },
+  { g: '🛡️ Le contenu', k: 'mechants', t: 'Les méchants', o: [['rigolos', 'Rigolos, et ils deviennent gentils'], ['jamais', 'Jamais de méchant'], ['vrai', 'Un vrai méchant, mais vaincu']], def: 'rigolos' },
+  { g: '🛡️ Le contenu', k: 'lecon', t: 'La leçon', o: [['action', 'Montrée par l’action, jamais dite'], ['phrase', 'Une phrase douce à la fin'], ['aucune', 'Aucune leçon']], def: 'action' },
+  { g: '🛡️ Le contenu', k: 'vrai', t: 'Les vrais lieux et personnes de l’enfant peuvent apparaître', o: [['oui', 'Oui'], ['non', 'Non']], def: 'oui' },
+  { g: '🛡️ Le contenu', k: 'eviter', t: 'Choses à toujours éviter', x: 1, ph: 'ex. la mort d’un animal, les piqûres, les clowns', def: '' },
+  { g: '🛡️ Le contenu', k: 'graines', t: 'Graines d’idées au hasard (quand tu ne donnes pas d’idée)', o: [['oui', 'Oui, 3 graines tirées au sort'], ['non', 'Non']], def: 'oui' },
+  { g: '🛡️ Le contenu', k: 'graines-liste', t: 'Les graines (une par ligne)', x: 6, def: '' },
+  { g: '🛡️ Le contenu', k: 'memoire', t: 'Mémoire des dernières histoires (pour ne pas se répéter)', o: [['0', 'Aucune'], ['6', 'Les 6 dernières'], ['12', 'Les 12 dernières']], def: '6' },
+
+  { g: '🧸 Les personnages', k: 'noms', t: 'Noms des personnages secondaires', o: [['decor', 'Inventés à partir du décor (Tic-Tac, Grignote)'], ['courants', 'Prénoms courants (Léo, Rose…)'], ['app', 'L’app en propose trois au hasard']], def: 'decor' },
+  { g: '🧸 Les personnages', k: 'animaux', t: 'Animaux qui parlent', o: [['oui', 'Oui'], ['magiques', 'Seulement les personnages magiques'], ['non', 'Non']], def: 'oui' },
+  { g: '🧸 Les personnages', k: 'parents', t: 'Les parents dans l’histoire', o: [['fond', 'En arrière-plan'], ['presents', 'Présents et aidants'], ['absents', 'Absents']], def: 'fond' },
+
+  { g: '🔀 Histoires à choix', k: 'choix-style', t: 'Les deux choix proposés sont', o: [['differents', 'Très différents'], ['bonnes', 'Deux bonnes idées'], ['sagefolle', 'Une sage et une folle']], def: 'differents' },
+
+  { g: '🎨 Les images', k: 'lumiere', t: 'Heure et lumière', o: [['histoire', 'Suivre l’histoire'], ['doux', 'Toujours doux et chaud'], ['nuit', 'Toujours nuit étoilée']], def: 'histoire' },
+  { g: '🎨 Les images', k: 'memelook', t: 'Les personnages gardent le même look d’une image à l’autre', o: [['oui', 'Oui'], ['non', 'Non']], def: 'oui' },
+
+  { g: '✍️ Mes consignes', k: 'consignes', t: 'Consignes à moi (toujours ajoutées à la fin du prompt)', x: 3, ph: 'ex. Abby adore les chevaux : mets-en souvent. Papa s’appelle Jonathan.', def: '' }
+];
+const STYLE_PAR_CLE = Object.fromEntries(STYLE.map(o => [o.k, o]));
+function styleVal(k) { const o = STYLE_PAR_CLE[k]; const v = store.get('style:' + k, null); return v === null || v === '' && !o.x ? o.def : v; }
+const styleTxt = k => styleVal(k).trim();
+const styleChange = () => STYLE.filter(o => store.get('style:' + o.k, null) !== null && styleVal(o.k) !== o.def).length;
+const NOMS_APP = ['Pistache', 'Grignote', 'Boudin', 'Tartine', 'Moustache', 'Caramel', 'Zigzag', 'Pompon', 'Rouquine', 'Trompette', 'Biscotte', 'Frimousse',
+  'Capucine', 'Bretzel', 'Clapotis', 'Ficelle', 'Noisette', 'Brindille', 'Ouistiti', 'Pépite', 'Rikiki', 'Tournesol', 'Vadrouille', 'Zéphyr'];
+const nomsApp = () => { const l = [...NOMS_APP]; const out = []; while (out.length < 3) out.push(l.splice(Math.floor(Math.random() * l.length), 1)[0]); return out; };
+
+/* Section 1 du prompt, phrase par phrase selon les réglages. Les textes « def » = le prompt d'avant, mot pour mot. */
+function promptSection1() {
+  const v = styleVal;
+  const L = [];
+  L.push({
+    action: `- L'OUVERTURE : entre directement dans une scène, par un bruit, une réplique, une question ou un geste (« Toc, toc, toc. Qui frappe à la fenêtre en pleine nuit ? »). INTERDIT : « Il était une fois », « C'était un beau jour », et commencer par présenter le héros, ses vêtements ou ses affaires. Le prénom arrive dans l'action, pas dans une présentation.`,
+    classique: `- L'OUVERTURE : classique, comme un conte, avec « Il était une fois » (ou « Dans un pays… », « Un soir d'été… »), puis une présentation courte et vivante du héros en deux phrases au plus, et tout de suite une première scène qui bouge.`,
+    question: `- L'OUVERTURE : commence par une question posée directement à l'enfant qui écoute (« Sais-tu ce qui se cache sous le pont du ruisseau ? »), puis plonge dans la scène. Pas de « Il était une fois », pas de présentation du héros : son prénom arrive dans l'action.`
+  }[v('ouverture')]);
+  const fins = {
+    apaisee: `une résolution rassurante, une fin douce qui fait un clin d'œil à l'ouverture`,
+    fiere: `une résolution rassurante, une fin joyeuse où le héros est fier de ce qu'il a fait (fête, bravo, câlin), sans retomber dans le calme forcé`,
+    suite: `une résolution rassurante pour l'aventure du jour, puis une toute dernière phrase qui ouvre sur la suite (« Mais ça, c'est une autre histoire… », un détail qui intrigue), sans angoisse`
+  };
+  L.push(`- Structure : un problème ou un désir clair, des péripéties (règle de trois quand c'est possible), ${v('rebond') === 'oui' ? `UN REBONDISSEMENT INATTENDU au milieu (ce que le héros croyait est faux, l'aide vient de là où on ne l'attendait pas, le petit devient grand), ` : `une progression simple et prévisible que l'enfant peut suivre sans surprise déroutante, `}un moment fort, ${fins[v('fin')]}.`);
+  const resout = { seul: `c'est LUI qui sauve la situation au moment fort, par sa propre idée`, adulte: `au moment fort, c'est un adulte bienveillant (parent, grand-parent, voisin) qui l'aide à trouver la solution, mais c'est l'enfant qui l'applique`, deux: `au moment fort, l'enfant et un adulte trouvent la solution ENSEMBLE, chacun apportant une partie de l'idée` }[v('resout')];
+  L.push(`- Le héros est attachant${v('defaut') === 'oui' ? ` ET imparfait : donne-lui une envie ou un petit défaut (pressé, peureux des araignées, veut toujours gagner, parle trop) qui joue dans l'histoire` : ` : courageux, curieux et gentil, sans défaut mis en avant`}. Si un prénom d'enfant est fourni, l'enfant est le héros et ${resout}.`);
+  const nb = { '1': `Un seul personnage secondaire, bien marqué, avec`, '2-3': `Deux ou trois personnages secondaires au plus, chacun avec`, plus: `Quatre ou cinq personnages secondaires, chacun avec` }[v('secondaires')];
+  const noms = { decor: `Leurs noms sont inventés à partir du décor ou de leur manie (Tic-Tac la pendule, Grignote la souris), jamais les mêmes d'une histoire à l'autre.`, courants: `Leurs noms sont des prénoms courants d'ici (Léo, Rose, Émile, Jade…), jamais les mêmes d'une histoire à l'autre.`, app: `Leurs noms sont ceux donnés dans la demande (section « Noms proposés »).` }[v('noms')];
+  L.push(`- ${nb} UN trait reconnaissable ET une façon de parler à lui (le grognon dit « Bof » à chaque phrase, la farceuse finit ses phrases par une devinette, le vieux hibou parle lentement en répétant « vois-tu »). La voix doit pouvoir les jouer. ${noms}`);
+  L.push({
+    peu: `- Des dialogues courts et rares : une réplique par groupe de cinq paragraphes au plus ; c'est surtout le narrateur qui raconte. Les incises sont courtes (« grogna l'ours », « demanda Abby ») ; jamais « dit-il d'une petite voix douce ».`,
+    normal: `- Des dialogues vivants : au moins une réplique dans chaque groupe de trois paragraphes, et de vrais échanges (question, réponse, désaccord), pas des phrases isolées. Les incises sont courtes et variées (« grogna l'ours », « demanda Abby ») ou absentes quand on sait qui parle ; jamais « dit-il d'une petite voix douce ».`,
+    beaucoup: `- Beaucoup de dialogues : environ la moitié de l'histoire en répliques, au moins une dans chaque groupe de deux paragraphes, de vrais échanges (question, réponse, désaccord, chamaillerie). Les incises sont courtes et variées ou absentes quand on sait qui parle ; jamais « dit-il d'une petite voix douce ».`
+  }[v('dialogues')]);
+  const rat = styleTxt('rationner');
+  L.push((v('sensoriel') === 'oui' ? `- Des détails CONCRETS qu'on entend, sent, goûte ou touche (l'odeur du pain chaud, le froid de la rivière sur les orteils, le craquement de la branche) plutôt que des adjectifs.` : `- Des descriptions brèves : l'action et les dialogues d'abord, peu de descriptions.`) + (rat ? ` MOTS À RATIONNER, deux fois au plus chacun dans toute l'histoire : ${rat}. Jamais « tout doux ».` : ''));
+  const formule = { oui: ` et, si ça s'y prête, une petite formule répétée que l'enfant peut anticiper`, non: ``, petits: ` et, SEULEMENT si l'enfant a deux ou trois ans, une petite formule répétée que l'enfant peut anticiper` }[v('formule')];
+  L.push({
+    beaucoup: `- Des sons et onomatopées amusants (« Plouf ! », « Toc, toc, toc… », « Crrrac ! »)${formule}.`,
+    peu: `- Quelques sons et onomatopées, un ou deux par histoire, là où ils comptent${formule}.`,
+    aucun: `- Pas d'onomatopées : les bruits sont décrits avec des mots (« la porte grinça »)${formule}.`
+  }[v('bruits')]);
+  L.push(`- Phrases courtes et rythmées, en variant la longueur pour la musicalité ; le vocabulaire suit les consignes d'âge données plus bas.`);
+  L.push({ chaleureux: ``, drole: `- Le ton du conteur est drôle et énergique : il s'amuse, exagère, fait des voix.`, mystere: `- Le ton du conteur est mystérieux et feutré : il chuchote, fait durer les attentes, s'émerveille.`, poetique: `- Le ton du conteur est poétique : des images belles et simples, du rythme, des répétitions qui bercent.` }[v('ton')]);
+  L.push({ neutre: ``, enfant: `- Le narrateur s'adresse de temps en temps à l'enfant qui écoute, par son prénom (« Tu vois, Abby, … », « Et là, devine quoi ? »), deux ou trois fois dans l'histoire, pas plus.`, personnage: `- C'est un personnage de l'histoire qui raconte, au « je » (le héros, ou un compagnon témoin), avec sa voix et son point de vue.` }[v('narrateur')]);
+  L.push({ leger: ``, beaucoup: `- Beaucoup d'humour : une situation rigolote par scène, des personnages qui se trompent, des bêtises, des répétitions comiques ; l'enfant doit rire.`, aucun: `- Pas d'humour : un ton sérieux et tendre d'un bout à l'autre.` }[v('humour')]);
+  const emotion = { age: ``, doux: ` Aucun frisson, même petit : aucune tension, rien qui inquiète, que de la douceur et de la curiosité.`, frisson: ` Un petit frisson est permis (un bruit étrange, une ombre) à condition d'être résolu dans les deux paragraphes qui suivent, en douceur.`, suspense: ` Un vrai suspense est bienvenu (on ne sait pas ce qui va arriver, le héros a peur un moment), mais tout finit bien et rassurant.` }[v('emotion')];
+  const mechants = { rigolos: `les méchants deviennent gentils ou ridicules`, jamais: `aucun méchant, aucun ennemi : les problèmes viennent des choses (une porte coincée, une tempête, un objet perdu) ou de malentendus`, vrai: `un vrai méchant est permis, mais il est vaincu par le héros, sans violence, et il ne fait de mal à personne` }[v('mechants')];
+  L.push(`- Rien d'effrayant pour de vrai : ${mechants} ; jamais de violence, de mort ou de peur non résolue.${emotion}`);
+  L.push({ action: `- La leçon, s'il y en a une, se montre par l'action. INTERDIT : une phrase qui explique la morale (« Abby avait compris que… », « Et c'est ainsi qu'elle apprit… »), un sermon d'un adulte, une conclusion qui résume l'histoire.`, phrase: `- La leçon, s'il y en a une, se montre d'abord par l'action, puis UNE seule phrase douce à la toute fin peut la dire simplement (« Parfois, il suffit de demander. »), sans sermon.`, aucune: `- Aucune leçon ni morale, ni montrée ni dite : juste une belle histoire.` }[v('lecon')]);
+  L.push({ oui: ``, magiques: `- Seuls les personnages magiques (fées, dragons, créatures enchantées) parlent ; les vrais animaux font leurs bruits et agissent sans parler.`, non: `- Les animaux et les objets ne parlent pas : ils agissent, font des bruits, et le héros les comprend par leurs gestes.` }[v('animaux')]);
+  L.push({ fond: ``, presents: `- Un parent ou un grand-parent est présent dans l'aventure, bienveillant et aidant, avec de vraies répliques.`, absents: `- Pas de parents dans l'histoire : le héros vit l'aventure avec ses amis ou ses compagnons.` }[v('parents')]);
+  return `## 1. Qualité de l'histoire\n` + L.filter(Boolean).join('\n');   // valeur de départ muette = comme avant
+}
+function promptSysteme() {
+  return `Tu es un auteur primé d'histoires pour enfants ET un directeur artistique pour la narration audio.
+Ton texte sera lu à voix haute par une voix de synthèse qui peut comprendre des BALISES AUDIO entre crochets.
+Ton objectif : une histoire captivante, chaleureuse, adaptée à l'âge, ET un texte écrit pour l'OREILLE, qui sonne comme un vrai conteur passionné.
+
+${promptSection1()}
+
+${PROMPT_VOIX_FORMAT}`;
+}
+/* Ce qui s'ajoute à la demande (prompt utilisateur) d'après les réglages */
+function consignesStyle() {
+  const l = [];
+  const u = styleTxt('utiliser'), i = styleTxt('interdits'), e = styleTxt('eviter'), c = styleTxt('consignes');
+  if (u) l.push(`Mots et expressions à utiliser dans l'histoire (naturellement, pas tous d'un coup) : ${u}.`);
+  if (i) l.push(`Mots INTERDITS, à ne jamais écrire : ${i}.`);
+  if (e) l.push(`À toujours éviter dans l'histoire : ${e}.`);
+  if (styleVal('vrai') === 'non') l.push(`N'utilise pas les vrais lieux ni les vraies personnes de la vie de l'enfant (sa garderie, sa famille) : l'histoire se passe dans un monde inventé.`);
+  if (styleVal('noms') === 'app') l.push(`Noms proposés pour les personnages secondaires (prends-en un, deux ou trois) : ${nomsApp().join(', ')}.`);
+  if (c) l.push(`Consignes du parent, à respecter : ${c}`);
+  return l;
+}
+const CHOIX_STYLE = {
+  differents: `Les deux possibilités de chaque question sont TRÈS différentes (un lieu contre un autre, agir contre attendre), pour que le choix change vraiment la suite.`,
+  bonnes: `Les deux possibilités de chaque question sont deux bonnes idées, aussi tentantes l'une que l'autre : aucune n'est la « mauvaise » réponse.`,
+  sagefolle: `À chaque question, une possibilité est sage et raisonnable, l'autre est folle et rigolote ; les deux mènent à une belle suite.`
+};
+const graines = () => {
+  const perso = styleTxt('graines-liste').split('\n').map(x => x.trim()).filter(Boolean);
+  const l = perso.length ? perso : [...GRAINES];
+  const out = []; while (out.length < 3 && l.length) out.push(l.splice(Math.floor(Math.random() * l.length), 1)[0]); return out;
+};
+
+/* ---------- l'interface dans Réglages ---------- */
+function rendreStyle() {
+  const groupes = [...new Set(STYLE.map(o => o.g))];
+  $('style-groupes').innerHTML = groupes.map(g => `<details class="sous-reglage"><summary>${esc(g)}</summary><div class="dedans">` + STYLE.filter(o => o.g === g).map(o => {
+    const v = styleVal(o.k), id = 'st-' + o.k, chg = store.get('style:' + o.k, null) !== null && v !== o.def;
+    let champ;
+    if (o.o) champ = `<select id="${id}" data-style="${o.k}">${o.o.map(([val, lib]) => `<option value="${esc(val)}" ${val === v ? 'selected' : ''}>${esc(lib)}</option>`).join('')}</select>`;
+    else if (o.n) champ = `<input id="${id}" data-style="${o.k}" type="number" min="${o.n[0]}" max="${o.n[1]}" step="50" value="${esc(v)}" inputmode="numeric">`;
+    else if (o.x > 1) champ = `<textarea id="${id}" data-style="${o.k}" rows="${o.x}" placeholder="${esc(o.ph || (o.k === 'graines-liste' ? GRAINES.slice(0, 4).join('\n') + '\n… (vide = la liste de l’app)' : ''))}">${esc(v)}</textarea>`;
+    else champ = `<input id="${id}" data-style="${o.k}" placeholder="${esc(o.ph || '')}" value="${esc(v)}" autocomplete="off">`;
+    return `<label for="${id}" class="${chg ? 'st-chg' : ''}">${esc(o.t)}${chg ? ' <small>· modifié</small>' : ''}</label>${champ}`;
+  }).join('') + `</div></details>`).join('');
+  const n = styleChange();
+  $('res-style').textContent = n ? `${n} réglage${n > 1 ? 's' : ''} modifié${n > 1 ? 's' : ''}` : 'Comme au départ';
+}
+$('style-groupes').addEventListener('change', e => {
+  const k = e.target.dataset?.style; if (!k) return;
+  const o = STYLE_PAR_CLE[k];
+  let v = e.target.value;
+  if (o.n) { v = String(Math.max(o.n[0], Math.min(o.n[1], parseInt(v, 10) || +o.def))); e.target.value = v; }
+  store.set('style:' + k, v);
+  rendreStyle();
+  status($('set-status'), '✔ Enregistré', 'ok');
+});
+$('btn-style-voir').onclick = () => {
+  const user = [...consignes(), `Longueur : ${LENGTHS[chipVal('length')]} (sans compter les balises).`].join('\n');
+  const f = $('etg-feuille');
+  f.innerHTML = `<div class="poignee"></div><h3>Le prompt complet, avec tes réglages</h3><p class="hint" style="margin-top:0">Exactement ce qui partira à Gemini pour l'histoire telle qu'elle est réglée dans Créer.</p>
+    <p class="etg-sous">Consigne de base (système)</p><pre class="prompt-vue">${esc(promptSysteme())}</pre>
+    <p class="etg-sous">La demande (cette histoire)</p><pre class="prompt-vue">${esc(user)}</pre>
+    <div class="actions"><button type="button" class="sec" id="st-copier">📋 Copier</button><button type="button" class="big" id="st-fermer" style="flex:1">Fermer</button></div>`;
+  document.body.classList.add('etg-ouvert');
+  $('st-fermer').onclick = () => document.body.classList.remove('etg-ouvert');
+  $('st-copier').onclick = () => { navigator.clipboard?.writeText(promptSysteme() + '\n\n' + user).then(() => { $('st-copier').textContent = '✔ Copié'; }).catch(() => {}); };
+};
+$('btn-style-reset').onclick = () => {
+  if (!confirm('Remettre tous les réglages du style des histoires comme au départ ?')) return;
+  STYLE.forEach(o => { try { localStorage.removeItem('style:' + o.k); } catch {} });
+  rendreStyle(); majResumes?.();
+  status($('set-status'), '✔ Style remis comme au départ', 'ok');
+};
+rendreStyle();
 
 /* v49 : histoires fabriquées sur le serveur pendant que l'app dormait */
 reprendreTravaux().catch(() => {});
