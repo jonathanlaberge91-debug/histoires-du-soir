@@ -601,7 +601,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v46</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v47</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -4306,10 +4306,13 @@ if (!cleGemini()) document.querySelector('#res-cles').closest('details').open = 
         if (i && !e.nom && !CHOIX.some(c => e.choix[c.k]) && enfants[i] === e) enfants.splice(i, 1);   // enfant ajouté puis laissé vide
         sauverEnfants(); tout();
       });
+    // Les tablettes sont créées UNE fois puis mises à jour sur place : les vider et les refaire
+    // ramenait la feuille en haut à chaque livre touché (signalé par Jonathan le 2026-10-14).
+    const zone = $('fe-tablettes');
+    const secs = CHOIX.map(() => zone.appendChild(document.createElement('section')));
     const dessiner = () => {
-      const zone = $('fe-tablettes'); zone.innerHTML = '';
-      CHOIX.forEach(c => {
-        const sec = document.createElement('section'); zone.appendChild(sec);
+      CHOIX.forEach((c, ci) => {
+        const sec = secs[ci];
         const v = e.choix[c.k] || '', libre = v && !c.idees.some(x => egal(txt(x), v));
         etagere(sec, {
           nom: txt(c.l),
