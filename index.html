@@ -685,7 +685,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v57</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v58</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -1153,7 +1153,7 @@ Ton objectif : une histoire captivante, chaleureuse, adaptée à l'âge, ET un t
 - L'OUVERTURE : entre directement dans une scène, par un bruit, une réplique, une question ou un geste (« Toc, toc, toc. Qui frappe à la fenêtre en pleine nuit ? »). INTERDIT : « Il était une fois », « C'était un beau jour », et commencer par présenter le héros, ses vêtements ou ses affaires. Le prénom arrive dans l'action, pas dans une présentation.
 - Structure : un problème ou un désir clair, des péripéties (règle de trois quand c'est possible), UN REBONDISSEMENT INATTENDU au milieu (ce que le héros croyait est faux, l'aide vient de là où on ne l'attendait pas, le petit devient grand), un moment fort, une résolution rassurante, une fin douce qui fait un clin d'œil à l'ouverture.
 - Le héros est attachant ET imparfait : donne-lui une envie ou un petit défaut (pressé, peureux des araignées, veut toujours gagner, parle trop) qui joue dans l'histoire. Si un prénom d'enfant est fourni, l'enfant est le héros et c'est LUI qui sauve la situation au moment fort, par sa propre idée.
-- Deux ou trois personnages secondaires au plus, chacun avec UN trait reconnaissable ET une façon de parler à lui (le grognon dit « Bof » à chaque phrase, la farceuse finit ses phrases par une devinette, le vieux hibou parle lentement en répétant « vois-tu »). La voix doit pouvoir les jouer.
+- Deux ou trois personnages secondaires au plus, chacun avec UN trait reconnaissable ET une façon de parler à lui (le grognon dit « Bof » à chaque phrase, la farceuse finit ses phrases par une devinette, le vieux hibou parle lentement en répétant « vois-tu »). La voix doit pouvoir les jouer. Leurs noms sont inventés à partir du décor ou de leur manie (Tic-Tac la pendule, Grignote la souris), jamais les mêmes d'une histoire à l'autre.
 - Des dialogues vivants : au moins une réplique dans chaque groupe de trois paragraphes, et de vrais échanges (question, réponse, désaccord), pas des phrases isolées. Les incises sont courtes et variées (« grogna l'ours », « demanda Abby ») ou absentes quand on sait qui parle ; jamais « dit-il d'une petite voix douce ».
 - Des détails CONCRETS qu'on entend, sent, goûte ou touche (l'odeur du pain chaud, le froid de la rivière sur les orteils, le craquement de la branche) plutôt que des adjectifs. MOTS À RATIONNER, deux fois au plus chacun dans toute l'histoire : petit, petite, doux, douce, joli, jolie, magique, doucement, merveilleux, tout à coup. Jamais « tout doux ».
 - Des sons et onomatopées amusants (« Plouf ! », « Toc, toc, toc… », « Crrrac ! ») et, si ça s'y prête, une petite formule répétée que l'enfant peut anticiper.
@@ -1808,13 +1808,16 @@ let recentes = [];
 async function majRecentes() {
   try {
     const l = (await DB.liste()).filter(s => s.titre && s.histoire).sort((a, b) => b.createdAt - a.createdAt).slice(0, 12);
-    recentes = l.map(s => ({ nom: s.meta?.name || '', titre: s.titre, debut: stripTags(s.histoire).split(/\s+/).slice(0, 18).join(' ') }));
+    recentes = l.map(s => ({ nom: s.meta?.name || '', titre: s.titre, debut: stripTags(s.histoire).split(/\s+/).slice(0, 18).join(' '),
+      persos: (s.personnages || []).filter(x => !x.cache).map(x => x.nom) }));
   } catch {}
 }
 function consigneRecentes(noms) {
   const l = recentes.filter(r => !noms.length || noms.some(n => (r.nom || '').toLowerCase().includes(n.toLowerCase()))).slice(0, 6);
   if (!l.length) return '';
-  return `Les dernières histoires de cet enfant (NE REFAIS PAS ces idées, ces titres, ces animaux ni ces débuts ; change de décor et de personnages) :\n` + l.map(r => `- « ${r.titre} » : ${r.debut}…`).join('\n');
+  const nomsPris = [...new Set(l.flatMap(r => r.persos || []))].filter(n => !persosPourHistoire().some(x => x.nom === n)).slice(0, 12);   // sauf ceux qu'on fait exprès revenir
+  return `Les dernières histoires de cet enfant (NE REFAIS PAS ces idées, ces titres, ces animaux ni ces débuts ; change de décor et de personnages) :\n` + l.map(r => `- « ${r.titre} » : ${r.debut}…`).join('\n')
+    + (nomsPris.length ? `\nNoms déjà donnés à des personnages secondaires : ${nomsPris.join(', ')}. Invente d'AUTRES noms, sonores et jamais entendus, inspirés du décor.` : '');
 }
 /* Les consignes communes, d'après le formulaire */
 function consignes(opts = {}) {
