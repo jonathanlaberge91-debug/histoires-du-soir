@@ -647,7 +647,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v52</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v53</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -3731,9 +3731,10 @@ function preparerReperes(seg) {
 
 /* Après un choix : on lit LA partie choisie, et seulement elle. Avant (jusqu'à v51), « Raconter » voyait au
    dernier choix que toutes les parties avaient un son et rejouait l'histoire depuis le début (signalé le 2026-10-14). */
+let lectureApresChoix = null;          // « Raconter » lancé par l'app juste après un choix : ne pas recommencer l'histoire
 function lirePartieChoisie(s) {
   const k = s.parts.length - 1, pl = plagesParties(s)[k];
-  if (!s.partAudio?.[k] || !pl || voixServeur.has(s.id) || (!voixChoisie.has(s.id) && versionsDe(s).length > 1)) return $('btn-read').click();
+  if (!s.partAudio?.[k] || !pl || voixServeur.has(s.id) || (!voixChoisie.has(s.id) && versionsDe(s).length > 1)) { lectureApresChoix = s.id; return $('btn-read').click(); }
   jouerFile([{ url: URL.createObjectURL(s.partAudio[k]), blob: s.partAudio[k], debut: pl[0], fin: pl[1], texte: s.parts[k].texte, noeud: s.arbre ? (s.chemin || '').slice(0, k) : null }]);
 }
 /* Double-toucher un paragraphe : la lecture repart de là (demandé le 2026-10-13). */
@@ -4037,6 +4038,15 @@ $('btn-read').onclick = async () => {
     if (s.audio) setAudio(s);
   }
   if (!voixChoisie.has(s.id) && versionsDe(s).length > 1) return choisirVoix(s);   // v50 : quelle voix ce soir ?
+  // v53 : RÉÉCOUTER une histoire à choix = on recommence au début et les choix reviennent (avant : le chemin déjà
+  // choisi rejouait d'un bout à l'autre, sans rien demander). Pas quand l'app lit elle-même la partie qu'on vient de choisir.
+  if (s.arbre && s.chemin && lectureApresChoix !== s.id) {
+    arreterParole(); $('player').pause();
+    s.chemin = ''; s.parts = [{ ...s.arbre[''] }]; s.histoire = s.arbre[''].texte; s.audio = null;
+    s.partAudio = audioChemin(s);
+    await DB.put(s); showStory(s);
+  }
+  lectureApresChoix = null;
   const plages = plagesParties(s);
   const interactifEnCours = s.interactive && s.parts.length < NB_PARTIES;
   const segPart = k => ({ url: URL.createObjectURL(s.partAudio[k]), blob: s.partAudio[k], debut: plages[k][0], fin: plages[k][1], texte: s.parts[k].texte, noeud: s.arbre ? (s.chemin || '').slice(0, k) : null });
