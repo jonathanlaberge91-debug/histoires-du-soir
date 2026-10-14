@@ -685,7 +685,7 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v56</span></p>
+  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v57</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
@@ -1150,14 +1150,16 @@ Ton texte sera lu à voix haute par une voix de synthèse qui peut comprendre de
 Ton objectif : une histoire captivante, chaleureuse, adaptée à l'âge, ET un texte écrit pour l'OREILLE, qui sonne comme un vrai conteur passionné.
 
 ## 1. Qualité de l'histoire
-- Structure claire : une ouverture qui accroche, un problème ou un désir, des péripéties (règle de trois quand c'est possible), un moment fort, une résolution rassurante, une fin douce.
-- Un héros attachant ; si un prénom d'enfant est fourni, l'enfant est le héros (ou son meilleur ami).
-- Des personnages secondaires aux personnalités bien distinctes (le timide, le grognon, le farceur…) pour que la voix puisse les jouer.
-- Des dialogues vivants : au moins le tiers de l'histoire en dialogues.
+- L'OUVERTURE : entre directement dans une scène, par un bruit, une réplique, une question ou un geste (« Toc, toc, toc. Qui frappe à la fenêtre en pleine nuit ? »). INTERDIT : « Il était une fois », « C'était un beau jour », et commencer par présenter le héros, ses vêtements ou ses affaires. Le prénom arrive dans l'action, pas dans une présentation.
+- Structure : un problème ou un désir clair, des péripéties (règle de trois quand c'est possible), UN REBONDISSEMENT INATTENDU au milieu (ce que le héros croyait est faux, l'aide vient de là où on ne l'attendait pas, le petit devient grand), un moment fort, une résolution rassurante, une fin douce qui fait un clin d'œil à l'ouverture.
+- Le héros est attachant ET imparfait : donne-lui une envie ou un petit défaut (pressé, peureux des araignées, veut toujours gagner, parle trop) qui joue dans l'histoire. Si un prénom d'enfant est fourni, l'enfant est le héros et c'est LUI qui sauve la situation au moment fort, par sa propre idée.
+- Deux ou trois personnages secondaires au plus, chacun avec UN trait reconnaissable ET une façon de parler à lui (le grognon dit « Bof » à chaque phrase, la farceuse finit ses phrases par une devinette, le vieux hibou parle lentement en répétant « vois-tu »). La voix doit pouvoir les jouer.
+- Des dialogues vivants : au moins une réplique dans chaque groupe de trois paragraphes, et de vrais échanges (question, réponse, désaccord), pas des phrases isolées. Les incises sont courtes et variées (« grogna l'ours », « demanda Abby ») ou absentes quand on sait qui parle ; jamais « dit-il d'une petite voix douce ».
+- Des détails CONCRETS qu'on entend, sent, goûte ou touche (l'odeur du pain chaud, le froid de la rivière sur les orteils, le craquement de la branche) plutôt que des adjectifs. MOTS À RATIONNER, deux fois au plus chacun dans toute l'histoire : petit, petite, doux, douce, joli, jolie, magique, doucement, merveilleux, tout à coup. Jamais « tout doux ».
 - Des sons et onomatopées amusants (« Plouf ! », « Toc, toc, toc… », « Crrrac ! ») et, si ça s'y prête, une petite formule répétée que l'enfant peut anticiper.
-- Vocabulaire adapté à l'âge ; phrases courtes et rythmées, en variant la longueur pour la musicalité.
+- Phrases courtes et rythmées, en variant la longueur pour la musicalité ; le vocabulaire suit les consignes d'âge données plus bas.
 - Rien d'effrayant pour de vrai : les méchants deviennent gentils ou ridicules ; jamais de violence, de mort ou de peur non résolue.
-- La leçon, s'il y en a une, se montre par l'action, jamais par un sermon.
+- La leçon, s'il y en a une, se montre par l'action. INTERDIT : une phrase qui explique la morale (« Abby avait compris que… », « Et c'est ainsi qu'elle apprit… »), un sermon d'un adulte, une conclusion qui résume l'histoire.
 
 ## 2. Écrire pour la voix (TRÈS IMPORTANT)
 Balises audio — toujours EN ANGLAIS, entre crochets, placées JUSTE AVANT la phrase qu'elles colorent :
@@ -1187,7 +1189,7 @@ Lisibilité pour la synthèse vocale :
 
 ## 3. Format de sortie
 Réponds UNIQUEMENT en JSON : {"titre": "...", "histoire": "..."}.
-Le titre est court et magique, sans balise. L'histoire contient les balises audio et commence par une ouverture accrocheuse.`;
+Le titre : deux à six mots, sans balise, qui intrigue sans dévoiler la fin ; drôle si l'ambiance l'est (« Qui a volé la lune ? », « Le dragon qui éternuait des bulles »). INTERDIT : « L'aventure de… », « La grande aventure… », « X et le/la… », « Le secret de… », « Le mystère de… », et le prénom de l'enfant dans le titre. L'histoire contient les balises audio et commence dans l'action.`;
 
 const MOODS = {
   dodo: `Histoire du soir pour s'endormir : rythme lent et apaisant, phrases douces, beaucoup de [softly], [warmly] et [whispers]. L'énergie DESCEND progressivement. Termine par le héros qui s'endort paisiblement, avec un [yawns] et une dernière phrase chuchotée qui souhaite bonne nuit à l'enfant.`,
@@ -1790,6 +1792,30 @@ const CONSIGNE_VOIX_GOOGLE = CONSIGNE_VOIX_SIMPLE
     'TRÈS IMPORTANT — VOIX GOOGLE. Cette histoire sera lue par une voix de synthèse qui comprend SEULEMENT quelques balises et prononce mal les effets écrits.')
   .replace('- AUCUNE balise entre crochets, nulle part.',
     '- Balises permises, et SEULEMENT celles-ci, en anglais entre crochets, juste avant la phrase ou la réplique qu\'elles colorent, avec parcimonie (une toutes les deux ou trois phrases au plus) : émotions [whispers] [softly] [excited] [happy] [sad] [scared] [surprised] [amazed] [grumpy] ; manière [slowly] [quickly] [mysteriously] [dramatically] [warmly] [sleepy] ; voix d\'un personnage juste avant sa réplique entre guillemets [deep voice] [squeaky voice] [tiny voice] [old voice] [booming voice] (chaque personnage garde toujours la même) ; [pause] pour un vrai silence. Aucune autre balise, jamais de réaction comme [laughs] ou [sighs] : écris-la avec des mots.');
+/* v57 : sans idée du parent, des graines tirées au sort (une liste fixe d'exemples donnait 3 fois la même histoire :
+   Gemini prenait toujours le dernier exemple). Lieux, objets et situations volontairement loin de la forêt enchantée. */
+const GRAINES = ['un garage la nuit', 'un bateau-lavoir', 'une fourmilière', 'un ascenseur capricieux', 'une boulangerie avant l\'aube', 'un phare au bord de la mer',
+  'un camion de déneigement', 'une bibliothèque où les livres chuchotent', 'un aquarium', 'une piscine municipale fermée', 'un autobus scolaire', 'un marché aux puces',
+  'une ferme de citrouilles', 'un chantier avec une grue', 'une cabane dans un pommier', 'un train de nuit', 'un musée après la fermeture', 'un cirque de puces',
+  'une station-service', 'une buanderie', 'un jardin communautaire', 'un vieux grenier', 'une patinoire', 'un terrain de soccer sous la pluie', 'une clinique vétérinaire',
+  'un restaurant de pizzas', 'une montgolfière', 'une île flottante', 'un sous-marin jaune', 'une mine de cristaux', 'un volcan endormi', 'une ville sur les nuages',
+  'une chaussette perdue', 'un parapluie qui veut voyager', 'une clé qui n\'ouvre rien', 'une boîte aux lettres bavarde', 'un ballon qui refuse d\'éclater', 'un réveil qui a peur du matin',
+  'un robot qui apprend à rire', 'une tortue pressée', 'un orignal timide', 'une mouffette parfumeuse', 'un castor architecte', 'une pie collectionneuse',
+  'un concours de grimaces', 'une panne d\'électricité', 'un déménagement de fourmis', 'une course d\'escargots', 'un pique-nique sur la lune', 'un anniversaire oublié'];
+const graines = () => { const l = [...GRAINES]; const out = []; while (out.length < 3 && l.length) out.push(l.splice(Math.floor(Math.random() * l.length), 1)[0]); return out; };
+/* v57 : les dernières histoires de cet enfant, pour que Gemini ne refasse pas les mêmes idées, titres et animaux */
+let recentes = [];
+async function majRecentes() {
+  try {
+    const l = (await DB.liste()).filter(s => s.titre && s.histoire).sort((a, b) => b.createdAt - a.createdAt).slice(0, 12);
+    recentes = l.map(s => ({ nom: s.meta?.name || '', titre: s.titre, debut: stripTags(s.histoire).split(/\s+/).slice(0, 18).join(' ') }));
+  } catch {}
+}
+function consigneRecentes(noms) {
+  const l = recentes.filter(r => !noms.length || noms.some(n => (r.nom || '').toLowerCase().includes(n.toLowerCase()))).slice(0, 6);
+  if (!l.length) return '';
+  return `Les dernières histoires de cet enfant (NE REFAIS PAS ces idées, ces titres, ces animaux ni ces débuts ; change de décor et de personnages) :\n` + l.map(r => `- « ${r.titre} » : ${r.debut}…`).join('\n');
+}
 /* Les consignes communes, d'après le formulaire */
 function consignes(opts = {}) {
   const friends = $('friends').value.trim();
@@ -1801,7 +1827,8 @@ function consignes(opts = {}) {
     ...enf.lignes,
     ...consignesPersos(),
     friends ? `Autres héros de l'histoire, aussi importants que le héros principal (chacun a son rôle, ses répliques et un moment où il aide) : ${friends}.` : '',
-    opts.sansIdee ? '' : (idea ? `Idée de départ : ${idea}` : `Surprends-moi avec une idée originale et inattendue.`),
+    opts.sansIdee ? '' : (idea ? `Idée de départ : ${idea}` : `Surprends-moi avec une idée originale et inattendue : pas de forêt enchantée, de lapin ni de renard par défaut. Pour t'inspirer, trois graines tirées au sort (prends-en UNE, mélange-les, ou invente mieux) : ${graines().join(' ; ')}.`),
+    opts.sansIdee ? '' : consigneRecentes(enf.noms),
     souciTxt ? `Petit défi de la vraie vie à apprivoiser : ${souciTxt}. Le héros vit une situation semblable, ressent la même émotion (nommée simplement, sans en faire un drame), découvre un ou deux trucs concrets qu'un enfant peut vraiment utiliser, et réussit. Ton rassurant, jamais moralisateur ; l'enfant doit se reconnaître et se sentir capable.` : '',
     moral ? `Valeur à transmettre subtilement : ${moral}.` : '',
     !opts.sansIdee && $('journee').value.trim() ? `Ce qui s'est VRAIMENT passé aujourd'hui dans la vie de l'enfant : ${$('journee').value.trim()}. Transforme ces vrais moments en aventure : l'enfant doit les reconnaître (mêmes lieux, mêmes objets, mêmes personnes), mais tout devient extraordinaire et se termine bien.` : '',
@@ -2567,7 +2594,7 @@ async function finirTravail(suivi, v) {
       if (v.phases?.voix?.etat === 'err') status($('tts-status'), 'La voix n\'a pas pu s\'enregistrer sur le serveur (' + esc(v.phases.voix.det || '') + ') : touche 🔊 Raconter pour l\'enregistrer ici.', 'err');
     }
   }
-  oublierTravail(v.id);
+  oublierTravail(v.id); majRecentes();
   fabFetch('/travaux/' + v.id, { method: 'DELETE' }).catch(() => {});
 }
 /* À l'ouverture : les travaux en cours ou finis pendant que l'app dormait */
@@ -3169,6 +3196,13 @@ setTimeout(() => { try { if (parServeur() && !GC_PALIERS.some(gcVoixDe)) gcCharg
 
 /* Les enfants et leurs choix → consignes pour Gemini */
 const NOMS_CHOIX = { objet: 'son objet', animal: 'son animal', personnage: 'son personnage', couleur: 'sa couleur', mechant: 'son méchant', lieu: 'son lieu', pouvoir: 'son pouvoir magique' };
+/* v57 : des consignes concrètes par âge (avant : seulement « adapté à l'âge ») */
+function consigneAge(age) {
+  if (age <= 3) return `Pour ${age} ans : phrases de cinq à huit mots, un seul fil (pas de sous-intrigue), deux ou trois personnages au plus, une formule qui revient trois fois pour que l'enfant la dise avec toi, beaucoup de sons et de répétitions, des choses de son monde (le bain, le toutou, le chat, le lit).`;
+  if (age <= 5) return `Pour ${age} ans : phrases courtes, un vrai problème que le héros règle lui-même, de l'humour simple (une chute, un animal qui fait une bêtise, un mot rigolo), des mots qu'il connaît ou qu'on comprend tout de suite dans le contexte, et un ou deux mots nouveaux expliqués par l'action.`;
+  if (age <= 8) return `Pour ${age} ans : un vrai suspense (l'enfant doit se demander ce qui va arriver), un rebondissement qu'il n'avait pas vu venir, de l'humour plus fin (un personnage qui se trompe, un jeu de mots facile), des émotions nommées (jaloux, fier, gêné) et un héros qui réfléchit avant d'agir.`;
+  return `Pour ${age} ans : un récit plus riche (sous-intrigue possible, un personnage qui change d'avis), des émotions nuancées, de l'humour et de l'ironie légère, un vocabulaire plus large, un rebondissement surprenant et une fin qui laisse quelque chose à penser.`;
+}
 function consignesEnfants() {
   const tousLus = lireEnfants();
   const l = tousLus.filter(e => !e.absent);      // seulement ceux qui écoutent ce soir
@@ -3180,11 +3214,11 @@ function consignesEnfants() {
   const lignes = [];
   if (plusieurs) {
     const ages = tous.map(e => parseInt(e.age, 10) || 5);
-    lignes.push(`Écris une histoire originale pour ${tous.length} enfants : ${tous.map((e, i) => `${nomDe(e, i)} (${e.age} ans)`).join(', ')}. Vocabulaire adapté au plus jeune (${Math.min(...ages)} ans).`);
+    lignes.push(`Écris une histoire originale pour ${tous.length} enfants : ${tous.map((e, i) => `${nomDe(e, i)} (${e.age} ans)`).join(', ')}. ${consigneAge(Math.min(...ages))}`);
     lignes.push(`Les héros sont CES ${tous.length} ENFANTS, tous aussi importants : chacun a son prénom, sa personnalité, ses répliques et SON moment de gloire où c'est lui ou elle qui sauve la situation. Aucun n'est un simple figurant. Si l'histoire finit au dodo, la dernière phrase souhaite bonne nuit à chaque enfant par son prénom.`);
   } else {
-    lignes.push(`Écris une histoire originale pour un enfant de ${l[0].age} ans.`);
-    lignes.push(l[0].nom ? `Le héros s'appelle ${l[0].nom}.` : `Invente un héros attachant.`);
+    lignes.push(`Écris une histoire originale pour un enfant de ${l[0].age} ans. ${consigneAge(parseInt(l[0].age, 10) || 5)}`);
+    lignes.push(l[0].nom ? `Le héros s'appelle ${l[0].nom} : c'est ${l[0].nom} qui a l'idée qui sauve la situation au moment fort.` : `Invente un héros attachant.`);
   }
   const avecChoix = tous.map((e, i) => ({ e, i })).filter(x => Object.keys(x.e.choix).length);
   if (avecChoix.length) {
@@ -4103,7 +4137,7 @@ async function creer(fn, extra = {}) {
     delete s.avecDessin;
     await DB.put(s);
     showStory(s);
-    srvSauver(s);
+    srvSauver(s); majRecentes();
     st('✔ Histoire prête !');
     $('gen-status').className = 'status ok';
     imageEnFond(s);
@@ -5191,6 +5225,7 @@ $('btn-tele').onclick = teleOuvrir;
 
 /* v49 : histoires fabriquées sur le serveur pendant que l'app dormait */
 reprendreTravaux().catch(() => {});
+majRecentes();
 
 /* Sans ça, Chrome peut vider la mémoire de l'app quand le téléphone manque d'espace */
 if (navigator.storage?.persist) navigator.storage.persisted().then(oui => oui || navigator.storage.persist()).catch(() => {});
