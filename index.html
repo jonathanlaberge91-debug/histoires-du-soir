@@ -1328,7 +1328,7 @@
     <button type="button" id="t-quitter" title="Quitter le mode télé">✕</button>
   </div>
 </div>
-<p id="version-bas">Histoires du soir · <span class="vers">v93</span></p>
+<p id="version-bas">Histoires du soir · <span class="vers">v94</span></p>
 <div class="mini-lecteur" id="mini-lecteur" hidden>
   <div class="ml-vitesses" id="ml-vitesses" hidden></div>
   <div class="ml-rangee">
@@ -4844,7 +4844,7 @@ async function srvEnvoyer(id) {
     champs.srvNoeuds = sigN;
   }
   // Table numéro → clé, toujours celle des fichiers actuels (inchangés = mêmes clés, même ordre)
-  fd.append('cles', JSON.stringify({ illus: clesIllus, noeuds }));
+  if (champs.srvIllus || champs.srvNoeuds) fd.append('cles', JSON.stringify({ illus: clesIllus, noeuds }));   // v94 : seulement si des fichiers partent
   const maj = async ch => {
     const s2 = await DB.get(id); if (!s2) return;
     Object.assign(s2, ch);
@@ -4950,7 +4950,22 @@ async function srvRecupererFaire(silencieux) {
   if (!jetonMaison()) return silencieux ? undefined : st('Pas connecté : ' + MSG_CONNEXION + '.', 'err');
   try {
     st('<span class="spin"></span>Lecture de ton serveur…');
-    const { items } = await (await apiMaison(`/api/collections/${COL_HIST}/records?perPage=500&fields=id,hid,titre&sort=-creeLe`)).json();
+    const { items } = await (await apiMaison(`/api/collections/${COL_HIST}/records?perPage=500&fields=id,hid,titre,updated&sort=-creeLe`)).json();
+    for (const h of items) {                                       // v94 : images de scènes ajoutées depuis (grandes aventures)
+      const a = await DB.get(h.hid).catch(() => null);
+      if (!a?.aventure || !h.updated || a.srvMaj === h.updated) continue;
+      const rec = await (await apiMaison(`/api/collections/${COL_HIST}/records/${h.id}`)).json();
+      const manque = (rec.illus || []).filter(f => { const c = rec.cles?.illus?.[numFichier(f)]; return c && !a.illusImages?.[c]; });
+      if (manque.length) {
+        const { token: jf } = await (await apiMaison('/api/files/token', { method: 'POST' })).json();
+        a.illusImages = a.illusImages || {};
+        for (const f of manque) a.illusImages[rec.cles.illus[numFichier(f)]] = await fichierServeur(rec, f, jf);
+        a.srvIllus = Object.keys(a.illusImages).sort().map(c => c + ':' + a.illusImages[c].size).join(',');
+      }
+      a.srvMaj = rec.updated; await DB.put(a);
+      if (current?.id === a.id) current.srvMaj = rec.updated;
+      if (manque.length && current?.id === a.id) { Object.assign(current, { illusImages: a.illusImages, srvIllus: a.srvIllus }); aventurePoser(current); afficherCouverture(current); majEcran(); }
+    }
     const ici = new Set((await DB.all()).map(s => s.id));
     const enAttente = new Map((await DB.all()).filter(s => s.attente).map(s => [s.id, s]));
     for (const h of items) { const a = enAttente.get(h.hid); if (a && h.titre !== a.titre) { await DB.del(a.id); ici.delete(h.hid); } }   // v90 : commande écrite → on la recharge
