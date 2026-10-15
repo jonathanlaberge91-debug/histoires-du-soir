@@ -1219,7 +1219,7 @@
     <button type="button" id="t-quitter" title="Quitter le mode télé">✕</button>
   </div>
 </div>
-<p id="version-bas">Histoires du soir · <span class="vers">v80</span></p>
+<p id="version-bas">Histoires du soir · <span class="vers">v81</span></p>
 <div class="mini-lecteur" id="mini-lecteur" hidden>
   <div class="ml-vitesses" id="ml-vitesses" hidden></div>
   <div class="ml-rangee">
@@ -5047,11 +5047,11 @@ if (!cleGemini()) document.querySelector('#res-cles').closest('details').open = 
     return lignes.map((l, i) => `<text transform="rotate(-90 ${cx + dx[i]} ${cy})" x="${cx + dx[i]}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-family="Fraunces, Georgia, serif" font-weight="700" font-size="${taille}" fill="${couleur}" letter-spacing=".2">${esc(l)}</text>`).join('');
   }
   function dessinLivre({ w, h, c, e, img, t, sous }) {
-    const id = 'lv' + (++nLivre), b = w * .05, d = Math.round(w * .32), H = h;
+    const id = 'lv' + (++nLivre), b = w * .11, d = Math.round(w * .32), H = h;
     const cuir = melLivre(c, 72, '#2b1608'), or = `url(#${id}o)`, y0 = d, y1 = H, hd = y1 - y0;
     const corps = bandeLivre(w, y0, y1 - b, b);
     let s = `<defs>
-      <linearGradient id="${id}c" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#000" stop-opacity=".42"/><stop offset=".1" stop-color="#000" stop-opacity=".14"/><stop offset=".32" stop-color="#fff" stop-opacity=".16"/><stop offset=".55" stop-color="#fff" stop-opacity=".02"/><stop offset=".8" stop-color="#000" stop-opacity=".1"/><stop offset="1" stop-color="#000" stop-opacity=".42"/></linearGradient>
+      <linearGradient id="${id}c" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#000" stop-opacity=".64"/><stop offset=".1" stop-color="#000" stop-opacity=".14"/><stop offset=".32" stop-color="#fff" stop-opacity=".28"/><stop offset=".55" stop-color="#fff" stop-opacity=".02"/><stop offset=".8" stop-color="#000" stop-opacity=".1"/><stop offset="1" stop-color="#000" stop-opacity=".64"/></linearGradient>
       <linearGradient id="${id}n" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".4"/><stop offset=".4" stop-color="#fff" stop-opacity=".06"/><stop offset=".55" stop-color="#000" stop-opacity=".22"/><stop offset="1" stop-color="#000" stop-opacity=".62"/></linearGradient>
       <linearGradient id="${id}o" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#9c7a2a"/><stop offset=".3" stop-color="#ffe9a0"/><stop offset=".55" stop-color="#e2bb5b"/><stop offset="1" stop-color="#8a6a22"/></linearGradient>
       <linearGradient id="${id}t" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#fff3c4"/><stop offset=".5" stop-color="#e0b64f"/><stop offset="1" stop-color="#fff0b8"/></linearGradient>
@@ -5082,6 +5082,12 @@ if (!cleGemini()) document.querySelector('#res-cles').closest('details').open = 
     s += `</g><path d="${corps}" fill="url(#${id}c)"/>`;                          // l'éclairage, par-dessus tout : le relief
     s += `<path d="M1.8,${d + 3} V${H - b - 2}" stroke="rgba(0,0,0,.5)" stroke-width="1.2"/><path d="M${w - 1.8},${d + 3} V${H - b - 2}" stroke="rgba(0,0,0,.5)" stroke-width="1.2"/>`;
     s += `<path d="${corps}" fill="none" stroke="rgba(0,0,0,.55)" stroke-width=".8"/><path class="sel" d="M0,${d} L${w * .12},0 L${w * .88},0 L${w},${d} L${w},${H - b} Q${w / 2},${H} 0,${H - b} Z" fill="none" stroke="#f2c46d" stroke-width="2"/>`;
+    // v81 (« Bien rond », choisi le 2026-10-15) : silhouette aux coins arrondis (arrière du bloc de pages : 4 ; bas : 12) + reflet doux sur l'arrondi
+    { const rb = 4, rr = 12, P = [w * .1, 0], Q = [w * .9, 0], lg = Math.hypot(w * .1, d);
+      const A = [P[0] - w * .1 / lg * rb, d / lg * rb], D = [Q[0] + w * .1 / lg * rb, d / lg * rb];
+      const sil = `M${A[0]},${A[1]} Q${P[0]},0 ${P[0] + rb},0 L${Q[0] - rb},0 Q${Q[0]},0 ${D[0]},${D[1]} L${w},${d} L${w},${H - rr} Q${w},${H} ${w - rr},${H} L${rr},${H} Q0,${H} 0,${H - rr} L0,${d} Z`;
+      s = `<clipPath id="${id}rr"><path d="${sil}"/></clipPath><g clip-path="url(#${id}rr)">${s}</g>`
+        + `<defs><linearGradient id="${id}hh" x1="0" x2="1"><stop offset=".18" stop-color="#fff" stop-opacity="0"/><stop offset=".27" stop-color="#fff" stop-opacity=".22"/><stop offset=".36" stop-color="#fff" stop-opacity="0"/></linearGradient></defs><path d="${corps}" fill="url(#${id}hh)" clip-path="url(#${id}rr)"/>`; }
     return `<svg width="${w}" height="${H}" viewBox="0 0 ${w} ${H}" aria-hidden="true">${s}</svg>`;
   }
   const ETINCELLES = `<i class="etin" style="left:-6px;top:10%;--dx:-14px;--dy:-18px">✦</i><i class="etin" style="right:-6px;top:20%;--dx:16px;--dy:-14px">✦</i><i class="etin" style="left:-4px;top:55%;--dx:-16px;--dy:6px">✦</i><i class="etin" style="right:-8px;top:60%;--dx:14px;--dy:10px;font-size:8px">✦</i><i class="etin" style="left:40%;top:-8px;--dx:2px;--dy:-20px">✦</i><i class="etin" style="left:-8px;top:34%;--dx:-16px;--dy:-4px;font-size:9.5px">✦</i><i class="etin" style="right:-6px;top:84%;--dx:14px;--dy:14px;font-size:10px">✦</i>`;
