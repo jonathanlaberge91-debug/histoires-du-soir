@@ -547,6 +547,10 @@
   @keyframes ch-respire { 0%, 100% { filter: brightness(1.08) drop-shadow(0 0 4px rgba(255,220,140,.55)); } 50% { filter: brightness(1.22) drop-shadow(0 0 14px rgba(255,220,140,1)); } }
   @keyframes ch-respire-l { 0%, 100% { filter: brightness(1.06) drop-shadow(0 12px 7px rgba(0,0,0,.65)) drop-shadow(0 0 4px rgba(255,220,140,.55)); } 50% { filter: brightness(1.18) drop-shadow(0 12px 7px rgba(0,0,0,.65)) drop-shadow(0 0 13px rgba(255,220,140,1)); } }
   @keyframes ch-etin { 0% { opacity: 0; transform: translate(0, 0) scale(.3); } 25% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1.1); } }
+  .cl-infos { justify-content: flex-start; }
+  .table .ch-claude, .table .ch-claude.off { filter: none; animation: ch-claude 3.2s ease-in-out infinite; border-radius: 3px; }
+  @keyframes ch-claude { 0%, 100% { filter: brightness(1) drop-shadow(0 0 2px rgba(255,220,140,.3)); } 50% { filter: brightness(1.18) drop-shadow(0 0 10px rgba(255,220,140,.9)); } }
+  .table .ch-claude::after { content: "✨"; position: absolute; right: -6px; top: -8px; font-size: 13px; filter: drop-shadow(0 0 4px #000); }
   .table .polaroid { cursor: pointer; transform-origin: 0 0; }
   .table .polaroid img { position: absolute; inset: 6% 6% 16%; width: 88%; height: 78%; object-fit: cover; display: none; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
   .table .polaroid.a img { display: block; }
@@ -905,6 +909,8 @@
         <div class="z obj spr ch-livre" data-l="long" data-src="chevet-livre2.png" data-r="33.31,39.7,11.31,14.39" role="button" title="Longue · 9 min"></div>
         <!-- images : 8 cadres (minimum : la couverture) -->
         <div id="ch-cadres"></div>
+        <!-- v90 : le cadre de droite sur le dessus = commander une grande aventure à Claude -->
+        <div class="z obj ch-claude" id="ch-claude" data-r="78.6,12.1,11.3,9.8" role="button" title="Une grande aventure écrite par Claude"></div>
         <!-- l'enfant choisit : le livre ouvert -->
         <div class="z obj spr ouvert" id="ch-format" data-src="chevet-ouvert.png" data-r="11.17,68.03,35.45,17.32" role="button" title="L'enfant choisit la suite"></div>
         <!-- dessin : la feuille épinglée -->
@@ -1321,7 +1327,7 @@
     <button type="button" id="t-quitter" title="Quitter le mode télé">✕</button>
   </div>
 </div>
-<p id="version-bas">Histoires du soir · <span class="vers">v89</span></p>
+<p id="version-bas">Histoires du soir · <span class="vers">v90</span></p>
 <div class="mini-lecteur" id="mini-lecteur" hidden>
   <div class="ml-vitesses" id="ml-vitesses" hidden></div>
   <div class="ml-rangee">
@@ -4849,6 +4855,8 @@ async function srvRecupererFaire(silencieux) {
     st('<span class="spin"></span>Lecture de ton serveur…');
     const { items } = await (await apiMaison(`/api/collections/${COL_HIST}/records?perPage=500&fields=id,hid,titre&sort=-creeLe`)).json();
     const ici = new Set((await DB.all()).map(s => s.id));
+    const enAttente = new Map((await DB.all()).filter(s => s.attente).map(s => [s.id, s]));
+    for (const h of items) { const a = enAttente.get(h.hid); if (a && h.titre !== a.titre) { await DB.del(a.id); ici.delete(h.hid); } }   // v90 : commande écrite → on la recharge
     const manquent = items.filter(h => /^[\w-]{1,40}$/.test(String(h.hid || '')) && !ici.has(h.hid));
     if (!manquent.length) return st(`✔ Rien à récupérer : les ${items.length} histoire(s) du serveur sont déjà ici.`, 'ok');
     let n = 0;
@@ -4907,6 +4915,49 @@ function plancheSVG() {
     <rect x="0" y="0" width="400" height="30" rx="3" fill="url(#${id}v)"/><rect x="0" y="0" width="400" height="30" rx="3" fill="url(#${id}b)"/>
     <rect x="0" y="0" width="400" height="30" rx="3" fill="none" stroke="rgba(0,0,0,.5)" stroke-width=".8"/></svg>`;
 }
+/* v90 : COMMANDER UNE GRANDE AVENTURE À CLAUDE. Les choix du moment (enfants, ambiance, lieu, méchant…) et la durée
+   deviennent une commande : une Super histoire « en attente », sauvegardée sur le serveur Maison. Jonathan demande ensuite à
+   Claude (dans Claude Code) de l'écrire ; Claude remplace la commande par l'aventure (même identifiant), l'app la met à jour. */
+function feuilleClaude() {
+  const m = metaHistoire(), sansEmoji = t => String(t || '').replace(/^[^\p{L}\p{N}]+/u, '').trim();
+  const lignes = [['👧', 'Pour', m.name || 'un héros inventé'], ['🎭', 'Ambiance', sansEmoji(m.ambiance)], ['🗺️', 'Lieu', m.lieu], ['😈', 'Méchant', m.mechant],
+    ['👥', 'Avec', m.friends], ['🌱', 'Petit souci', sansEmoji(m.souci)], ['💛', 'Leçon', m.lecon], ['💡', 'Idée', $('idea').value.trim()]].filter(x => x[2]);
+  const f = feuille(`<h3>✨ Une grande aventure écrite par Claude</h3>
+    <p class="hint" style="margin-top:0">Une très longue histoire où l'enfant choisit souvent, avec une image par scène. Elle se range dans <b>✨ Super histoires</b>, en attente : Claude l'écrira quand tu le lui demanderas.</p>
+    <div class="s-infos cl-infos">${lignes.map(([e, k, v]) => `<span class="s-info"><i>${e}</i><span><small>${k}</small>${esc(v)}</span></span>`).join('')}</div>
+    <p class="hint" style="margin:14px 0 6px">Combien de temps pour une partie ?</p>
+    <div class="v-vitesses" id="cl-durees">${[10, 20, 30, 45].map(n => `<button type="button" class="vv ${n === 20 ? 'on' : ''}" data-min="${n}">${n} min</button>`).join('')}</div>
+    <button type="button" class="big" id="cl-ok" style="margin-top:16px">✨ Commander l'aventure</button>
+    <button type="button" class="sec etg-retirer" id="cl-non">Annuler</button>`);
+  f.onclick = async e => {
+    const d = e.target.closest('[data-min]'); if (d) { f.querySelectorAll('[data-min]').forEach(x => x.classList.toggle('on', x === d)); return; }
+    if (e.target.closest('#cl-non')) { f.onclick = null; fermerFeuille(); return; }
+    if (!e.target.closest('#cl-ok')) return;
+    f.onclick = null; fermerFeuille();
+    const min = +f.querySelector('[data-min].on').dataset.min;
+    const s = { id: Date.now().toString(36) + 'c', createdAt: Date.now(), titre: `Grande aventure pour ${m.name || 'un héros inventé'} · ${min} min`, histoire: '',
+      meta: { ...m, duree: `${min} min` }, super: true, attente: true,
+      commande: { minutes: min, format: 'aventure', choix: 'souvent', images: 'une par scène', idee: $('idea').value.trim(),
+        prompt: consignes().join('\n'), systeme: promptSysteme(), demandee: new Date().toISOString() } };
+    await DB.put(s); srvSauver(s);
+    remettreAZero();
+    status($('gen-status'), `✨ Commande envoyée : elle attend dans 📚 Histoires → ✨ Super histoires. Demande à Claude de l'écrire.`, 'ok');
+  };
+}
+function feuilleAttente(s) {
+  const c = s.commande || {};
+  const f = feuille(`<h3>⏳ ${esc(s.titre)}</h3>
+    <p class="hint" style="margin-top:0">Commandée le ${new Date(s.createdAt).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long' })} · ${c.minutes || '?'} min · l'enfant choisit souvent · une image par scène.</p>
+    <p>Pour qu'elle soit écrite, dis à Claude (dans Claude Code) : <b>« écris mes grandes aventures en attente »</b>. Elle apparaîtra ici toute seule quand elle sera prête.</p>
+    <button type="button" class="sec etg-retirer" id="at-annuler">🗑️ Annuler cette commande</button>`);
+  f.onclick = async e => {
+    if (!e.target.closest('#at-annuler')) return;
+    if (!confirm('Annuler cette commande ?')) return;
+    f.onclick = null; fermerFeuille();
+    await DB.del(s.id); if (srvActif()) srvSupprimer(s.id).catch(() => {});
+    renderLib();
+  };
+}
 /* ==================== BIBLIOTHÈQUE ==================== */
 $('lib-planche').innerHTML = plancheSVG() + '<span class="plaque">Mes histoires</span>';
 let vignettes = [];
@@ -4943,10 +4994,10 @@ async function renderLib() {
     r ? r.l.push(s) : rayons.push({ nom, l: [s] });
   }
   const livre = s => {
-    let couv = `<div class="vign" style="--c:${['#6f82c9', '#4f9a72', '#d0628f', '#8a63c9', '#d07a3a', '#3b7ea3', '#c2474c'][s.createdAt % 7]}">${s.audio ? '🎧' : s.interactive ? '🔀' : '📖'}</div>`;
+    let couv = `<div class="vign" style="--c:${['#6f82c9', '#4f9a72', '#d0628f', '#8a63c9', '#d07a3a', '#3b7ea3', '#c2474c'][s.createdAt % 7]}">${s.attente ? '⏳' : s.audio ? '🎧' : s.interactive ? '🔀' : '📖'}</div>`;
     if (s.image) { const u = URL.createObjectURL(s.image); vignettes.push(u); couv = `<img class="vign" src="${u}" alt="">`; }
     const quand = new Date(s.createdAt).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long' });
-    const det = [quand, s.chap > 1 ? `chap. ${s.chap}` : '', s.interactive ? (s.parts?.length < NB_PARTIES ? 'à choix (pas finie)' : 'à choix') : '',
+    const det = [quand, s.attente ? 'en attente de Claude' : '', s.chap > 1 ? `chap. ${s.chap}` : '', s.interactive ? (s.parts?.length < NB_PARTIES ? 'à choix (pas finie)' : 'à choix') : '',
       s.meta?.name ? esc(s.meta.name) : '', s.autresVoix?.length ? `🎙️ ${s.autresVoix.length + 1} voix` : s.audio ? '🎧' : '', s.srv && !s.srvAttente ? '☁️' : ''].filter(Boolean).join(' · ');
     return `<div class="lib-item" data-id="${esc(s.id)}" role="button" tabindex="0">${couv}
       <div class="t">${esc(s.titre)}<small>${det}</small></div>
@@ -4986,6 +5037,7 @@ $('lib-list').addEventListener('click', async e => {
     return;
   }
   const item = e.target.closest('.lib-item'); if (!item) return;
+  { const x = await DB.get(item.dataset.id); if (x?.attente) return feuilleAttente(x); }
   voixChoisie.delete(item.dataset.id);
   $('v-lib').insertBefore($('story-card'), $('lib-list'));          // v75 : la fiche s'ouvre ICI, dans Histoires (plus dans Créer)
   document.body.classList.add('lib-lecture');                     // v82 : plus de place : la recherche et les filtres se cachent jusqu'au ✕
@@ -5548,6 +5600,7 @@ if (!cleGemini()) document.querySelector('#res-cles').closest('details').open = 
     const l = e.target.closest('[data-l]'); if (l) { chip('length', l.dataset.l).click(); tout(); return; }
     const c = e.target.closest('.cadre[data-n]'); if (c) { const k = +c.dataset.n; chip('images', k === imgReco() ? 'reco' : String(k)).click(); tout(); return; }
     if (e.target.closest('#ch-format')) { chip('format', chipVal('format') === 'choix' ? 'complete' : 'choix').click(); tout(); return; }
+    if (e.target.closest('#ch-claude')) { feuilleClaude(); return; }
     if (e.target.closest('#ch-dessin-x')) { $('dessin-retirer').click(); etgChevet(); return; }
     if (e.target.closest('#ch-dessin') && !dessin) $('dessin').click();
   };
