@@ -431,7 +431,7 @@
   .etg-intro { color: var(--doux); font-size: .9rem; margin: 2px 0 6px; }
   .tablette { position: relative; margin: 0 -16px 16px; }
   .tablette .rang { position: relative; }
-  .tablette .livres { display: flex; align-items: flex-end; gap: 5px; overflow-x: auto; padding: 24px 18px 0; scroll-snap-type: x proximity; scrollbar-width: none; }
+  .tablette .livres { display: flex; align-items: flex-end; gap: 5px; overflow-x: auto; padding: 46px 18px 0; scroll-snap-type: x proximity; scrollbar-width: none; }
   .tablette .livres::-webkit-scrollbar { display: none; }
   .livre { flex: none; position: relative; min-width: 44px; max-width: 120px; height: var(--h, 124px); padding: 10px 6px 14px; margin: 0; border: 0; border-radius: 5px 5px 2px 2px;
     display: flex; flex-direction: column; align-items: center; cursor: pointer; scroll-snap-align: start; font: inherit;
@@ -459,7 +459,7 @@
   .livre.svg.on .etin:nth-of-type(6) { animation-delay: .25s; } .livre.svg.on .etin:nth-of-type(7) { animation-delay: .95s; }
   @keyframes livre-danse { 0%, 100% { transform: translateY(-14px); } 15% { transform: translateY(-26px); } 30% { transform: translateY(-14px); }
     45% { transform: translateY(-14px); } 60% { transform: translateY(-26px); } 75% { transform: translateY(-14px); } }   /* v71 : de haut en bas seulement */
-  @keyframes livre-lueur { 0%, 100% { filter: drop-shadow(0 0 8px rgba(242,196,109,.85)) brightness(1.06); } 50% { filter: drop-shadow(0 0 22px rgba(255,220,140,1)) drop-shadow(0 0 6px rgba(255,235,180,.9)) brightness(1.14); } }
+  @keyframes livre-lueur { 0%, 100% { filter: drop-shadow(0 0 5px rgba(242,196,109,.6)) brightness(1.03); } 50% { filter: drop-shadow(0 0 14px rgba(255,220,140,.9)) brightness(1.08); } }   /* v72 : lueur adoucie */
   @keyframes livre-etin { 0% { opacity: 0; transform: translate(0, 0) scale(.3); } 20% { opacity: 1; } 60% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1.1); } 100% { opacity: 0; } }
   .livre.libre { background: transparent; color: var(--doux); border: 2px dashed var(--meuble-bord); box-shadow: none; filter: none; --h: 124px; }
   .livre.libre em { text-shadow: none; }
@@ -1179,7 +1179,7 @@
     <button type="button" id="t-quitter" title="Quitter le mode télé">✕</button>
   </div>
 </div>
-<p id="version-bas">Histoires du soir · <span class="vers">v71</span></p>
+<p id="version-bas">Histoires du soir · <span class="vers">v72</span></p>
 <div class="mini-lecteur" id="mini-lecteur" hidden>
   <div class="ml-vitesses" id="ml-vitesses" hidden></div>
   <div class="ml-rangee">
