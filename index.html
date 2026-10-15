@@ -468,11 +468,20 @@
   .tablette .fleche { position: absolute; right: 0; top: 0; bottom: 0; width: 46px; border: 0; padding: 0; display: grid; place-items: center; font: 800 1.8rem var(--f-texte); color: var(--texte);
     background: linear-gradient(90deg, transparent, var(--fondu) 70%); opacity: 0; pointer-events: none; transition: opacity .2s; cursor: pointer; }
   .tablette.deborde .fleche { opacity: 1; pointer-events: auto; }
-  .planche, .lib-rayon .planche { position: relative; height: 16px; margin: 0 10px; border-radius: 3px; background: linear-gradient(var(--bois1), var(--bois2));
-    box-shadow: 0 8px 12px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,220,160,.25); }
-  .plaque { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); white-space: nowrap; color: var(--bois-txt); font: 800 .76rem var(--f-texte);
-    letter-spacing: .06em; text-transform: uppercase; text-shadow: var(--bois-lueur); }
-  .plaque small { text-transform: none; letter-spacing: 0; opacity: .75; font-size: .9em; }
+  /* v74 : la planche = une seule pièce de chêne clair verni dessinée en SVG (grain = bruit étiré, nœuds, reflet de vernis),
+     et le nom sur une plaque de laiton vissée (biseau, brossé, texte gravé, deux vis fendues). Choisi le 2026-10-14 (planches.html n° 1). */
+  .planche, .lib-rayon .planche { position: relative; height: auto; margin: 0 6px; }
+  .planche svg { display: block; width: 100%; height: 30px; filter: drop-shadow(0 8px 10px rgba(0,0,0,.45)); }
+  .plaque { position: absolute; left: 50%; top: 15px; transform: translate(-50%, -50%); white-space: nowrap; font: 800 .7rem var(--f-texte); letter-spacing: .12em; text-transform: uppercase;
+    color: #4a2e06; padding: 2px 26px; border-radius: 3px; max-width: calc(100% - 20px); overflow: hidden; text-overflow: ellipsis;
+    background: repeating-linear-gradient(90deg, rgba(255,255,255,.06) 0 1px, transparent 1px 3px), linear-gradient(170deg, #f7df9a 0%, #d9b35a 35%, #b8902e 60%, #e8c766 100%);
+    box-shadow: inset 1.5px 1.5px 0 rgba(255,250,220,.9), inset -1.5px -1.5px 0 rgba(90,55,5,.75), 0 2px 3px rgba(0,0,0,.6), 0 0 0 .5px rgba(60,35,0,.6);
+    text-shadow: 0 1px 0 rgba(255,245,210,.55), 0 -0.5px 0 rgba(0,0,0,.5); }
+  .plaque::before, .plaque::after { content: ""; position: absolute; top: 50%; width: 7px; height: 7px; margin-top: -3.5px; border-radius: 50%;
+    box-shadow: 0 .5px 1px rgba(0,0,0,.7), inset 0 0 0 .5px rgba(60,35,0,.5);
+    background: linear-gradient(var(--fente, 30deg), transparent 44%, #4a2e06 44% 56%, transparent 56%), radial-gradient(circle at 35% 30%, #fff3c4, #c9a24a 55%, #6b4a10); }
+  .plaque::before { left: 7px; --fente: 30deg; } .plaque::after { right: 7px; --fente: -50deg; }
+  .plaque small { text-transform: none; letter-spacing: 0; opacity: .85; font-size: .9em; color: #5a3a10; }
   .etg-aide { color: var(--doux); font-size: .78rem; margin: -8px 2px 12px; min-height: 0; }
   .etg-aide:empty { display: none; }
   #persos-status { margin: -6px 2px 12px; }
@@ -1179,7 +1188,7 @@
     <button type="button" id="t-quitter" title="Quitter le mode télé">✕</button>
   </div>
 </div>
-<p id="version-bas">Histoires du soir · <span class="vers">v73</span></p>
+<p id="version-bas">Histoires du soir · <span class="vers">v74</span></p>
 <div class="mini-lecteur" id="mini-lecteur" hidden>
   <div class="ml-vitesses" id="ml-vitesses" hidden></div>
   <div class="ml-rangee">
@@ -4657,6 +4666,24 @@ async function majBadgeNouvelles() {
   try { const n = (await DB.liste()).filter(s => s.nouvelle).length; const b = $('lib-badge'); b.hidden = !n; b.textContent = n; } catch {}
 }
 majBadgeNouvelles();
+/* v74 : la planche de chêne clair verni (SVG) : grain = bruit fractal étiré dans le sens des fibres, deux nœuds, vernis, arêtes arrondies */
+let nPlanche = 0;
+function plancheSVG() {
+  const id = 'pl' + (++nPlanche);
+  const noeuds = [[22, .5], [71, .4]].map(([x, r]) => `<ellipse cx="${x}%" cy="${40 + r * 10}%" rx="${7 + r * 4}" ry="${2.2 + r}" fill="none" stroke="rgba(40,20,5,${.35 + r * .3})" stroke-width=".8"/><ellipse cx="${x}%" cy="${40 + r * 10}%" rx="${3.5 + r * 2}" ry="1.2" fill="rgba(40,20,5,.55)"/><ellipse cx="${x}%" cy="${40 + r * 10}%" rx="${11 + r * 5}" ry="${3.6 + r}" fill="none" stroke="rgba(40,20,5,.18)" stroke-width=".6"/>`).join('');
+  return `<svg viewBox="0 0 400 30" preserveAspectRatio="none" aria-hidden="true"><defs>
+    <filter id="${id}f" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.012 0.6" numOctaves="3" seed="3" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  1 0 0 0 0" result="a"/>
+      <feComponentTransfer in="a"><feFuncA type="table" tableValues="0 .25 .55 .35 .75 .45 1"/></feComponentTransfer></filter>
+    <linearGradient id="${id}t" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#e3b77a"/><stop offset=".55" stop-color="#b97f3f"/><stop offset="1" stop-color="#9a6a35"/></linearGradient>
+    <linearGradient id="${id}v" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".35" stop-color="#fff" stop-opacity=".35"/><stop offset=".5" stop-color="#fff" stop-opacity=".1"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <linearGradient id="${id}b" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".45"/><stop offset=".12" stop-color="#fff" stop-opacity=".08"/><stop offset=".85" stop-color="#000" stop-opacity=".05"/><stop offset="1" stop-color="#000" stop-opacity=".55"/></linearGradient>
+    <clipPath id="${id}k"><rect x="0" y="0" width="400" height="30" rx="3"/></clipPath></defs>
+    <rect x="0" y="0" width="400" height="30" rx="3" fill="url(#${id}t)"/>
+    <g clip-path="url(#${id}k)"><rect x="0" y="0" width="400" height="30" filter="url(#${id}f)" fill="#2a1408" opacity=".75"/>${noeuds}</g>
+    <rect x="0" y="0" width="400" height="30" rx="3" fill="url(#${id}v)"/><rect x="0" y="0" width="400" height="30" rx="3" fill="url(#${id}b)"/>
+    <rect x="0" y="0" width="400" height="30" rx="3" fill="none" stroke="rgba(0,0,0,.5)" stroke-width=".8"/></svg>`;
+}
 /* ==================== BIBLIOTHÈQUE ==================== */
 let vignettes = [];
 async function renderLib() {
@@ -4703,7 +4730,7 @@ async function renderLib() {
   };
   el.classList.add('rayons');
   el.innerHTML = rayons.map(r => `<section class="lib-rayon"><div class="lib-livres">${r.l.map(livre).join('')}</div>
-    <div class="planche"><span class="plaque">${esc(r.nom)} <small>${r.l.length}</small></span></div></section>`).join('');
+    <div class="planche">${plancheSVG()}<span class="plaque">${esc(r.nom)} <small>${r.l.length}</small></span></div></section>`).join('');
 }
 let minuterieRecherche = null;
 $('lib-q').addEventListener('input', () => { clearTimeout(minuterieRecherche); minuterieRecherche = setTimeout(renderLib, 200); });
@@ -4935,7 +4962,7 @@ if (!cleGemini()) document.querySelector('#res-cles').closest('details').open = 
     if (!el.querySelector('.livres')) {
       el.className = 'tablette' + (opt ? ' opt' : '');
       el.innerHTML = `<div class="rang"><div class="livres" role="group" aria-label="${esc(nom)}"></div><button type="button" class="fleche" aria-label="Voir les autres livres" tabindex="-1">›</button></div>
-        <div class="planche"><span class="plaque">${esc(nom)}${opt ? ' <small>facultatif</small>' : ''}</span></div>`;
+        <div class="planche">${plancheSVG()}<span class="plaque">${esc(nom)}${opt ? ' <small>facultatif</small>' : ''}</span></div>`;
       const r = el.querySelector('.livres');
       r.addEventListener('scroll', () => fleche(el), { passive: true });
       el.querySelector('.fleche').onclick = () => r.scrollBy({ left: r.clientWidth * .7, behavior: 'smooth' });
