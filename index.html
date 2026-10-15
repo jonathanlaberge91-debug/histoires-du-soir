@@ -423,6 +423,23 @@
   .livre em { font-style: normal; writing-mode: vertical-rl; transform: rotate(180deg); max-height: 76px; overflow: hidden; font: 800 .72rem/1.1 var(--f-texte); margin-top: 6px; text-align: left; text-shadow: 0 1px 1px rgba(0,0,0,.25); }
   .livre small { position: absolute; bottom: 3px; left: 0; right: 0; text-align: center; font: 800 .6rem var(--f-texte); opacity: .85; }
   .livre.on { background: var(--c); color: #fff; filter: none; transform: translateY(-14px); box-shadow: var(--livre-on); }
+  /* v69 : livres dessinés en SVG (dos de cuir peu bombé, deux nerfs, étiquettes, coins dorés, pages vues du dessus) ;
+     le livre choisi sort de la tablette, danse (petits sauts) et brille, des étincelles jaillissent à chaque saut */
+  .livre.svg { min-width: 0; max-width: none; height: auto; padding: 0; border-radius: 0; background: none; box-shadow: none; filter: drop-shadow(3px 4px 5px rgba(0,0,0,.55));
+    transform-origin: 50% 100%; transition: filter .25s; overflow: visible; }
+  .livre.svg svg { display: block; overflow: visible; }
+  .livre.svg .sel { display: none; }
+  .livre.svg .etin { position: absolute; color: #ffe9a0; font-size: 11px; opacity: 0; pointer-events: none; text-shadow: 0 0 6px #ffe9a0; }
+  .livre.svg.on { background: none; filter: drop-shadow(3px 4px 5px rgba(0,0,0,.55)); box-shadow: none; transform: translateY(-14px); z-index: 2; animation: livre-danse 1.4s ease-in-out infinite; }
+  .livre.svg.on .sel { display: block; }
+  .livre.svg.on svg { animation: livre-lueur 1.4s ease-in-out infinite; }
+  .livre.svg.on .etin { animation: livre-etin 1.4s ease-out infinite; }
+  .livre.svg.on .etin:nth-of-type(2) { animation-delay: .1s; } .livre.svg.on .etin:nth-of-type(3) { animation-delay: .7s; }
+  .livre.svg.on .etin:nth-of-type(4) { animation-delay: .8s; } .livre.svg.on .etin:nth-of-type(5) { animation-delay: .45s; }
+  @keyframes livre-danse { 0%, 100% { transform: translateY(-14px) rotate(0); } 15% { transform: translateY(-24px) rotate(-4deg); } 30% { transform: translateY(-14px) rotate(0); }
+    45% { transform: translateY(-14px) rotate(0); } 60% { transform: translateY(-24px) rotate(4deg); } 75% { transform: translateY(-14px) rotate(0); } }
+  @keyframes livre-lueur { 0%, 100% { filter: drop-shadow(0 0 4px rgba(242,196,109,.55)); } 50% { filter: drop-shadow(0 0 16px rgba(242,196,109,1)); } }
+  @keyframes livre-etin { 0% { opacity: 0; transform: translate(0, 0) scale(.3); } 20% { opacity: 1; } 60% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1.1); } 100% { opacity: 0; } }
   .livre.libre { background: transparent; color: var(--doux); border: 2px dashed var(--meuble-bord); box-shadow: none; filter: none; --h: 124px; }
   .livre.libre em { text-shadow: none; }
   .livre.libre.on { border: 2px solid var(--accent); color: var(--accent); background: var(--lu); }
@@ -1139,7 +1156,7 @@
     <button type="button" id="t-quitter" title="Quitter le mode télé">✕</button>
   </div>
 </div>
-<p id="version-bas">Histoires du soir · <span class="vers">v68</span></p>
+<p id="version-bas">Histoires du soir · <span class="vers">v69</span></p>
 <div class="mini-lecteur" id="mini-lecteur" hidden>
   <div class="ml-vitesses" id="ml-vitesses" hidden></div>
   <div class="ml-rangee">
@@ -4900,13 +4917,71 @@ if (!cleGemini()) document.querySelector('#res-cles').closest('details').open = 
     r.scrollLeft = x;
     requestAnimationFrame(() => fleche(el));
   }
+  /* ---------- v69 : un livre relié dessiné en SVG (choisi par Jonathan le 2026-10-14 : maquette livres-5 n° 3, mouvement « danse ») ----------
+     Le dos est légèrement bombé ; nerfs, étiquettes, titre et coins dorés reçoivent le même éclairage par-dessus (le relief).
+     Le dessus montre la tranche des pages (feuilles côte à côte) entre les deux plats. */
+  const LARGEURS = [48, 54, 44, 50, 56];
+  let nLivre = 0;
+  const melLivre = (c, k, vers = '#000') => `color-mix(in srgb, ${c} ${k}%, ${vers})`;
+  const bandeLivre = (w, y0, y1, b, x0 = 0, x1 = w) => `M${x0},${y0} Q${(x0 + x1) / 2},${y0 + b} ${x1},${y0} L${x1},${y1} Q${(x0 + x1) / 2},${y1 + b} ${x0},${y1} Z`;
+  function titreLivre(t, cx, cy, couleur, taille = 10.5) {
+    let lignes = [t];
+    if (t.length > 9) {                                            // deux lignes (coupées à l'espace ou au trait d'union le plus près du milieu)
+      const m = Math.round(t.length / 2); let k = -1;
+      for (const sep of [' ', '-']) { let q = t.lastIndexOf(sep, m); if (q < 2) q = t.indexOf(sep, m); if (q > 1 && (k < 0 || Math.abs(q - m) < Math.abs(k - m))) k = q; }
+      if (k > 0) { lignes = [t.slice(0, t[k] === '-' ? k + 1 : k), t.slice(k + 1)]; taille = 9.5; } else taille = t.length > 11 ? 8 : 9;
+    }
+    lignes = lignes.map(l => l.length > 13 ? l.slice(0, 12) + '…' : l);
+    const dx = lignes.length === 2 ? [-5.2, 5.2] : [0];
+    return lignes.map((l, i) => `<text transform="rotate(-90 ${cx + dx[i]} ${cy})" x="${cx + dx[i]}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-family="Fraunces, Georgia, serif" font-weight="700" font-size="${taille}" fill="${couleur}" letter-spacing=".2">${esc(l)}</text>`).join('');
+  }
+  function dessinLivre({ w, h, c, e, img, t, sous }) {
+    const id = 'lv' + (++nLivre), b = w * .05, d = Math.round(w * .32), H = h;
+    const cuir = melLivre(c, 72, '#2b1608'), or = `url(#${id}o)`, y0 = d, y1 = H, hd = y1 - y0;
+    const corps = bandeLivre(w, y0, y1 - b, b);
+    let s = `<defs>
+      <linearGradient id="${id}c" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#000" stop-opacity=".42"/><stop offset=".1" stop-color="#000" stop-opacity=".14"/><stop offset=".32" stop-color="#fff" stop-opacity=".16"/><stop offset=".55" stop-color="#fff" stop-opacity=".02"/><stop offset=".8" stop-color="#000" stop-opacity=".1"/><stop offset="1" stop-color="#000" stop-opacity=".42"/></linearGradient>
+      <linearGradient id="${id}n" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".4"/><stop offset=".4" stop-color="#fff" stop-opacity=".06"/><stop offset=".55" stop-color="#000" stop-opacity=".22"/><stop offset="1" stop-color="#000" stop-opacity=".62"/></linearGradient>
+      <linearGradient id="${id}o" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#9c7a2a"/><stop offset=".3" stop-color="#ffe9a0"/><stop offset=".55" stop-color="#e2bb5b"/><stop offset="1" stop-color="#8a6a22"/></linearGradient>
+      <linearGradient id="${id}t" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#fff3c4"/><stop offset=".5" stop-color="#e0b64f"/><stop offset="1" stop-color="#fff0b8"/></linearGradient>
+      <pattern id="${id}p" width="5" height="5" patternUnits="userSpaceOnUse"><circle cx="1.2" cy="1.5" r=".7" fill="#000" opacity=".22"/><circle cx="3.6" cy="3.8" r=".6" fill="#fff" opacity=".1"/></pattern>
+      <clipPath id="${id}k"><path d="${corps}"/></clipPath>${img ? `<clipPath id="${id}i"><rect x="5" y="${y0 + hd * .8 + 1}" width="${w - 10}" height="${y1 - b - hd * .04 - (y0 + hd * .8) - 2}" rx="2"/></clipPath>` : ''}</defs>`;
+    // le dessus : la tranche des pages (feuilles côte à côte, d'avant en arrière) entre les deux plats, et le haut du dos
+    s += `<path d="M1,${d} L${w * .12},0 L${w * .88},0 L${w - 1},${d} Z" fill="#efe4c8" stroke="rgba(0,0,0,.35)" stroke-width=".6"/>`;
+    { let lignes = ''; const nb = Math.round((w - 6) / 2.1);
+      for (let i = 1; i < nb; i++) { const f = i / nb, xb = 3 + f * (w - 6), xt = w * .16 + f * (w * .68); lignes += `M${xb.toFixed(1)},${d} L${xt.toFixed(1)},0 `; }
+      s += `<path d="${lignes}" stroke="#b9ab8a" stroke-width=".55" fill="none"/><path d="M1,${d} L${w * .12},0 L${w * .88},0 L${w - 1},${d} Z" fill="url(#${id}c)" opacity=".35"/>`; }
+    s += `<path d="M0,${d} L${w * .1},0 L${w * .16},0 L${3},${d} Z M${w},${d} L${w * .9},0 L${w * .84},0 L${w - 3},${d} Z" fill="${melLivre(cuir, 80, '#fff')}" stroke="rgba(0,0,0,.4)" stroke-width=".5"/>`;
+    s += `<path d="M0,${d} Q${w / 2},${d + b * 2} ${w},${d} L${w},${d + 2.5} Q${w / 2},${d + 2.5 + b * 2} 0,${d + 2.5} Z" fill="${melLivre(cuir, 70, '#fff')}"/>`;
+    // le dos : cuir grainé, deux nerfs à filet d'or, étiquette du titre, étiquette de l'emoji (ou la photo du personnage), l'âge, coins dorés
+    s += `<path d="${corps}" fill="${cuir}"/><path d="${corps}" fill="url(#${id}p)"/><g clip-path="url(#${id}k)">`;
+    for (const f of [.26, .74]) {
+      const y = y0 + hd * f;
+      s += `<path d="${bandeLivre(w, y - 4.5, y + 4.5, b)}" fill="url(#${id}n)"/><path d="M0,${y + 6.6} Q${w / 2},${y + 6.6 + b} ${w},${y + 6.6}" fill="none" stroke="${or}" stroke-width="1.2"/>`;
+    }
+    const yT0 = y0 + hd * .09, yT1 = y0 + hd * .66;
+    s += `<path d="${bandeLivre(w, yT0, yT1, b, 3.5, w - 3.5)}" fill="#1a1008" stroke="${or}" stroke-width=".9"/>` + titreLivre(t, w / 2, (yT0 + yT1) / 2 + b / 2, `url(#${id}t)`);
+    const yE0 = y0 + hd * .8, yE1 = y1 - b - hd * .04;
+    s += `<path d="${bandeLivre(w, yE0, yE1, b, 4, w - 4)}" fill="#1a1008" stroke="${or}" stroke-width=".9"/>`;
+    s += img ? `<image href="${img}" x="5" y="${yE0 + 1}" width="${w - 10}" height="${yE1 - yE0 - 2}" preserveAspectRatio="xMidYMid slice" clip-path="url(#${id}i)"/>`
+             : `<text x="${w / 2}" y="${(yE0 + yE1) / 2 + b / 2}" text-anchor="middle" dominant-baseline="central" font-size="${Math.min(13, w * .26)}">${e || '📖'}</text>`;
+    if (sous) s += `<text x="${w / 2}" y="${y0 + hd * .745}" text-anchor="middle" font-family="Nunito, sans-serif" font-weight="800" font-size="7" fill="#f3d88a">${esc(sous)}</text>`;
+    const k = 7;
+    s += `<path d="M0,${y0 + 1} L${k},${y0 + 1} L0,${y0 + k + 1}Z M${w},${y0 + 1} L${w - k},${y0 + 1} L${w},${y0 + k + 1}Z M0,${y1 - b - 1} L${k},${y1 - b - 1} L0,${y1 - b - k - 1}Z M${w},${y1 - b - 1} L${w - k},${y1 - b - 1} L${w},${y1 - b - k - 1}Z" fill="${or}" opacity=".9"/>`;
+    s += `</g><path d="${corps}" fill="url(#${id}c)"/>`;                          // l'éclairage, par-dessus tout : le relief
+    s += `<path d="M1.8,${d + 3} V${H - b - 2}" stroke="rgba(0,0,0,.5)" stroke-width="1.2"/><path d="M${w - 1.8},${d + 3} V${H - b - 2}" stroke="rgba(0,0,0,.5)" stroke-width="1.2"/>`;
+    s += `<path d="${corps}" fill="none" stroke="rgba(0,0,0,.55)" stroke-width=".8"/><path class="sel" d="M0,${d} L${w * .12},0 L${w * .88},0 L${w},${d} L${w},${H - b} Q${w / 2},${H} 0,${H - b} Z" fill="none" stroke="#f2c46d" stroke-width="2"/>`;
+    return `<svg width="${w}" height="${H}" viewBox="0 0 ${w} ${H}" aria-hidden="true">${s}</svg>`;
+  }
+  const ETINCELLES = `<i class="etin" style="left:-6px;top:10%;--dx:-14px;--dy:-18px">✦</i><i class="etin" style="right:-6px;top:20%;--dx:16px;--dy:-14px">✦</i><i class="etin" style="left:-4px;top:55%;--dx:-16px;--dy:6px">✦</i><i class="etin" style="right:-8px;top:60%;--dx:14px;--dy:10px;font-size:8px">✦</i><i class="etin" style="left:40%;top:-8px;--dx:2px;--dy:-20px">✦</i>`;
   function unLivre(l, i, onTap, onLong) {
     const b = document.createElement('button');
-    b.type = 'button'; b.className = 'livre' + (l.libre ? ' libre' : '') + (l.on ? ' on' : '');
+    b.type = 'button'; b.className = 'livre' + (l.libre ? ' libre' : ' svg') + (l.on ? ' on' : '');
     b.setAttribute('aria-pressed', l.on ? 'true' : 'false');
     b.style.setProperty('--c', l.c || COULEURS[i % COULEURS.length]);
-    b.style.setProperty('--h', HAUTEURS[i % HAUTEURS.length] + 'px');
-    b.innerHTML = (l.img ? `<img class="medaille" src="${l.img}" alt="">` : `<span class="e">${l.e}</span>`) + `<em>${esc(l.t)}</em>` + (l.sous ? `<small>${esc(l.sous)}</small>` : '');
+    if (!l.libre) b.style.setProperty('--h', HAUTEURS[i % HAUTEURS.length] + 'px');   // v69 : le livre « Choisir » garde sa hauteur fixe (124 px) : son texte ne se coupe plus
+    if (l.libre) b.innerHTML = `<span class="e">${l.e}</span><em>${esc(l.t)}</em>` + (l.sous ? `<small>${esc(l.sous)}</small>` : '');
+    else { b.title = l.t; b.innerHTML = dessinLivre({ w: LARGEURS[i % LARGEURS.length] + (l.t.length > 11 ? 4 : 0), h: HAUTEURS[i % HAUTEURS.length], c: l.c || COULEURS[i % COULEURS.length], e: l.e, img: l.img, t: l.t, sous: l.sous }) + ETINCELLES; }
     let minuterie = null, long = false;
     if (onLong) {        // garder le doigt sur un livre = l'autre geste (modifier, retirer)
       b.addEventListener('pointerdown', () => { long = false; minuterie = setTimeout(() => { long = true; onLong(); }, 600); });
