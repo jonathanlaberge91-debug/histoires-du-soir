@@ -1204,7 +1204,7 @@
     <button type="button" id="t-quitter" title="Quitter le mode télé">✕</button>
   </div>
 </div>
-<p id="version-bas">Histoires du soir · <span class="vers">v76</span></p>
+<p id="version-bas">Histoires du soir · <span class="vers">v77</span></p>
 <div class="mini-lecteur" id="mini-lecteur" hidden>
   <div class="ml-vitesses" id="ml-vitesses" hidden></div>
   <div class="ml-rangee">
@@ -5468,9 +5468,11 @@ function teleMaj() {
   const txt = p ? [...p.childNodes].filter(n => !(n.classList && n.classList.contains('tag'))).map(n => n.textContent).join('').replace(/\s+/g, ' ').trim() : '';   // v64 : sans les mots des balises (« whispers »…), qui ne sont pas lus
   if (txt !== tele.txt) { tele.txt = txt; $('t-sous').textContent = txt; $('t-sous').classList.toggle('vide', !txt); }
   $('t-titre').textContent = current.titre || '';
-  // les choix d'une histoire à choix, quand la partie est finie (ou pas encore commencée)
-  const pl = $('player'), libre = pl.paused || pl.ended;
-  const choix = $('choix-zone').style.display !== 'none' && libre ? [...document.querySelectorAll('#choix-btns button')] : [];
+  // les choix d'une histoire à choix : seulement quand la partie a été ÉCOUTÉE jusqu'au bout (v77 ; avant, ils
+  // apparaissaient dès l'ouverture et cachaient le ▶️ Raconter). Sans son du tout (texte seul) : tout de suite.
+  const pl = $('player'), aSon = !!pl.getAttribute('src') || !!parole?.actif || voixServeur.has(current.id);
+  const ecoutee = !aSon || pl.ended || tele.fini === (current.parts?.length || 0);
+  const choix = $('choix-zone').style.display !== 'none' && ecoutee && (pl.paused || pl.ended) ? [...document.querySelectorAll('#choix-btns button')] : [];
   const sig = choix.map(x => x.textContent).join('|');
   if (sig !== tele.choix) {
     tele.choix = sig;
@@ -5487,6 +5489,7 @@ function teleMontrerBoutons() {
   clearTimeout(tele.boutons);
   tele.boutons = setTimeout(() => $('tele')?.classList.remove('boutons'), 3500);
 }
+$('player').addEventListener('ended', () => { if (tele && current) tele.fini = current.parts?.length || 0; });   // v77 : la partie est écoutée
 async function teleOuvrir() {
   if (!current || tele) return;
   const t = $('tele');
