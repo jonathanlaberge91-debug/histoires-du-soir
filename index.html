@@ -450,13 +450,13 @@
   .livre.svg svg { display: block; overflow: visible; }
   .livre.svg .sel { display: none; }
   .livre.svg .etin { position: absolute; color: #ffe9a0; font-size: 12.5px; opacity: 0; pointer-events: none; text-shadow: 0 0 6px #ffe9a0; }
-  .livre.svg.on { background: none; filter: drop-shadow(3px 4px 5px rgba(0,0,0,.55)); box-shadow: none; transform: translateY(-14px); z-index: 2; animation: livre-danse 2.4s ease-in-out infinite; }   /* v73 : plus lent */
+  .livre.svg.on { background: none; filter: drop-shadow(3px 4px 5px rgba(0,0,0,.55)); box-shadow: none; transform: translateY(-14px); z-index: 2; animation: livre-danse 2.4s ease-in-out infinite; animation-delay: var(--ph, 0s); }   /* v73 : plus lent ; v80 : --ph = sa phase à lui */
   .livre.svg.on .sel { display: block; }
-  .livre.svg.on svg { animation: livre-lueur 2.4s ease-in-out infinite; }
-  .livre.svg.on .etin { animation: livre-etin 2.4s ease-out infinite; }
-  .livre.svg.on .etin:nth-of-type(2) { animation-delay: .17s; } .livre.svg.on .etin:nth-of-type(3) { animation-delay: 1.2s; }
-  .livre.svg.on .etin:nth-of-type(4) { animation-delay: 1.37s; } .livre.svg.on .etin:nth-of-type(5) { animation-delay: .77s; }
-  .livre.svg.on .etin:nth-of-type(6) { animation-delay: .43s; } .livre.svg.on .etin:nth-of-type(7) { animation-delay: 1.63s; }
+  .livre.svg.on svg { animation: livre-lueur 2.4s ease-in-out infinite; animation-delay: var(--ph, 0s); }
+  .livre.svg.on .etin { animation: livre-etin 2.4s ease-out infinite; animation-delay: var(--ph, 0s); }
+  .livre.svg.on .etin:nth-of-type(2) { animation-delay: calc(var(--ph, 0s) + .17s); } .livre.svg.on .etin:nth-of-type(3) { animation-delay: calc(var(--ph, 0s) + 1.2s); }
+  .livre.svg.on .etin:nth-of-type(4) { animation-delay: calc(var(--ph, 0s) + 1.37s); } .livre.svg.on .etin:nth-of-type(5) { animation-delay: calc(var(--ph, 0s) + .77s); }
+  .livre.svg.on .etin:nth-of-type(6) { animation-delay: calc(var(--ph, 0s) + .43s); } .livre.svg.on .etin:nth-of-type(7) { animation-delay: calc(var(--ph, 0s) + 1.63s); }
   @keyframes livre-danse { 0%, 100% { transform: translateY(-14px); } 15% { transform: translateY(-26px); } 30% { transform: translateY(-14px); }
     45% { transform: translateY(-14px); } 60% { transform: translateY(-26px); } 75% { transform: translateY(-14px); } }   /* v71 : de haut en bas seulement */
   @keyframes livre-lueur { 0%, 100% { filter: drop-shadow(0 0 5px rgba(242,196,109,.6)) brightness(1.03); } 50% { filter: drop-shadow(0 0 14px rgba(255,220,140,.9)) brightness(1.08); } }   /* v72 : lueur adoucie */
@@ -1219,7 +1219,7 @@
     <button type="button" id="t-quitter" title="Quitter le mode télé">✕</button>
   </div>
 </div>
-<p id="version-bas">Histoires du soir · <span class="vers">v79</span></p>
+<p id="version-bas">Histoires du soir · <span class="vers">v80</span></p>
 <div class="mini-lecteur" id="mini-lecteur" hidden>
   <div class="ml-vitesses" id="ml-vitesses" hidden></div>
   <div class="ml-rangee">
@@ -5089,6 +5089,8 @@ if (!cleGemini()) document.querySelector('#res-cles').closest('details').open = 
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'livre' + (l.libre ? ' libre' : ' svg') + (l.on ? ' on' : '');
     b.setAttribute('aria-pressed', l.on ? 'true' : 'false');
+    { let h = 0; for (const ch of String(l.t || i)) h = (h * 31 + ch.charCodeAt(0)) % 2400;   // v80 : décalage propre au livre (son titre)
+      b.style.setProperty('--ph', -((performance.now() + h) % 2400) / 1000 + 's'); }
     b.style.setProperty('--c', l.c || COULEURS[i % COULEURS.length]);
     if (!l.libre) b.style.setProperty('--h', HAUTEURS[i % HAUTEURS.length] + 'px');   // v69 : le livre « Choisir » garde sa hauteur fixe (124 px) : son texte ne se coupe plus
     if (l.libre) b.innerHTML = `<span class="e">${l.e}</span><em>${esc(l.t)}</em>` + (l.sous ? `<small>${esc(l.sous)}</small>` : '');
