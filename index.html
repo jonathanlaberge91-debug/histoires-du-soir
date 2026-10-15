@@ -15,7 +15,7 @@
   } catch (e) {}
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Nunito:wght@400;600;700;800&family=Grandstander:wght@600;700;800&family=Baloo+2:wght@500;600;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Nunito:wght@400;600;700;800&family=Grandstander:wght@600;700;800&family=Baloo+2:wght@500;600;700;800&family=Patrick+Hand&display=swap">
 <style>
   /* ═══════════════ Trois thèmes, un seul jeu de jetons ═══════════════
      Veilleuse : nuit profonde et or doux · Livre d'images : ciel pâle, marine, corail · Doudou : lavande, très rond. */
@@ -439,61 +439,34 @@
   .ses-choix small { color: var(--doux); font-weight: 700; font-size: .78rem; }
   .ses-choix::after { content: "›"; color: var(--bois-txt); font-size: 1.2rem; }
 
-  /* ───── le carnet de l'idée ───── */
-  .carnet { margin: 8px 0 26px; }
-  .carnet .papier { position: relative; background: repeating-linear-gradient(#fbf3df 0 29px, #d8cbb0 29px 30px); background-color: #fbf3df; color: #3a2c1e;
-    border-radius: 4px 14px 14px 4px; padding: 12px 12px 12px 34px; box-shadow: 0 0 30px rgba(242,196,109,.2), 0 10px 18px rgba(0,0,0,.35); }
-  .carnet .papier::before { content: ""; position: absolute; left: 20px; top: 0; bottom: 0; width: 2px; background: #e8a3a3; }
-  .carnet .spirale { position: absolute; left: 6px; top: 12px; bottom: 12px; width: 10px; background: radial-gradient(circle, #555 0 3px, transparent 3.5px) 0 0 / 10px 22px repeat-y; }
-  .carnet h3 { margin: 0; font: 800 1.05rem var(--f-titre); color: #3a2c1e; display: flex; justify-content: space-between; align-items: center; }
-  .carnet h3 small { font: 700 .72rem var(--f-texte); color: #8a7660; }
-  .carnet .avec-micro { align-items: flex-end; }
-  .carnet textarea { min-height: 60px; border: 0; background: transparent; padding: 0; font: 600 1.1rem/30px var(--f-texte); color: #2c3e66; resize: none; border-radius: 0; }
-  .carnet textarea:focus { outline: none; }
-  .carnet textarea::placeholder { color: #a99b80; opacity: 1; }
-  .carnet button.micro { width: 42px; height: 42px; border-radius: 50%; background: #2c3e66; border: 0; color: #fff; }
-  .carnet button.micro.rec { background: var(--err); }
-  .carnet .suggestions { display: flex; gap: 7px; overflow-x: auto; padding: 10px 2px 0; scrollbar-width: none; }
-  .carnet .suggestions::-webkit-scrollbar { display: none; }
+  /* ───── la table de chevet (v66) : l'image Gemini détourée est le décor, des zones touchables par-dessus (en % de l'image 1465 × 2270).
+     Le choisi est ÉCLAIRÉ (voile clair fondu), les autres assombris. La feuille et le polaroid : texte/photo déformés en perspective (matrix3d, data-coins). ───── */
+  .chevet3d { margin: 10px 0 0; }
+  .chevet3d h2 { margin: 0 0 6px; text-align: center; color: var(--bois-txt); font: 800 .76rem var(--f-texte); letter-spacing: .1em; text-transform: uppercase; text-shadow: var(--bois-lueur); }
+  .table { position: relative; width: 100%; max-width: 420px; margin: 0 auto; aspect-ratio: 1465 / 2270; background: url(table-chevet.webp) center / 100% 100% no-repeat; filter: drop-shadow(0 18px 26px rgba(0,0,0,.6)); }
+  .table .z { position: absolute; }
+  .table .val { display: flex; align-items: center; justify-content: flex-end; color: var(--doux); font: 800 clamp(10px, 3.1vw, 13px) var(--f-texte); white-space: nowrap; text-shadow: 0 1px 2px #000; }
+  .table .val.on { color: var(--accent); text-shadow: 0 0 8px rgba(242,196,109,.9); }
+  .table .obj { cursor: pointer; border-radius: 8px; transition: all .3s; }
+  .table .obj.on { background: rgba(255,238,200,.55); mix-blend-mode: overlay; box-shadow: 0 0 10px 6px rgba(255,238,200,.35); }
+  .table .obj.on::before { content: ""; position: absolute; inset: 0; border-radius: inherit; background: rgba(255,245,220,.18); mix-blend-mode: screen; }
+  .table .obj.off { background: rgba(5,3,1,.66); box-shadow: 0 0 16px 12px rgba(5,3,1,.66); }
+  .table .cadre { border-radius: 4px; }
+  .table .cadre.reco::after { content: "⭐"; position: absolute; top: -9px; right: -7px; font-size: clamp(10px, 3.2vw, 14px); filter: drop-shadow(0 0 4px #000); }
+  .table .polaroid { cursor: pointer; transform-origin: 0 0; }
+  .table .polaroid img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: none; }
+  .table .polaroid.a img { display: block; }
+  .table .ch-retirer { display: none; position: absolute; top: -10px; right: -10px; width: 28px; height: 28px; border-radius: 50%; border: 0; background: rgba(0,0,0,.6); color: #fff; cursor: pointer; z-index: 2; }
+  .table .polaroid.a .ch-retirer { display: block; }
+  .table .feuille { transform-origin: 0 0; }
+  .table .feuille textarea { width: 100%; height: 100%; min-height: 0; margin: 0; border: 0; border-radius: 0; background: transparent; resize: none; outline: none; box-shadow: none;
+    padding: 0 14% 0 2px; font: clamp(10px, 3vw, 13px)/1.45 'Patrick Hand', cursive; color: #2c3e66; overflow: hidden; }
+  .table .feuille textarea::placeholder { color: #b3a68c; opacity: 1; }
+  .table .micro3d { border-radius: 50%; border: 0; background: transparent; cursor: pointer; font-size: 0; color: transparent; padding: 0; }
+  .table .micro3d.rec { box-shadow: 0 0 0 3px var(--err), 0 0 18px var(--err); }
+  .chevet3d .suggestions { display: flex; gap: 7px; overflow-x: auto; padding: 16px 2px 0; scrollbar-width: none; }
+  .chevet3d .suggestions::-webkit-scrollbar { display: none; }
   .sugg { flex: none; border: 1px solid var(--ligne); background: var(--surface); color: var(--texte); border-radius: 999px; padding: 8px 12px; font: 700 .82rem var(--f-texte); cursor: pointer; }
-
-  /* ───── la table de chevet ───── */
-  .chevet { margin: 6px -6px 0; }
-  .chevet .dessus { height: 18px; border-radius: 6px 6px 2px 2px; background: linear-gradient(var(--bois1), var(--bois2)); box-shadow: inset 0 1px 0 rgba(255,220,160,.3); }
-  .chevet .meuble { margin: 0 8px; border-radius: 0 0 12px 12px; padding: 14px 12px 16px; color: var(--meuble-txt); box-shadow: 0 14px 24px rgba(0,0,0,.35);
-    background: radial-gradient(120% 60% at 50% 0%, rgba(242,196,109,.12), transparent 60%), linear-gradient(var(--meuble1), var(--meuble2)); }
-  .chevet h2 { margin: 0 0 12px; text-align: center; color: var(--bois-txt); font: 800 .76rem var(--f-texte); letter-spacing: .1em; text-transform: uppercase; text-shadow: var(--bois-lueur); }
-  .tiroir { position: relative; display: block; width: 100%; background: var(--meuble-creux); border: 1px solid var(--meuble-bord); border-radius: 12px; padding: 12px;
-    margin: 0 0 12px; color: var(--meuble-txt); font: inherit; text-align: left; }
-  .tiroir::after { content: ""; position: absolute; left: 50%; bottom: -6px; width: 34px; height: 6px; margin-left: -17px; border-radius: 0 0 6px 6px; background: var(--poignee); }
-  .tiroir .lbl { display: flex; justify-content: space-between; font-weight: 800; margin-bottom: 10px; }
-  .tiroir .lbl em { font-style: normal; color: var(--accent); }
-  .couches { display: flex; gap: 6px; align-items: flex-end; justify-content: space-around; }
-  .couche { flex: 1; border: 0; background: none; color: var(--meuble-txt); font: inherit; cursor: pointer; text-align: center; padding: 4px 0 0; }
-  .couche svg { display: block; margin: 0 auto 6px; overflow: visible; opacity: .75; filter: saturate(.7) brightness(.85); transition: .25s; }
-  .couche b { display: block; font-size: .85rem; color: var(--doux); }
-  .couche small { color: var(--doux); font-weight: 700; font-size: .72rem; }
-  .couche.on svg { opacity: 1; filter: drop-shadow(0 0 10px rgba(242,196,109,.55)); transform: translateY(-4px); }
-  .couche.on b { color: var(--meuble-txt); } .couche.on small { color: var(--accent); }
-  .cadres { display: flex; gap: 6px; align-items: center; }
-  .cadres button { flex: 1; aspect-ratio: 1; padding: 0; border-radius: 5px; border: 2px solid var(--poignee); background: var(--meuble-creux); color: var(--doux);
-    font: 800 .72rem var(--f-texte); cursor: pointer; position: relative; display: grid; place-items: center; }
-  .cadres button.on { border-color: var(--accent); background: radial-gradient(#f9dc94, #d9a74a); color: #4a3510; box-shadow: 0 0 8px rgba(242,196,109,.5); }
-  .cadres button.reco::after { content: "⭐"; position: absolute; top: -11px; right: -6px; font-size: .7rem; }
-  .cadres .aucune { flex: none; width: 34px; aspect-ratio: auto; height: 34px; }
-  .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .duo .tiroir { margin: 0; text-align: center; cursor: pointer; }
-  .duo .tiroir .ic { font-size: 1.9rem; display: block; margin: 2px 0 4px; filter: grayscale(.6) brightness(.85); transition: .2s; }
-  .duo .tiroir b { display: block; font-size: .88rem; line-height: 1.2; }
-  .duo .tiroir small { display: block; color: var(--doux); font-weight: 700; font-size: .76rem; margin-top: 2px; }
-  .duo .tiroir.on { border-color: var(--accent); background: var(--lu); }
-  .duo .tiroir.on .ic { filter: none; } .duo .tiroir.on small { color: var(--accent); }
-  .polaroid { display: grid; place-items: center; width: 56px; height: 56px; margin: 0 auto 4px; background: #f3ece0; padding: 4px 4px 12px; transform: rotate(-4deg);
-    box-shadow: 0 3px 6px rgba(0,0,0,.35); font-size: 1.4rem; }
-  .polaroid img { width: 100%; height: 100%; object-fit: cover; display: none; }
-  #ch-dessin.a .polaroid img { display: block; } #ch-dessin.a .polaroid > span { display: none; }
-  .ch-retirer { display: none; position: absolute; top: 6px; right: 6px; width: 28px; height: 28px; border-radius: 50%; border: 0; background: rgba(0,0,0,.45); color: #fff; cursor: pointer; }
-  #ch-dessin.a .ch-retirer { display: block; }
   .raconte { position: sticky; bottom: calc(74px + env(safe-area-inset-bottom)); z-index: 5; margin-top: 20px; padding-top: 6px; }
   .raconte .big { margin-top: 0; }
   .raconte .status:empty { display: none; }
@@ -723,26 +696,34 @@
       <section id="etg-lecon"></section>
     </div>
 
-    <section class="carnet" id="carnet">
-      <div class="papier"><span class="spirale"></span>
-        <h3>💡 Ton idée <small>facultatif</small></h3>
-        <div id="carnet-champ"></div>
+
+    <section class="chevet3d" id="chevet3d">
+      <h2>Sur la table de chevet</h2>
+      <div class="table" id="ch-table">
+        <!-- la feuille sur le chevalet : 4 coins (en % de l'image) ; le champ #idea déménage dedans -->
+        <div class="z feuille" id="ch-feuille" data-coins="39.8,16.9 59.4,16.1 60.6,27.6 41.1,28.3"></div>
+        <button type="button" class="z micro3d" id="ch-micro" style="left:55.2%;top:21.4%;width:7.2%;height:4.6%" title="Dicter ton idée"></button>
+        <!-- longueur : les trois livres -->
+        <div class="z val" id="ch-dur" style="left:30%;top:39.4%;width:12.5%;height:2.5%"></div>
+        <div class="z obj" data-l="court" role="button" title="Courte · 3 min" style="left:10.4%;top:50.1%;width:8.3%;height:7.8%"></div>
+        <div class="z obj" data-l="moyen" role="button" title="Moyenne · 5 min" style="left:21.4%;top:47.1%;width:9.6%;height:10.8%"></div>
+        <div class="z obj" data-l="long" role="button" title="Longue · 9 min" style="left:33.9%;top:44.1%;width:11.6%;height:13.8%"></div>
+        <!-- images : les cadres (minimum : la couverture) -->
+        <div class="z val" id="ch-img" style="left:70%;top:39.4%;width:20.5%;height:2.5%"></div>
+        <div class="z obj cadre" data-n="1" title="La couverture seulement" style="left:55.8%;top:43.4%;width:8.1%;height:5.1%"></div>
+        <div class="z obj cadre" data-n="3" title="3 images" style="left:65%;top:43.4%;width:8.1%;height:5.1%"></div>
+        <div class="z obj cadre" data-n="4" title="4 images" style="left:74.3%;top:43.4%;width:8.1%;height:5.1%"></div>
+        <div class="z obj cadre" data-n="5" title="5 images" style="left:83.5%;top:43.4%;width:8.1%;height:5.1%"></div>
+        <div class="z obj cadre" data-n="6" title="6 images" style="left:55.8%;top:50.1%;width:8.1%;height:5.1%"></div>
+        <div class="z obj cadre" data-n="8" title="8 images" style="left:65%;top:50.1%;width:8.1%;height:5.1%"></div>
+        <!-- l'enfant choisit : le livre ouvert -->
+        <div class="z val" id="ch-format-v" style="left:30%;top:64.6%;width:12.5%;height:2.5%"></div>
+        <div class="z obj" id="ch-format" role="button" title="L'enfant choisit la suite" style="left:11%;top:69.8%;width:35.5%;height:16.2%"></div>
+        <!-- dessin : le polaroid -->
+        <div class="z val" id="ch-dessin-v" style="left:70%;top:64.6%;width:20.5%;height:2.5%"></div>
+        <div class="z polaroid" id="ch-dessin" data-coins="64.2,69.2 83.6,69.0 84.6,82.6 65.4,83.2" role="button" tabindex="0" title="D'après un dessin"><img id="ch-dessin-img" alt=""><button type="button" class="ch-retirer" id="ch-dessin-x" title="Retirer le dessin">✕</button></div>
       </div>
       <div class="suggestions" id="idee-sugg"></div>
-    </section>
-
-    <section class="chevet">
-      <div class="dessus"></div>
-      <div class="meuble">
-        <h2>Sur la table de chevet</h2>
-        <div class="tiroir"><div class="lbl">📏 Longueur <em id="ch-dur"></em></div><div class="couches" id="couches"></div></div>
-        <div class="tiroir"><div class="lbl">🎨 Images <em id="ch-img"></em></div><div class="cadres" id="cadres"></div></div>
-        <div class="duo">
-          <button type="button" class="tiroir" id="ch-format"><span class="ic">🔀</span><b>L'enfant choisit la suite</b><small id="ch-format-v">Non</small></button>
-          <div class="tiroir" id="ch-dessin" role="button" tabindex="0"><span class="polaroid"><span>🖍️</span><img id="ch-dessin-img" alt=""></span><b>D'après un dessin</b><small id="ch-dessin-v">Ajouter une photo</small>
-            <button type="button" class="ch-retirer" id="ch-dessin-x" title="Retirer le dessin">✕</button></div>
-        </div>
-      </div>
     </section>
 
     <div class="raconte">
@@ -1149,7 +1130,7 @@
     <button type="button" id="t-quitter" title="Quitter le mode télé">✕</button>
   </div>
 </div>
-<p id="version-bas">Histoires du soir · <span class="vers">v65</span></p>
+<p id="version-bas">Histoires du soir · <span class="vers">v66</span></p>
 <div class="mini-lecteur" id="mini-lecteur" hidden>
   <div class="ml-vitesses" id="ml-vitesses" hidden></div>
   <div class="ml-rangee">
@@ -2039,7 +2020,7 @@ function imageEnFond(s) {
 /* Combien d'images : le choix de l'écran de création, avec une recommandation selon la durée et le format.
    Histoire à choix = 7 morceaux : une image par morceau. */
 const imgReco = () => chipVal('format') === 'choix' ? 7 : ({ court: 3, moyen: 4, long: 6 }[chipVal('length')] || 4);
-function imagesVoulues() { const v = chipVal('images'); return v === 'reco' ? imgReco() : parseInt(v, 10) || 0; }
+function imagesVoulues() { const v = chipVal('images'); return Math.max(1, v === 'reco' ? imgReco() : parseInt(v, 10) || 1); }   // v66 : au moins la couverture
 function majRecoImages() {
   const n = imgReco();
   const c = document.querySelector('.chips[data-group="images"] .chip[data-v="reco"]');
@@ -5112,57 +5093,67 @@ if (!cleGemini()) document.querySelector('#res-cles').closest('details').open = 
   }
   window.etgPersos = etgPersos;
 
-  /* ---------- l'idée : le carnet ---------- */
-  $('carnet-champ').appendChild($('idea').parentNode);          // le vrai champ (et son micro) déménage dans le carnet
+  /* ---------- l'idée : la feuille sur le chevalet (v66) ---------- */
+  $('ch-feuille').appendChild($('idea'));                          // le vrai champ déménage sur la feuille
   $('idea').placeholder = 'De quoi parle l\'histoire ?';
+  $('ch-micro').onclick = () => dicter('idea', $('ch-micro'));     // le micro de l'image devient un vrai bouton
   $('idee-sugg').innerHTML = IDEES.map(x => `<button type="button" class="sugg" data-sugg="${esc(txt(x))}">${esc(x)}</button>`).join('');
   $('idee-sugg').onclick = e => {
     const b = e.target.closest('[data-sugg]'); if (!b) return;
     const z = $('idea'); z.value = z.value.trim() ? z.value.trim() + ', ' + b.dataset.sugg : b.dataset.sugg;
   };
 
-  /* ---------- la table de chevet : longueur, images, à choix, dessin ---------- */
-  const DUREES = { court: [34, 46, 5, '#5b84c4', '🐣', 'Petit livre'], moyen: [44, 60, 11, '#5aa37c', '🦊', 'Moyen livre'], long: [54, 74, 20, '#c2474c', '🐉', 'Gros livre'] };
-  function livreSVG(w, h, d, c, e) {      // un vrai livre fermé : couverture, dos, tranche des pages (plus épais = plus long)
-    const W = w + d, H = h + d, lignes = [];
-    for (let y = d + 4; y < H - 3; y += 3) lignes.push(`<line x1="${w + 1}" y1="${y}" x2="${w + d - 1}" y2="${y - d + 1}" stroke="#d8cbb0" stroke-width=".6"/>`);
-    return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true">
-      <polygon points="0,${d} ${d},0 ${W},0 ${w},${d}" fill="#f6eedd"/><polygon points="${w},${d} ${W},0 ${W},${h} ${w},${H}" fill="#efe4cc"/>${lignes.join('')}
-      <rect x="0" y="${d}" width="${w}" height="${h}" rx="2" fill="${c}"/><rect x="0" y="${d}" width="${Math.max(4, w * .14)}" height="${h}" rx="2" fill="rgba(0,0,0,.18)"/>
-      <rect x="${w * .26}" y="${d + h * .62}" width="${w * .6}" height="${Math.max(3, h * .06)}" rx="1.5" fill="rgba(255,255,255,.75)"/>
-      <rect x="${w * .26}" y="${d + h * .74}" width="${w * .42}" height="${Math.max(2, h * .04)}" rx="1" fill="rgba(255,255,255,.5)"/>
-      <text x="${w * .57}" y="${d + h * .46}" font-size="${w * .38}" text-anchor="middle" dominant-baseline="middle">${e}</text></svg>`;
+  /* ---------- la table de chevet (v66) : image Gemini + zones alignées sur ses objets ---------- */
+  function matrice(w, h, pts) {               // déformer un rectangle w×h vers 4 coins (homographie → matrix3d) ; pts : TL TR BR BL en px
+    const src = [[0, 0], [w, 0], [w, h], [0, h]], A = [], B = [];
+    for (let i = 0; i < 4; i++) {
+      const [x, y] = src[i], [u, v] = pts[i];
+      A.push([x, y, 1, 0, 0, 0, -u * x, -u * y]); B.push(u);
+      A.push([0, 0, 0, x, y, 1, -v * x, -v * y]); B.push(v);
+    }
+    const n = 8, M = A.map((r, i) => [...r, B[i]]);
+    for (let c = 0; c < n; c++) {
+      let p = c; for (let r = c + 1; r < n; r++) if (Math.abs(M[r][c]) > Math.abs(M[p][c])) p = r;
+      [M[c], M[p]] = [M[p], M[c]];
+      for (let r = 0; r < n; r++) { if (r === c) continue; const f = M[r][c] / M[c][c]; for (let k = c; k <= n; k++) M[r][k] -= f * M[c][k]; }
+    }
+    const [a, b, c, d, e, f, g, hI] = M.map((r, i) => r[n] / r[i]);
+    return `matrix3d(${a},${d},0,${g},${b},${e},0,${hI},0,0,1,0,${c},${f},0,1)`;
   }
-  const IMAGES = [1, 3, 4, 5, 6, 8];
+  function poserCoins() {                     // la feuille et le polaroid épousent l'angle de l'image
+    const T = $('ch-table').getBoundingClientRect(); if (!T.width) return;
+    document.querySelectorAll('#ch-table [data-coins]').forEach(el => {
+      const pts = el.dataset.coins.split(' ').map(p => p.split(',').map(Number)).map(([x, y]) => [x / 100 * T.width, y / 100 * T.height]);
+      const w = Math.hypot(pts[1][0] - pts[0][0], pts[1][1] - pts[0][1]), h = Math.hypot(pts[3][0] - pts[0][0], pts[3][1] - pts[0][1]);
+      el.style.left = '0'; el.style.top = '0'; el.style.width = w + 'px'; el.style.height = h + 'px';
+      el.style.transform = matrice(w, h, pts);
+    });
+  }
+  new ResizeObserver(poserCoins).observe($('ch-table'));
+  const etat3d = (el, on) => { el.classList.remove('on', 'off'); el.classList.add(on ? 'on' : 'off'); };
   function etgChevet() {
     const L = chipVal('length');
-    $('couches').innerHTML = chips('length').map(c => {
-      const [w, h, d, col, e, nom] = DUREES[c.dataset.v];
-      return `<button type="button" class="couche ${c.dataset.v === L ? 'on' : ''}" data-v="${c.dataset.v}" aria-pressed="${c.dataset.v === L}">${livreSVG(w, h, d, col, e)}<b>${nom}</b><small>${esc(chipTxt(c).t)}</small></button>`;
-    }).join('');
-    $('ch-dur').textContent = (chipTxt(chip('length', L)).t.split('·')[1] || '').trim();
+    document.querySelectorAll('#ch-table [data-l]').forEach(b => { etat3d(b, b.dataset.l === L); b.setAttribute('aria-pressed', b.dataset.l === L); });
+    $('ch-dur').textContent = (chipTxt(chip('length', L)).t.split('·')[1] || '').trim(); $('ch-dur').classList.add('on');
     const n = imagesVoulues(), reco = imgReco(), v = chipVal('images');
-    $('cadres').innerHTML = `<button type="button" class="aucune ${n === 0 ? 'on' : ''}" data-n="0" title="Aucune image">✕</button>` +
-      IMAGES.map(k => `<button type="button" class="cadre ${n > 0 && k <= n ? 'on' : ''} ${k === reco ? 'reco' : ''}" data-n="${k}" title="${k === 1 ? 'La couverture seulement' : k + ' images'}"><span>${k}</span></button>`).join('');
-    $('ch-img').textContent = (n === 0 ? 'aucune' : n === 1 ? 'la couverture' : n + ' images') + (v === 'reco' ? ' ⭐' : '');
+    document.querySelectorAll('#ch-table .cadre').forEach(c => { const k = +c.dataset.n; etat3d(c, k <= n); c.classList.toggle('reco', k === reco); });
+    $('ch-img').textContent = (n === 1 ? 'couverture' : n + ' images') + (v === 'reco' ? ' ⭐' : ''); $('ch-img').classList.add('on');
     const aChoix = chipVal('format') === 'choix';
-    $('ch-format').classList.toggle('on', aChoix); $('ch-format').setAttribute('aria-pressed', aChoix);
-    $('ch-format-v').textContent = aChoix ? 'Oui, il décide de la suite' : 'Non, une histoire complète';
+    etat3d($('ch-format'), aChoix); $('ch-format').setAttribute('aria-pressed', aChoix);
+    $('ch-format-v').textContent = aChoix ? 'Oui' : 'Non'; $('ch-format-v').classList.toggle('on', aChoix);
     const d = !!dessin;
-    $('ch-dessin').classList.toggle('on', d); $('ch-dessin').classList.toggle('a', d);
+    $('ch-dessin').classList.toggle('a', d); $('ch-dessin').classList.toggle('obj', d); $('ch-dessin').classList.toggle('on', d);
     $('ch-dessin-img').src = d ? $('dessin-apercu').src : '';
-    $('ch-dessin-v').textContent = d ? 'Ajouté ✓' : 'Ajouter une photo';
+    $('ch-dessin-v').textContent = d ? 'Ajouté ✓' : 'Ajouter'; $('ch-dessin-v').classList.toggle('on', d);
   }
-  $('couches').onclick = e => { const b = e.target.closest('[data-v]'); if (b) { chip('length', b.dataset.v).click(); tout(); } };
-  $('cadres').onclick = e => {
-    const b = e.target.closest('[data-n]'); if (!b) return;
-    const k = +b.dataset.n;
-    chip('images', k && k === imgReco() ? 'reco' : String(k)).click(); tout();
+  $('ch-table').onclick = e => {
+    const l = e.target.closest('[data-l]'); if (l) { chip('length', l.dataset.l).click(); tout(); return; }
+    const c = e.target.closest('.cadre[data-n]'); if (c) { const k = +c.dataset.n; chip('images', k === imgReco() ? 'reco' : String(k)).click(); tout(); return; }
+    if (e.target.closest('#ch-format')) { chip('format', chipVal('format') === 'choix' ? 'complete' : 'choix').click(); tout(); return; }
+    if (e.target.closest('#ch-dessin-x')) { $('dessin-retirer').click(); etgChevet(); return; }
+    if (e.target.closest('#ch-dessin') && !dessin) $('dessin').click();
   };
-  $('ch-format').onclick = () => { chip('format', chipVal('format') === 'choix' ? 'complete' : 'choix').click(); tout(); };
-  $('ch-dessin').onclick = e => { if (e.target.closest('#ch-dessin-x')) return; if (!dessin) $('dessin').click(); };
   $('ch-dessin').onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('ch-dessin').click(); } };
-  $('ch-dessin-x').onclick = () => { $('dessin-retirer').click(); etgChevet(); };
   $('dessin-apercu').addEventListener('load', etgChevet);
 
   /* ---------- tout redessiner ---------- */
