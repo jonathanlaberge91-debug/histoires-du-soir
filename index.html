@@ -1321,7 +1321,7 @@
     <button type="button" id="t-quitter" title="Quitter le mode télé">✕</button>
   </div>
 </div>
-<p id="version-bas">Histoires du soir · <span class="vers">v86</span></p>
+<p id="version-bas">Histoires du soir · <span class="vers">v87</span></p>
 <div class="mini-lecteur" id="mini-lecteur" hidden>
   <div class="ml-vitesses" id="ml-vitesses" hidden></div>
   <div class="ml-rangee">
@@ -2263,7 +2263,9 @@ async function planifierImages(s) {
     : (nb === 1 ? 'UNE seule scène, pour la couverture, avec « ou » = "0"' : `EXACTEMENT ${cibles.length} scènes, une près de CHACUN de ces paragraphes : ${cibles.map(c => '[' + c + ']').join(', ')} (la première, « ou » = "0", c'est la couverture) ; « ou » = le numéro du paragraphe choisi, à 1 ou 2 paragraphes près de sa cible au plus ; jamais deux scènes au même paragraphe`);
   const user = [
     'Tu prépares les illustrations d\'un livre d\'histoire pour enfants. Écris EN ANGLAIS (pour le dessinateur).',
-    `- « fiche » : la description visuelle FIXE de chaque personnage qui revient (2 à 3 personnages au plus), comme des personnages de DESSIN ANIMÉ : nom, espèce, cheveux ou pelage, vêtements avec leurs COULEURS exactes. JAMAIS d'âge, de corps ni de peau : seulement coiffure, vêtements, accessoires et couleurs. Une courte phrase par personnage (20 mots au plus), très concrète. Exemple : "Abby: cartoon kid with curly red hair, yellow raincoat, red boots. Biscuit: small light brown cartoon puppy with a blue collar."`,
+    `- « fiche » : la description visuelle FIXE de CHAQUE personnage qui apparaît dans une scène (5 au plus), comme des personnages de DESSIN ANIMÉ, FIDÈLE à ce que l'histoire en dit. Pour un ENFANT ou un adulte : nom, coiffure, vêtements, accessoires et leurs COULEURS exactes ; JAMAIS d'âge, de corps ni de peau. Pour un ANIMAL, une CRÉATURE ou un MÉCHANT : commence par son ESPÈCE et sa FORME telles que l'histoire les décrit (ex. une araignée = huit pattes, un corps rond, des yeux ; un dragon = ailes, queue, écailles ; un loup = museau, oreilles pointues, queue), puis ses couleurs et ses détails ; ne le change JAMAIS en autre chose (pas de boule de poils, pas de nuage, pas de vague silhouette). Une courte phrase par personnage (25 mots au plus), très concrète. Exemple : "Abby: cartoon kid with curly red hair, yellow raincoat, red boots. Biscuit: small light brown cartoon puppy with a blue collar. Grumble: a big round purple cartoon spider with eight thin legs, six shiny eyes and a tiny green hat."`,
+    `- Les personnages et les choses gardent EXACTEMENT ce que l'histoire en dit (espèce, nombre de pattes, couleurs, taille, objets qu'ils portent) dans la fiche ET dans chaque scène ; si l'histoire donne un détail, il doit se voir.`,
+    (s.meta?.mechant || '') ? `- Le méchant de cette histoire est : ${(s.meta?.mechant || '')}. Il doit être reconnaissable au premier coup d'œil dans la fiche et dans chaque scène où il est (sa vraie espèce, sa vraie forme), dessiné drôle et gentil, jamais effrayant.` : '',
     ficheAvant ? `- Ces personnages ont déjà été dessinés dans les chapitres précédents : reprends EXACTEMENT cette fiche, en ajoutant seulement les nouveaux : ${ficheAvant}` : '',
     s.persoRepris?.length ? `- Ces personnages reviennent d'histoires déjà illustrées : mets-les dans la fiche avec EXACTEMENT cette description : ${s.persoRepris.map(x => x.nom + ': ' + x.visuel).join(' ')}` : '',
     s.dessin ? '- L\'enfant a fait un dessin pour cette histoire : décris les personnages comme dans son dessin.' : '',
@@ -2277,7 +2279,7 @@ async function planifierImages(s) {
   try { j = await appelGemini(user, SCHEMA_ILLUS, () => {}, { system: sys, temperature: 0.4 }); }
   catch (e) {                                   // filtre de Gemini parfois trop prudent : un second essai, autrement formulé
     if (!/PROHIBITED|SAFETY|rien renvoy/i.test(e.message)) throw e;
-    j = await appelGemini(user + ' (Rappel : des personnages de dessin animé pour un livre jeunesse ; seulement coiffure, vêtements et couleurs.)', SCHEMA_ILLUS, () => {}, { system: sys, temperature: 0.8 });
+    j = await appelGemini(user + ' (Rappel : des personnages de dessin animé pour un livre jeunesse ; pour les enfants, seulement coiffure, vêtements et couleurs ; les animaux et créatures gardent leur espèce et leur forme.)', SCHEMA_ILLUS, () => {}, { system: sys, temperature: 0.8 });
   }
   const scenes = (j.scenes || []).slice(0, s.arbre ? Math.min(7, nb) : nb).map(sc => {
     const ou = String(sc.ou || '').replace(/[\[\]\s]/g, '');
@@ -2327,6 +2329,7 @@ async function dessinerGemini(s, sc, refs) {
     `Illustrate this scene for a children's picture book, in a ${STYLES_GEMINI[s.illus.style] || STYLES_GEMINI.aquarelle}, landscape format: ${sc.description}`,
     `Characters: ${s.illus.fiche}`,
     refs.length ? 'Keep the characters EXACTLY as in the reference image: same faces, hair, clothes, colors and art style. Only the scene, pose and setting change.' : '',
+    'Draw EVERY character exactly as described above: same species, same body shape (count the legs, wings, tails), same colors and outfits. A creature or villain must stay clearly recognizable as what it is (a spider is a spider with eight legs, never a fluffy ball) — just drawn cute and friendly.',
     'Gentle and reassuring, nothing scary. No text, no letters, no speech bubbles.'
   ].filter(Boolean).join('\n');
   const parts = [{ text: texte }];
