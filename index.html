@@ -603,8 +603,28 @@
   .fermer-histoire:hover { color: var(--texte); }
   #s-title { padding-right: 44px; }
   body.nuit .fermer-histoire { display: none; }
-  #story-card { position: relative; margin-top: 34px; background: var(--surface-pleine); border-color: var(--meuble-bord); border-top: 0; border-radius: 0 0 var(--r) var(--r); }
-  #story-card::before { content: ""; position: absolute; left: -6px; right: -6px; top: -16px; height: 16px; border-radius: 6px 6px 2px 2px; background: linear-gradient(var(--bois1), var(--bois2)); }
+  /* v82 : la fiche = une couverture de livre (cuir bleu nuit, double filet doré, coins ornés), titre centré, étiquettes de l'histoire */
+  #story-card { position: relative; margin-top: 18px; padding: 22px 18px 18px; border: 0; border-radius: 22px;
+    background: radial-gradient(120% 70% at 50% 0%, rgba(242,196,109,.12), transparent 55%), linear-gradient(170deg, #1d2160 0%, #141849 55%, #0f1238 100%);
+    box-shadow: 0 18px 40px rgba(0,0,0,.55), inset 0 0 0 1px rgba(242,196,109,.55), inset 0 0 0 5px rgba(20,24,73,.9), inset 0 0 0 6px rgba(242,196,109,.28); }
+  #story-card::before, #story-card::after { content: "✦"; position: absolute; top: 9px; color: rgba(242,196,109,.7); font-size: .8rem; pointer-events: none; }
+  #story-card::before { left: 13px; } #story-card::after { right: 52px; }
+  body.lib-lecture #lib-tete { display: none; }
+  body.lib-lecture #v-lib #story-card { margin-top: 4px; }
+  #story-card .chap { display: block; text-align: center; color: var(--accent); text-shadow: 0 0 8px rgba(242,196,109,.5); margin: 2px 0 2px; }
+  #story-card #s-title { text-align: center; padding: 0 30px; font: 700 1.55rem/1.15 var(--f-titre); color: #fff4d6; text-shadow: 0 2px 10px rgba(0,0,0,.5); margin: 4px 0 0; }
+  .s-orne { display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--accent); font-size: .8rem; margin: 8px 0 12px; }
+  .s-orne::before, .s-orne::after { content: ""; height: 1px; width: 70px; background: linear-gradient(90deg, transparent, rgba(242,196,109,.8)); }
+  .s-orne::after { background: linear-gradient(90deg, rgba(242,196,109,.8), transparent); }
+  .s-infos { display: flex; flex-wrap: wrap; justify-content: center; gap: 7px; margin: 0 0 6px; }
+  .s-info { display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px 6px 8px; border-radius: 12px; background: rgba(255,255,255,.06); border: 1px solid rgba(242,196,109,.22);
+    color: #eef0ff; font: 700 .8rem/1.15 var(--f-texte); max-width: 100%; }
+  .s-info i { font-style: normal; font-size: 1rem; }
+  .s-info small { display: block; color: var(--accent); font: 800 .6rem var(--f-texte); letter-spacing: .08em; text-transform: uppercase; opacity: .85; }
+  #story-card .fermer-histoire { top: 12px; right: 12px; border: 0; background: radial-gradient(circle at 35% 30%, #ffe9a0, #c9a24a 60%, #8a6a22); color: #2a1d00;
+    box-shadow: 0 2px 6px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.5); }
+  #story-card .petites button.sec { border: 1px solid rgba(242,196,109,.28); background: rgba(255,255,255,.05); border-radius: 999px; }
+  body.nuit .s-infos, body.nuit .s-orne, body.nuit #story-card::after { display: none; }
   #story-card .chap { display: inline-block; color: var(--bois-txt); text-shadow: var(--bois-lueur); }
   body.nuit #story-card::before { display: none; }
 
@@ -941,6 +961,8 @@
     <button type="button" class="fermer-histoire" id="btn-fermer-histoire" title="Fermer (l'histoire reste dans Histoires)">✕</button>
     <div class="chap" id="s-chap"></div>
     <h2 id="s-title"></h2>
+    <div class="s-orne" aria-hidden="true">✦</div>
+    <div class="s-infos" id="s-infos"></div>
     <div class="hint" id="drive-info" style="margin-top:0"></div>
     <div class="hint" id="illus-status" style="margin-top:2px"></div>
     <div class="barre-lecture">
@@ -1219,7 +1241,7 @@
     <button type="button" id="t-quitter" title="Quitter le mode télé">✕</button>
   </div>
 </div>
-<p id="version-bas">Histoires du soir · <span class="vers">v81</span></p>
+<p id="version-bas">Histoires du soir · <span class="vers">v82</span></p>
 <div class="mini-lecteur" id="mini-lecteur" hidden>
   <div class="ml-vitesses" id="ml-vitesses" hidden></div>
   <div class="ml-rangee">
@@ -1664,6 +1686,7 @@ document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
   document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x === b));
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === b.dataset.v));
   if (b.dataset.v === 'v-lib') { renderLib(); if (srvActif()) srvRecuperer(true); }
+  if (b.dataset.v !== 'v-lib' && $('story-card').parentElement?.id === 'v-lib') document.body.classList.remove('lib-lecture');
   window.scrollTo(0, 0);
 });
 document.querySelectorAll('.chips').forEach(g => g.addEventListener('click', e => {
@@ -2574,7 +2597,7 @@ async function creerServeur(fn, extra) {
       voix: { moteur: moteur === 'gcloud' || moteur === 'edge' || moteur === 'phone' ? moteur : 'auto', multivoix: $('opt-multivoix').checked, neutre: vitesseALaLecture(),
         gcRate: $('gc-rate').value, msRate: $('ms-rate').value, msVoix: $('ms-voice').value, plafond: gcPlafond(), modeles: [...new Set(['gemini-flash-latest', ...FALLBACK_MODELS])],
         gcVoix: Object.fromEntries(GC_PALIERS.map(pl => [pl.id, gcVoixDe(pl)])) },
-      info: { meta: { name: consignesEnfants().noms.join(' et '), friends: $('friends').value.trim(), mood: chipVal('mood') },
+      info: { meta: metaHistoire(),
         illusNb: nb, extra: { ...extra, avecDessin: undefined }, persoRepris: repris, ecriture: voixGoogle ? 'google' : 'simple', cree: Date.now() }
     };
     const r = await fabFetch('/travaux', { method: 'POST', body: JSON.stringify(recette) });
@@ -2911,6 +2934,7 @@ async function enregistrerVersion(s, c) {
   $('btn-read').click();
 }
 function majBoutonVoix(s) {
+  if (current === s && $('s-infos')) majInfos(s);
   $('btn-voix').style.display = versionsPossibles(s) && (s.arbre || s.histoire) ? '' : 'none';
   const n = versionsDe(s).length;
   if (n > 1 && aUneVoix(s)) $('btn-read').textContent = `▶️ Écouter (${n} voix)`;
@@ -3347,6 +3371,15 @@ function consigneAgeBase(age) {
   if (age <= 5) return `Pour ${age} ans : phrases courtes, un vrai problème que le héros règle lui-même, de l'humour simple (une chute, un animal qui fait une bêtise, un mot rigolo), des mots qu'il connaît ou qu'on comprend tout de suite dans le contexte, et un ou deux mots nouveaux expliqués par l'action.`;
   if (age <= 8) return `Pour ${age} ans : un vrai suspense (l'enfant doit se demander ce qui va arriver), un rebondissement qu'il n'avait pas vu venir, de l'humour plus fin (un personnage qui se trompe, un jeu de mots facile), des émotions nommées (jaloux, fier, gêné) et un héros qui réfléchit avant d'agir.`;
   return `Pour ${age} ans : un récit plus riche (sous-intrigue possible, un personnage qui change d'avis), des émotions nuancées, de l'humour et de l'ironie légère, un vocabulaire plus large, un rebondissement surprenant et une fin qui laisse quelque chose à penser.`;
+}
+/* v82 : ce qu'on garde des choix, pour la fiche de l'histoire (pour qui, ambiance, lieu, méchant, durée…) */
+function metaHistoire() {
+  const txtChip = g => (document.querySelector(`.chips[data-group="${g}"] .chip.on`)?.textContent || '').replace(/\s+/g, ' ').trim();
+  const souci = chipVal('souci');
+  return { name: consignesEnfants().noms.join(' et '), friends: $('friends').value.trim(), mood: chipVal('mood'),
+    ambiance: chipVal('mood') === 'autre' ? $('mood-autre').value.trim() : txtChip('mood'),
+    lieu: $('lieu').value.trim(), mechant: $('mechant').value.trim(), duree: txtChip('length'),
+    souci: souci === 'autre' ? $('souci-autre').value.trim() : souci ? txtChip('souci') : '', lecon: $('moral').value.trim() };
 }
 function consignesEnfants() {
   const tousLus = lireEnfants();
@@ -3909,6 +3942,7 @@ function showStory(s) {
   afficherCouverture(s);
   $('s-chap').textContent = s.chap > 1 ? `Chapitre ${s.chap}` : s.interactive ? '🔀 L\'enfant choisit la suite' : '';
   $('s-title').textContent = s.titre;
+  majInfos(s);
   ecranBlob = null; litIdx = -1;
   $('s-text').innerHTML = paras(s.histoire).map((p, i) =>
     `<p data-i="${i}">${esc(p).replace(/\[([^\]\n]{1,40})\]\s*/g, '<span class="tag">$1 </span>')}</p>`).join('');
@@ -4287,7 +4321,7 @@ async function creer(fn, extra = {}) {
     fabMaj('histoire', { etat: 'fini', fn: null, det: `écrite en ${Math.round(duree / 1000)} s` });
     const s = {
       id: Date.now().toString(36), createdAt: Date.now(), titre: j.titre, histoire: j.histoire, nouvelle: true,
-      meta: { name: consignesEnfants().noms.join(' et '), friends: $('friends').value.trim(), mood: chipVal('mood') }, illusNb: imagesVoulues(), ...extra
+      meta: metaHistoire(), illusNb: imagesVoulues(), ...extra
     };
     const repris = persosPourHistoire(); if (repris.length) s.persoRepris = repris;
     if (extra.interactive) { s.parts = [{ texte: j.histoire, choixA: j.choixA, choixB: j.choixB }]; s.partAudio = []; }
@@ -4649,7 +4683,23 @@ async function fichierServeur(rec, nom, jf) {
 }
 /* v62 : fermer la fiche de l'histoire (elle reste dans Histoires). Demandé par Jonathan le 2026-10-14 :
    une histoire finie restait collée en bas de la page Créer. */
+/* v82 : les étiquettes de l'histoire (seulement ce qu'on sait : les vieilles histoires en ont moins) */
+function majInfos(s) {
+  const m = s.meta || {}, sansEmoji = t => String(t || '').replace(/^[^\p{L}\p{N}]+/u, '').trim();
+  const ambiance = m.ambiance || (m.mood && m.mood !== 'autre' ? (document.querySelector(`.chips[data-group="mood"] .chip[data-v="${m.mood}"]`)?.textContent || '') : '');
+  const l = [
+    ['👧', 'Pour', m.name || 'un héros inventé'],
+    ['📖', 'Format', s.interactive ? 'L\'enfant choisit la suite' : s.chap > 1 ? `La suite · chapitre ${s.chap}` : 'Histoire complète'],
+    ['🎭', 'Ambiance', sansEmoji(ambiance)],
+    ['🗺️', 'Lieu', m.lieu], ['😈', 'Méchant', m.mechant], ['👥', 'Avec', m.friends],
+    ['⏱️', 'Durée', sansEmoji(m.duree)], ['🌱', 'Petit souci', sansEmoji(m.souci)], ['💛', 'Leçon', m.lecon],
+    ['🎙️', 'Voix', s.voixNom], ['📅', 'Écrite le', new Date(s.createdAt).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric' })]
+  ].filter(x => x[2]);
+  const maj1 = v => { v = String(v); return v.charAt(0).toUpperCase() + v.slice(1); };
+  $('s-infos').innerHTML = l.map(([e, k, v]) => `<span class="s-info"><i>${e}</i><span><small>${k}</small>${esc(maj1(v))}</span></span>`).join('');
+}
 function fermerHistoire() {
+  document.body.classList.remove('lib-lecture');                  // v82 : la recherche et les filtres reviennent
   arreterParole();
   const pl = $('player'); try { pl.pause(); } catch {} pl.removeAttribute('src'); pl.style.display = 'none';
   if (audioUrl) { URL.revokeObjectURL(audioUrl); audioUrl = null; }
@@ -4816,6 +4866,7 @@ $('lib-list').addEventListener('click', async e => {
   const item = e.target.closest('.lib-item'); if (!item) return;
   voixChoisie.delete(item.dataset.id);
   $('v-lib').insertBefore($('story-card'), $('lib-list'));          // v75 : la fiche s'ouvre ICI, dans Histoires (plus dans Créer)
+  document.body.classList.add('lib-lecture');                     // v82 : plus de place : la recherche et les filtres se cachent jusqu'au ✕
   showStory(await DB.get(item.dataset.id));
   status($('gen-status'), '');
   setTimeout(() => $('story-card').scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
