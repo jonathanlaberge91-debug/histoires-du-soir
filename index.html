@@ -579,6 +579,16 @@
   .etg-feuille h3 { margin: 0 0 8px; }
   .etg-feuille .tablette { margin-left: -18px; margin-right: -18px; }
   .etg-sous { font-weight: 800; margin: 16px 0 0; } .etg-sous small { color: var(--doux); font-weight: 600; }
+  /* v86 : « Effacer ses choix » : une petite plaque de laiton, comme celles des tablettes */
+  .fe-choix-tete { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
+  .fe-choix-tete .etg-sous { flex: 1; }
+  .fe-effacer { flex: none; display: inline-flex; align-items: center; gap: 6px; margin-bottom: 2px; padding: 7px 12px 7px 10px; border: 0; border-radius: 999px; cursor: pointer;
+    font: 800 .72rem var(--f-texte); letter-spacing: .04em; color: #4a2e06; text-shadow: 0 1px 0 rgba(255,245,210,.55);
+    background: repeating-linear-gradient(90deg, rgba(255,255,255,.06) 0 1px, transparent 1px 3px), linear-gradient(170deg, #f7df9a 0%, #d9b35a 35%, #b8902e 60%, #e8c766 100%);
+    box-shadow: inset 1.5px 1.5px 0 rgba(255,250,220,.9), inset -1.5px -1.5px 0 rgba(90,55,5,.75), 0 2px 4px rgba(0,0,0,.45); transition: transform .15s, opacity .2s; }
+  .fe-effacer span { font-size: 1rem; line-height: 1; transition: transform .5s; }
+  .fe-effacer:active { transform: scale(.95); } .fe-effacer:active span { transform: rotate(-300deg); }
+  .fe-effacer:disabled { opacity: .4; cursor: default; filter: saturate(.4); }
   .etg-retirer { width: 100%; justify-content: center; margin-top: 10px !important; }
 
   /* ───── Histoires : les tablettes de la bibliothèque ───── */
@@ -1311,7 +1321,7 @@
     <button type="button" id="t-quitter" title="Quitter le mode télé">✕</button>
   </div>
 </div>
-<p id="version-bas">Histoires du soir · <span class="vers">v85</span></p>
+<p id="version-bas">Histoires du soir · <span class="vers">v86</span></p>
 <div class="mini-lecteur" id="mini-lecteur" hidden>
   <div class="ml-vitesses" id="ml-vitesses" hidden></div>
   <div class="ml-rangee">
@@ -1765,7 +1775,7 @@ document.querySelectorAll('.chips').forEach(g => g.addEventListener('click', e =
   if (g.dataset.group === 'souci') $('souci-autre').style.display = c.dataset.v === 'autre' ? 'block' : 'none';
   if (g.dataset.group === 'libf') renderLib();
 }));
-const chipVal = g => document.querySelector(`.chips[data-group="${g}"] .chip.on`).dataset.v;
+const chipVal = g => document.querySelector(`.chips[data-group="${g}"] .chip.on`)?.dataset.v ?? '';   // v86 : une tablette peut être vide
 
 /* ==================== RÉGLAGES ==================== */
 const SETTINGS = ['k-gemini', 'm-gemini', 'lang', 'name', 'age', 'friends', 'lieu', 'mechant',
@@ -2034,7 +2044,7 @@ function consignes(opts = {}) {
     moral ? `Valeur à transmettre subtilement : ${moral}.` : '',
     !opts.sansIdee && $('journee').value.trim() ? `Ce qui s'est VRAIMENT passé aujourd'hui dans la vie de l'enfant : ${$('journee').value.trim()}. Transforme ces vrais moments en aventure : l'enfant doit les reconnaître (mêmes lieux, mêmes objets, mêmes personnes), mais tout devient extraordinaire et se termine bien.` : '',
     !opts.sansIdee && dessin ? `L'enfant a fait le DESSIN joint en image. L'histoire raconte CE dessin : ses personnages, ses couleurs, ses détails (même un gribouillis devient quelque chose de magique). Décris-les pour que l'enfant reconnaisse son dessin et soit fier.` : '',
-    `Ambiance : ${mood === 'autre' ? ($('mood-autre').value.trim() || MOODS.dodo) : MOODS[mood]}`,
+    mood ? `Ambiance : ${mood === 'autre' ? ($('mood-autre').value.trim() || MOODS.dodo) : MOODS[mood]}` : '',
     ...consignesStyle(),
     LANGS[lang === 'fr-qc' ? ({ parler: 'fr-qc', decor: 'fr-qc-decor', aucune: 'fr-fr' }[styleVal('saveur')] || 'fr-qc') : lang],
     voixGoogle ? CONSIGNE_VOIX_GOOGLE : voixSimple ? CONSIGNE_VOIX_SIMPLE : ''
@@ -4429,8 +4439,31 @@ function onGenerate() {
   if (chipVal('format') === 'choix') return creer(genererArbre, { interactive: true, avecDessin: true });
   return creer(genererHistoire, { avecDessin: true });
 }
-$('btn-gen').onclick = onGenerate;
-$('btn-regen').onclick = onGenerate;
+/* v86 : après chaque NOUVELLE histoire, les tablettes repartent à zéro (aucun livre allumé) ; seuls « Pour qui » et les choix
+   des enfants restent. Les choix d'avant sont gardés en photo : « 🔁 Une autre » les reprend le temps de refaire l'histoire. */
+const CHAMPS_HISTOIRE = ['friends', 'lieu', 'mechant', 'journee', 'moral', 'idea', 'mood-autre', 'souci-autre'];
+let derniersChoix = null;
+function photoChoix() { return { champs: Object.fromEntries(CHAMPS_HISTOIRE.map(id => [id, $(id).value])), mood: chipVal('mood'), souci: chipVal('souci'), persos: [...persosChoisis] }; }
+function poserChoix(c) {
+  CHAMPS_HISTOIRE.forEach(id => { $(id).value = c.champs[id] || ''; });
+  document.querySelectorAll('.chips[data-group="mood"] .chip').forEach(x => x.classList.toggle('on', !!c.mood && x.dataset.v === c.mood));
+  document.querySelectorAll('.chips[data-group="souci"] .chip').forEach(x => x.classList.toggle('on', x.dataset.v === (c.souci || '')));
+  persosChoisis.clear(); c.persos.forEach(x => persosChoisis.add(x)); store.set('set:persos', JSON.stringify(c.persos));
+  store.set('set:mood', c.mood || ''); store.set('set:mood-autre', c.champs['mood-autre'] || '');
+  saveSettings(); window.toutEtageres?.();
+}
+function remettreAZero() {
+  derniersChoix = photoChoix();
+  poserChoix({ champs: {}, mood: '', souci: '', persos: [] });
+  if (dessin) $('dessin-retirer').click();
+}
+$('btn-gen').onclick = async () => { await onGenerate(); if (!$('gen-status').classList.contains('err')) remettreAZero(); };
+$('btn-regen').onclick = async () => {
+  const maintenant = photoChoix();
+  if (derniersChoix) poserChoix(derniersChoix);
+  await onGenerate();
+  poserChoix(maintenant);
+};
 $('btn-suite').onclick = () => {
   if (!current) return;
   const prec = current;
@@ -5317,7 +5350,8 @@ if (!cleGemini()) document.querySelector('#res-cles').closest('details').open = 
         <div><label for="fe-nom">Prénom</label><input id="fe-nom" value="${esc(e.nom || '')}" placeholder="ex. Abby" autocomplete="off"></div>
         <div><label for="fe-age">Âge</label><input id="fe-age" type="number" min="2" max="12" inputmode="numeric" value="${esc(e.age || '5')}"></div>
       </div>
-      <p class="etg-sous">🎨 Ses choix <small>· facultatif : un livre par tablette, il les reconnaîtra dans l'histoire</small></p>
+      <div class="fe-choix-tete"><p class="etg-sous">🎨 Ses choix <small>· facultatif : un livre par tablette, il les reconnaîtra dans l'histoire</small></p>
+        <button type="button" class="fe-effacer" id="fe-effacer" title="Enlever tous ses choix"><span>↺</span>Effacer ses choix</button></div>
       <div id="fe-tablettes"></div>
       <button type="button" class="big" id="fe-ok">C'est bon</button>
       ${i ? '<button type="button" class="sec etg-retirer" id="fe-retirer">✖ Retirer cet enfant</button>' : ''}`,
@@ -5340,14 +5374,18 @@ if (!cleGemini()) document.querySelector('#res-cles').closest('details').open = 
           nom: txt(c.l),
           livres: idees.map(x => ({ e: emo(x), t: cap(txt(x)), on: egal(txt(x), v) })),
           dernier: { t: libre ? v : 'Choisir', on: !!libre },
-          onLivre: k => { e.choix[c.k] = egal(txt(idees[k]), v) ? '' : txt(idees[k]); dessiner(); },
+          onLivre: k => { e.choix[c.k] = egal(txt(idees[k]), v) ? '' : txt(idees[k]); redessinerFeuille(); },
           onLong: k => { if (k >= c.idees.length) retirerLivre(c.k, txt(idees[k]), () => { if (egal(e.choix[c.k], txt(idees[k]))) e.choix[c.k] = ''; }); },
-          onDernier: () => demander(txt(c.l) + ' : à toi de choisir', libre ? v : '', c.ph, w => { e.choix[c.k] = w; ajouterLivre(c.k, w); dessiner(); })
+          onDernier: () => demander(txt(c.l) + ' : à toi de choisir', libre ? v : '', c.ph, w => { e.choix[c.k] = w; ajouterLivre(c.k, w); redessinerFeuille(); })
         });
       });
     };
     redessinerFeuille = dessiner;
     dessiner();
+    const majEffacer = () => { $('fe-effacer').disabled = !CHOIX.some(c => e.choix[c.k]); };
+    const dessiner0 = dessiner; redessinerFeuille = () => { dessiner0(); majEffacer(); };
+    majEffacer();
+    $('fe-effacer').onclick = () => { CHOIX.forEach(c => { e.choix[c.k] = ''; }); sauverEnfants(); redessinerFeuille(); };
     $('fe-nom').addEventListener('input', () => { lire(); document.querySelector('#etg-feuille h3').textContent = e.nom || 'Un enfant'; });
     $('fe-ok').onclick = fermer;
     if (i) $('fe-retirer').onclick = () => {
@@ -5511,6 +5549,7 @@ if (!cleGemini()) document.querySelector('#res-cles').closest('details').open = 
   $('dessin-apercu').addEventListener('load', etgChevet);
 
   /* ---------- tout redessiner ---------- */
+  window.toutEtageres = () => tout();
   function tout() {
     etgQui(); etgGenre();
     etgListe($('etg-avec'), 'friends', 'Avec qui d\'autre ?', AVEC, 'ex. son chien Biscuit, sa cousine Léa', null, 'avec');
@@ -5527,6 +5566,7 @@ if (!cleGemini()) document.querySelector('#res-cles').closest('details').open = 
   /* au démarrage : l'ambiance d'hier, les enfants relus, le statut des personnages sous leur tablette */
   $('mood-autre').value = store.get('set:mood-autre', '');
   const m = store.get('set:mood'); if (m && chip('mood', m) && (m !== 'autre' || $('mood-autre').value.trim())) chip('mood', m).click();
+  if (localStorage.getItem('set:mood') === '') document.querySelectorAll('.chips[data-group="mood"] .chip').forEach(x => x.classList.remove('on'));   // v86 : remise à zéro gardée
   lireEnfants();
   $('etg-persos-aide').after($('persos-status'));
   $('lib-list').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.lib-item')) { e.preventDefault(); e.target.click(); } });
