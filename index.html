@@ -495,28 +495,42 @@
   .ses-choix small { color: var(--doux); font-weight: 700; font-size: .78rem; }
   .ses-choix::after { content: "›"; color: var(--bois-txt); font-size: 1.2rem; }
 
-  /* ───── la table de chevet (v66) : l'image Gemini détourée est le décor, des zones touchables par-dessus (en % de l'image 1465 × 2270).
-     Le choisi est ÉCLAIRÉ (voile clair fondu), les autres assombris. La feuille et le polaroid : texte/photo déformés en perspective (matrix3d, data-coins). ───── */
+  /* ───── la table de chevet (v79) : la nouvelle image de Jonathan (sans fond, 8 cadres, sans texte), 1450 × 1980.
+     Les 3 livres et le livre ouvert sont de VRAIS découpages (png) effacés du décor : le choisi sort de sa case vers toi
+     (monte, grossit, son ombre tombe sur la tablette). Les 8 cadres sont des calques de la même image (sprites).
+     Le choisi s'éclaire et lance des étincelles (style « Étincelles »), les autres restent dans l'ombre. Textes = plaques de laiton. ───── */
   .chevet3d { margin: 10px 0 0; }
   .chevet3d h2 { margin: 0 0 6px; text-align: center; color: var(--bois-txt); font: 800 .76rem var(--f-texte); letter-spacing: .1em; text-transform: uppercase; text-shadow: var(--bois-lueur); }
-  .table { position: relative; width: 100%; max-width: 420px; margin: 0 auto; aspect-ratio: 1465 / 2270; background: url(table-chevet.webp) center / 100% 100% no-repeat; filter: drop-shadow(0 18px 26px rgba(0,0,0,.6)); }
+  .table { position: relative; width: 100%; max-width: 420px; margin: 0 auto; aspect-ratio: 1450 / 1980; background: url(table-chevet2.webp) center / 100% 100% no-repeat; filter: drop-shadow(0 18px 26px rgba(0,0,0,.6)); }
   .table .z { position: absolute; }
-  .table .val { display: flex; align-items: center; justify-content: flex-end; color: var(--doux); font: 800 clamp(10px, 3.1vw, 13px) var(--f-texte); white-space: nowrap; text-shadow: 0 1px 2px #000; }
-  .table .val.on { color: var(--accent); text-shadow: 0 0 8px rgba(242,196,109,.9); }
-  .table .obj { cursor: pointer; border-radius: 8px; transition: all .3s; }
-  .table .obj.on { background: rgba(255,238,200,.55); mix-blend-mode: overlay; box-shadow: 0 0 10px 6px rgba(255,238,200,.35); }
-  .table .obj.on::before { content: ""; position: absolute; inset: 0; border-radius: inherit; background: rgba(255,245,220,.18); mix-blend-mode: screen; }
-  .table .obj.off { background: rgba(5,3,1,.66); box-shadow: 0 0 16px 12px rgba(5,3,1,.66); }
-  .table .cadre { border-radius: 4px; }
-  .table .cadre.reco::after { content: "⭐"; position: absolute; top: -9px; right: -7px; font-size: clamp(10px, 3.2vw, 14px); filter: drop-shadow(0 0 4px #000); }
+  .table .plaque { top: auto; font-size: clamp(8px, 2.5vw, 10.5px); padding: 2px 22px; }
+  .table .plaque b { color: #7a2e06; font-weight: 800; letter-spacing: .04em; margin-left: 6px; text-transform: none; }
+  .table .obj { cursor: pointer; background-image: url(table-chevet2.webp); background-repeat: no-repeat; transition: filter .4s; }
+  .table .obj.off { filter: brightness(.5) saturate(.6); }
+  .table .obj.on { z-index: 2; animation: ch-respire 2.4s ease-in-out infinite; }
+  .table .cadre.on { animation-delay: calc(var(--k) * .15s); }
+  .table .etin { position: absolute; color: #ffe9a0; font-size: 11px; opacity: 0; pointer-events: none; text-shadow: 0 0 6px #ffe9a0; }
+  .table .obj.on .etin { animation: ch-etin 2.2s ease-out infinite; }
+  .table .obj.on .etin:nth-of-type(2) { animation-delay: .45s; } .table .obj.on .etin:nth-of-type(3) { animation-delay: .9s; }
+  .table .obj.on .etin:nth-of-type(4) { animation-delay: 1.35s; } .table .obj.on .etin:nth-of-type(5) { animation-delay: 1.8s; }
+  /* les livres (vrais découpages) : la boîte ne brille pas, seule l'image (sa forme) */
+  .table .obj.spr, .table .obj.spr.on, .table .obj.spr.off { background: none; filter: none; animation: none; transform-origin: 50% 100%; transition: transform .55s cubic-bezier(.2,1.35,.4,1); }
+  .table .spr img { display: block; width: 100%; height: 100%; transition: filter .4s; }
+  .table .spr.off img { filter: brightness(.5) saturate(.6); }
+  .table .spr.on img { animation: ch-respire-l 2.4s ease-in-out infinite; }
+  .table .ch-livre.on { transform: translateY(-7%) scale(1.15) rotate(-2deg); }
+  .table .ouvert.on { transform: translateY(-6%) scale(1.07); }
+  @keyframes ch-respire { 0%, 100% { filter: brightness(1.08) drop-shadow(0 0 4px rgba(255,220,140,.55)); } 50% { filter: brightness(1.22) drop-shadow(0 0 14px rgba(255,220,140,1)); } }
+  @keyframes ch-respire-l { 0%, 100% { filter: brightness(1.06) drop-shadow(0 12px 7px rgba(0,0,0,.65)) drop-shadow(0 0 4px rgba(255,220,140,.55)); } 50% { filter: brightness(1.18) drop-shadow(0 12px 7px rgba(0,0,0,.65)) drop-shadow(0 0 13px rgba(255,220,140,1)); } }
+  @keyframes ch-etin { 0% { opacity: 0; transform: translate(0, 0) scale(.3); } 25% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1.1); } }
   .table .polaroid { cursor: pointer; transform-origin: 0 0; }
-  .table .polaroid img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: none; }
+  .table .polaroid img { position: absolute; inset: 6% 6% 16%; width: 88%; height: 78%; object-fit: cover; display: none; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
   .table .polaroid.a img { display: block; }
   .table .ch-retirer { display: none; position: absolute; top: -10px; right: -10px; width: 28px; height: 28px; border-radius: 50%; border: 0; background: rgba(0,0,0,.6); color: #fff; cursor: pointer; z-index: 2; }
   .table .polaroid.a .ch-retirer { display: block; }
   .table .feuille { transform-origin: 0 0; }
   .table .feuille textarea { width: 100%; height: 100%; min-height: 0; margin: 0; border: 0; border-radius: 0; background: transparent; resize: none; outline: none; box-shadow: none;
-    padding: 0 14% 0 2px; font: clamp(10px, 3vw, 13px)/1.45 'Patrick Hand', cursive; color: #2c3e66; overflow: hidden; }
+    padding: 0 4px; font: clamp(11px, 3.2vw, 14px)/1.42 'Patrick Hand', cursive; color: #2c3e66; overflow: hidden; }
   .table .feuille textarea::placeholder { color: #b3a68c; opacity: 1; }
   .table .micro3d { border-radius: 50%; border: 0; background: transparent; cursor: pointer; font-size: 0; color: transparent; padding: 0; }
   .table .micro3d.rec { box-shadow: 0 0 0 3px var(--err), 0 0 18px var(--err); }
@@ -780,27 +794,22 @@
       <h2>Sur la table de chevet</h2>
       <div class="table" id="ch-table">
         <!-- la feuille sur le chevalet : 4 coins (en % de l'image) ; le champ #idea déménage dedans -->
-        <div class="z feuille" id="ch-feuille" data-coins="39.8,16.9 59.4,16.1 60.6,27.6 41.1,28.3"></div>
-        <button type="button" class="z micro3d" id="ch-micro" style="left:55.2%;top:21.4%;width:7.2%;height:4.6%" title="Dicter ton idée"></button>
-        <!-- longueur : les trois livres -->
-        <div class="z val" id="ch-dur" style="left:30%;top:39.4%;width:12.5%;height:2.5%"></div>
-        <div class="z obj" data-l="court" role="button" title="Courte · 3 min" style="left:10.4%;top:50.1%;width:8.3%;height:7.8%"></div>
-        <div class="z obj" data-l="moyen" role="button" title="Moyenne · 5 min" style="left:21.4%;top:47.1%;width:9.6%;height:10.8%"></div>
-        <div class="z obj" data-l="long" role="button" title="Longue · 9 min" style="left:33.9%;top:44.1%;width:11.6%;height:13.8%"></div>
-        <!-- images : les cadres (minimum : la couverture) -->
-        <div class="z val" id="ch-img" style="left:70%;top:39.4%;width:20.5%;height:2.5%"></div>
-        <div class="z obj cadre" data-n="1" title="La couverture seulement" style="left:55.8%;top:43.4%;width:8.1%;height:5.1%"></div>
-        <div class="z obj cadre" data-n="3" title="3 images" style="left:65%;top:43.4%;width:8.1%;height:5.1%"></div>
-        <div class="z obj cadre" data-n="4" title="4 images" style="left:74.3%;top:43.4%;width:8.1%;height:5.1%"></div>
-        <div class="z obj cadre" data-n="5" title="5 images" style="left:83.5%;top:43.4%;width:8.1%;height:5.1%"></div>
-        <div class="z obj cadre" data-n="6" title="6 images" style="left:55.8%;top:50.1%;width:8.1%;height:5.1%"></div>
-        <div class="z obj cadre" data-n="8" title="8 images" style="left:65%;top:50.1%;width:8.1%;height:5.1%"></div>
+        <div class="z feuille" id="ch-feuille" data-coins="39.3,6.5 57.9,6.3 58.5,13.6 39.7,13.8"></div>
+        <button type="button" class="z micro3d" id="ch-micro" style="left:55.3%;top:13%;width:6.3%;height:4.6%" title="Dicter ton idée"></button>
+        <span class="plaque" style="left:27.6%;top:32.6%">Longueur <b id="ch-dur"></b></span>
+        <span class="plaque" style="left:73%;top:32.6%">Images <b id="ch-img"></b></span>
+        <span class="plaque" style="left:27.6%;top:61.8%">L'enfant choisit <b id="ch-format-v"></b></span>
+        <span class="plaque" style="left:73%;top:61.8%">Dessin <b id="ch-dessin-v"></b></span>
+        <!-- longueur : les trois livres (vrais découpages) -->
+        <div class="z obj spr ch-livre" data-l="court" data-src="chevet-livre0.png" data-r="9.59,44.95,8.34,9.14" role="button" title="Courte · 3 min"></div>
+        <div class="z obj spr ch-livre" data-l="moyen" data-src="chevet-livre1.png" data-r="20.48,42.17,10,11.97" role="button" title="Moyenne · 5 min"></div>
+        <div class="z obj spr ch-livre" data-l="long" data-src="chevet-livre2.png" data-r="33.31,39.7,11.31,14.39" role="button" title="Longue · 9 min"></div>
+        <!-- images : 8 cadres (minimum : la couverture) -->
+        <div id="ch-cadres"></div>
         <!-- l'enfant choisit : le livre ouvert -->
-        <div class="z val" id="ch-format-v" style="left:30%;top:64.6%;width:12.5%;height:2.5%"></div>
-        <div class="z obj" id="ch-format" role="button" title="L'enfant choisit la suite" style="left:11%;top:69.8%;width:35.5%;height:16.2%"></div>
-        <!-- dessin : le polaroid -->
-        <div class="z val" id="ch-dessin-v" style="left:70%;top:64.6%;width:20.5%;height:2.5%"></div>
-        <div class="z polaroid" id="ch-dessin" data-coins="64.2,69.2 83.6,69.0 84.6,82.6 65.4,83.2" role="button" tabindex="0" title="D'après un dessin"><img id="ch-dessin-img" alt=""><button type="button" class="ch-retirer" id="ch-dessin-x" title="Retirer le dessin">✕</button></div>
+        <div class="z obj spr ouvert" id="ch-format" data-src="chevet-ouvert.png" data-r="11.17,68.03,35.45,17.32" role="button" title="L'enfant choisit la suite"></div>
+        <!-- dessin : la feuille épinglée -->
+        <div class="z polaroid" id="ch-dessin" data-coins="62.3,67.5 82.8,66.3 84.4,80.8 63.9,82.0" role="button" tabindex="0" title="D'après un dessin"><img id="ch-dessin-img" alt=""><button type="button" class="ch-retirer" id="ch-dessin-x" title="Retirer le dessin">✕</button></div>
       </div>
       <div class="suggestions" id="idee-sugg"></div>
     </section>
@@ -890,10 +899,12 @@
               <div class="chip on" data-v="reco">⭐ Recommandé</div>
               <div class="chip" data-v="0">🚫 Aucune image</div>
               <div class="chip" data-v="1">🖼️ Couverture seulement</div>
+              <div class="chip" data-v="2">🎨 2 images</div>
               <div class="chip" data-v="3">🎨 3 images</div>
               <div class="chip" data-v="4">🎨 4 images</div>
               <div class="chip" data-v="5">🎨 5 images</div>
               <div class="chip" data-v="6">🎨 6 images</div>
+              <div class="chip" data-v="7">🎨 7 images</div>
               <div class="chip" data-v="8">🎨 8 images</div>
             </div>
           </div>
@@ -1208,7 +1219,7 @@
     <button type="button" id="t-quitter" title="Quitter le mode télé">✕</button>
   </div>
 </div>
-<p id="version-bas">Histoires du soir · <span class="vers">v78</span></p>
+<p id="version-bas">Histoires du soir · <span class="vers">v79</span></p>
 <div class="mini-lecteur" id="mini-lecteur" hidden>
   <div class="ml-vitesses" id="ml-vitesses" hidden></div>
   <div class="ml-rangee">
@@ -5321,20 +5332,31 @@ if (!cleGemini()) document.querySelector('#res-cles').closest('details').open = 
   }
   new ResizeObserver(poserCoins).observe($('ch-table'));
   const etat3d = (el, on) => { el.classList.remove('on', 'off'); el.classList.add(on ? 'on' : 'off'); };
+  /* v79 : les 8 cadres, puis chaque objet prend sa place (data-r) : vrai découpage (img) ou calque de l'image (sprite) + 5 étincelles */
+  $('ch-cadres').outerHTML = [37.4, 45.1].map((y, r) => [55.4, 65.0, 74.2, 83.4].map((x, c) => { const n = r * 4 + c + 1;
+    return `<div class="z obj cadre" data-n="${n}" style="--k:${n - 1}" data-r="${x},${y},7.9,6.9" role="button" title="${n === 1 ? 'La couverture seulement' : n + ' images'}"></div>`; }).join('')).join('');
+  const ETIN_CH = `<i class="etin" style="left:-8px;top:8%;--dx:-12px;--dy:-16px">✦</i><i class="etin" style="right:-8px;top:18%;--dx:14px;--dy:-14px">✦</i><i class="etin" style="left:-6px;bottom:20%;--dx:-14px;--dy:8px">✦</i><i class="etin" style="right:-6px;bottom:12%;--dx:12px;--dy:12px">✦</i><i class="etin" style="left:42%;top:-10px;--dx:2px;--dy:-18px">✦</i>`;
+  document.querySelectorAll('#ch-table [data-r]').forEach(el => {
+    const [x, y, w, h] = el.dataset.r.split(',').map(Number);
+    Object.assign(el.style, { left: x + '%', top: y + '%', width: w + '%', height: h + '%' });
+    if (el.dataset.src) { el.innerHTML = `<img src="${el.dataset.src}" alt="">` + ETIN_CH; return; }
+    Object.assign(el.style, { backgroundSize: `${10000 / w}% ${10000 / h}%`, backgroundPosition: `${x / (100 - w) * 100}% ${y / (100 - h) * 100}%` });
+    el.innerHTML = ETIN_CH;
+  });
   function etgChevet() {
     const L = chipVal('length');
     document.querySelectorAll('#ch-table [data-l]').forEach(b => { etat3d(b, b.dataset.l === L); b.setAttribute('aria-pressed', b.dataset.l === L); });
-    $('ch-dur').textContent = (chipTxt(chip('length', L)).t.split('·')[1] || '').trim(); $('ch-dur').classList.add('on');
+    $('ch-dur').textContent = (chipTxt(chip('length', L)).t.split('·')[1] || '').trim();
     const n = imagesVoulues(), reco = imgReco(), v = chipVal('images');
-    document.querySelectorAll('#ch-table .cadre').forEach(c => { const k = +c.dataset.n; etat3d(c, k <= n); c.classList.toggle('reco', k === reco); });
-    $('ch-img').textContent = (n === 1 ? 'couverture' : n + ' images') + (v === 'reco' ? ' ⭐' : ''); $('ch-img').classList.add('on');
+    document.querySelectorAll('#ch-table .cadre').forEach(c => etat3d(c, +c.dataset.n <= n));
+    $('ch-img').textContent = (n === 1 ? 'couverture' : n) + (v === 'reco' ? ' ⭐' : '');
     const aChoix = chipVal('format') === 'choix';
     etat3d($('ch-format'), aChoix); $('ch-format').setAttribute('aria-pressed', aChoix);
-    $('ch-format-v').textContent = aChoix ? 'Oui' : 'Non'; $('ch-format-v').classList.toggle('on', aChoix);
+    $('ch-format-v').textContent = aChoix ? 'Oui' : 'Non';
     const d = !!dessin;
-    $('ch-dessin').classList.toggle('a', d); $('ch-dessin').classList.toggle('obj', d); $('ch-dessin').classList.toggle('on', d);
+    $('ch-dessin').classList.toggle('a', d);
     $('ch-dessin-img').src = d ? $('dessin-apercu').src : '';
-    $('ch-dessin-v').textContent = d ? 'Ajouté ✓' : 'Ajouter'; $('ch-dessin-v').classList.toggle('on', d);
+    $('ch-dessin-v').textContent = d ? 'Ajouté ✓' : 'Ajouter';
   }
   $('ch-table').onclick = e => {
     const l = e.target.closest('[data-l]'); if (l) { chip('length', l.dataset.l).click(); tout(); return; }
