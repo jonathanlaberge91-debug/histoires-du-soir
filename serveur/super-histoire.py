@@ -15,13 +15,14 @@ AUTEUR = '1nowfgvyzuk1hse'          # le compte Maison de Jonathan (même auteur
 
 h = json.load(open(sys.argv[1], encoding='utf-8'))
 COMMANDE = sys.argv[sys.argv.index('--commande') + 1].replace("'", '') if '--commande' in sys.argv else None   # remplacer une commande de l'app
-assert h.get('titre') and h.get('histoire'), 'il faut au moins « titre » et « histoire »'
+assert h.get('titre') and (h.get('histoire') or h.get('aventure')), 'il faut « titre » et « histoire » (ou « aventure »)'
 hid, maintenant = COMMANDE or secrets.token_hex(8), int(time.time() * 1000)
 donnees = {
-    'id': hid, 'createdAt': maintenant, 'titre': h['titre'], 'histoire': h['histoire'].strip(),
+    'id': hid, 'createdAt': maintenant, 'titre': h['titre'], 'histoire': (h.get('histoire') or '').strip(),
     'meta': {k: h.get(k, '') for k in ('ambiance', 'lieu', 'mechant', 'duree')} | {'name': h.get('pour', ''), 'friends': h.get('avec', '')},
     'illusNb': int(h.get('images', 4)), 'ecriture': 'simple', 'super': True, 'nouvelle': True,
 }
+if h.get('aventure'): donnees['aventure'] = h['aventure']          # grande aventure (carte de scènes, v91)
 q = lambda v: "'" + str(v).replace("'", "''") + "'"
 iso = time.strftime('%Y-%m-%d %H:%M:%S.000Z', time.gmtime())
 don = q(json.dumps(donnees, ensure_ascii=False))
