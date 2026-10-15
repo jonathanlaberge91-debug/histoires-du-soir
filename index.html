@@ -424,7 +424,31 @@
     --livre-on: 0 0 0 3px #fff, 0 0 0 6px var(--accent), 0 10px 16px rgba(108,85,201,.25); --fondu: rgba(251,247,255,.96);
   }
   html[data-look="veilleuse"] header { position: relative; }
-  html[data-look="veilleuse"] header::after { content: "🪔"; position: absolute; right: 4px; top: 20px; font-size: 1.8rem; filter: drop-shadow(0 0 14px rgba(255,200,110,.8)); }
+  /* v85 : la chandelle (bougie de cire) dans une applique de fer forgé accrochée au mur ; la flamme vacille et danse (Veilleuse seulement) */
+  .chandelle { display: none; position: absolute; right: 2px; top: 6px; width: 70px; height: 100px; pointer-events: none; }
+  html[data-look="veilleuse"] .chandelle { display: block; }
+  .chandelle .plaque-mur { position: absolute; left: 4px; top: 30px; width: 14px; height: 46px; border-radius: 7px;
+    background: linear-gradient(90deg, #15151a, #4a4a55 45%, #2a2a32 70%, #101014); box-shadow: 0 2px 4px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.12); }
+  .chandelle .plaque-mur::before, .chandelle .plaque-mur::after { content: ""; position: absolute; left: 4px; width: 6px; height: 6px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #8a8a95, #2a2a30 70%); box-shadow: 0 1px 1px rgba(0,0,0,.8); }
+  .chandelle .plaque-mur::before { top: 5px; } .chandelle .plaque-mur::after { bottom: 5px; }
+  .chandelle svg.bras { position: absolute; left: 0; top: 0; width: 70px; height: 100px; overflow: visible; filter: drop-shadow(0 2px 2px rgba(0,0,0,.7)); }
+  .chandelle .cire { position: absolute; left: 34px; top: 42px; width: 18px; height: 36px; border-radius: 3px 3px 2px 2px;
+    background: linear-gradient(90deg, #cfc2a6 0%, #f7efdd 30%, #fffaf0 45%, #e9dcc0 75%, #b9a888 100%); box-shadow: 0 0 12px rgba(255,190,90,.35); }
+  .chandelle .cire::before { content: ""; position: absolute; left: 1px; right: 1px; top: -2px; height: 6px; border-radius: 50%; background: radial-gradient(ellipse at 50% 40%, #fff6dc, #e8d7b0 70%); box-shadow: inset 0 1px 3px rgba(255,190,90,.6); }
+  .chandelle .cire::after { content: ""; position: absolute; left: 3px; top: 2px; width: 4px; height: 12px; border-radius: 0 0 3px 3px; background: linear-gradient(#fffaf0, #f0e4c8); box-shadow: 9px 3px 0 -1px #f0e4c8; }
+  .chandelle .meche { position: absolute; left: 42px; top: 35px; width: 2px; height: 7px; border-radius: 1px; background: linear-gradient(#2a1a10, #5a3a20); }
+  .chandelle .flamme { position: absolute; left: 37px; top: 9px; width: 12px; height: 28px; transform-origin: 50% 100%; border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%;
+    background: radial-gradient(ellipse 35% 45% at 50% 72%, #fff 0%, #fff8d6 40%, rgba(255,240,180,0) 100%), radial-gradient(ellipse 60% 75% at 50% 70%, #ffd75e 0%, #ffb02e 45%, rgba(255,120,30,.6) 75%, rgba(255,90,20,0) 100%);
+    filter: blur(.4px); mix-blend-mode: screen; animation: ch-vacille 1.6s ease-in-out infinite, ch-danse 3.1s ease-in-out infinite; }
+  .chandelle .flamme::before { content: ""; position: absolute; left: 28%; right: 28%; bottom: 4%; height: 24%; border-radius: 50%; background: radial-gradient(ellipse at 50% 60%, rgba(120,160,255,.85), rgba(80,110,255,0) 70%); }
+  .chandelle .flamme::after { content: ""; position: absolute; inset: -70% -170%; border-radius: 50%; background: radial-gradient(circle at 50% 62%, rgba(255,190,90,.36), rgba(255,170,70,.1) 35%, transparent 62%); animation: ch-halo 1.6s ease-in-out infinite; }
+  .chandelle .fumee { position: absolute; left: 40px; top: 4px; width: 6px; height: 6px; border-radius: 50%; background: rgba(200,200,220,.18); filter: blur(2px); opacity: 0; animation: ch-fumee 5s ease-out infinite; }
+  .chandelle .fumee + .fumee { animation-delay: 2.5s; }
+  @keyframes ch-vacille { 0%, 100% { transform: scale(1, 1) skewX(0); } 18% { transform: scale(.96, 1.08) skewX(2deg); } 36% { transform: scale(1.03, .94) skewX(-1.5deg); } 52% { transform: scale(.95, 1.1) skewX(1deg); } 70% { transform: scale(1.02, .97) skewX(-2.5deg); } 86% { transform: scale(.98, 1.05) skewX(1.5deg); } }
+  @keyframes ch-danse { 0%, 100% { translate: 0 0; rotate: 0deg; } 25% { translate: -.6px -.4px; rotate: -3deg; } 50% { translate: .5px .2px; rotate: 2deg; } 75% { translate: -.3px -.6px; rotate: -1.5deg; } }
+  @keyframes ch-halo { 0%, 100% { opacity: .85; transform: scale(1); } 40% { opacity: 1; transform: scale(1.06); } 70% { opacity: .75; transform: scale(.96); } }
+  @keyframes ch-fumee { 0%, 40% { opacity: 0; transform: translate(0, 0) scale(.6); } 55% { opacity: .6; } 100% { opacity: 0; transform: translate(6px, -34px) scale(2.4); } }
   html[data-look="veilleuse"] { --fond-img: radial-gradient(120% 40% at 85% 0%, rgba(255,200,110,.16), transparent 60%), radial-gradient(120% 60% at 50% -10%, #1f2033 0%, #08080e 62%); }
 
   /* ───── une tablette de livres ───── */
@@ -819,6 +843,20 @@
 <div id="voile"></div>
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
+  <div class="chandelle" aria-hidden="true">
+    <span class="plaque-mur"></span>
+    <svg class="bras" viewBox="0 0 70 100">
+      <defs><linearGradient id="fer" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#5a5a66"/><stop offset=".5" stop-color="#2a2a32"/><stop offset="1" stop-color="#121216"/></linearGradient></defs>
+      <path d="M17,60 C30,60 30,88 43,86" fill="none" stroke="url(#fer)" stroke-width="4" stroke-linecap="round"/>
+      <path d="M17,48 C26,44 22,36 28,34" fill="none" stroke="#2a2a32" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="28.5" cy="33.5" r="2.2" fill="#3a3a44"/>
+      <path d="M43,86 L43,80" stroke="url(#fer)" stroke-width="4"/>
+      <ellipse cx="43" cy="79" rx="15" ry="4" fill="url(#fer)"/>
+      <ellipse cx="43" cy="77.6" rx="12" ry="2.6" fill="#1a1a20"/>
+      <path d="M28,79 q15,7 30,0" fill="none" stroke="rgba(255,190,110,.35)" stroke-width="1"/>
+    </svg>
+    <span class="cire"></span><span class="meche"></span><span class="flamme"></span><span class="fumee"></span><span class="fumee"></span>
+  </div>
   <h1><span class="h-et" style="left:2%;top:-2px">✦</span><span class="h-et" style="left:40%;top:-8px;font-size:9px;animation-delay:1.7s">✦</span><span class="h-et" style="left:66%;top:6px;animation-delay:.7s">✦</span><span class="h-et" style="left:84%;top:34px;font-size:10px;animation-delay:1.1s">✦</span><span class="h-et" style="left:98%;top:58px;animation-delay:1.3s">✦</span><span class="h-et" style="left:26%;top:72px;font-size:9px;animation-delay:.3s">✦</span><span class="h-zz"><span>z</span><span>z</span><span>z</span></span>Histoires<small>du soir</small></h1>
 </header>
 
@@ -1273,7 +1311,7 @@
     <button type="button" id="t-quitter" title="Quitter le mode télé">✕</button>
   </div>
 </div>
-<p id="version-bas">Histoires du soir · <span class="vers">v84</span></p>
+<p id="version-bas">Histoires du soir · <span class="vers">v85</span></p>
 <div class="mini-lecteur" id="mini-lecteur" hidden>
   <div class="ml-vitesses" id="ml-vitesses" hidden></div>
   <div class="ml-rangee">
