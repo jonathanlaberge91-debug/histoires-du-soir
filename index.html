@@ -558,7 +558,22 @@
   #lib-list.rayons .lib-item [data-del] { position: absolute; top: 4px; left: 6px; width: 30px; height: 30px; padding: 0; justify-content: center; border-radius: 50%;
     background: rgba(0,0,0,.4); border: 0; color: #fff; font-size: .78rem; box-shadow: none; }
   .lib-rayon .planche { margin-top: -6px; }
-  #v-lib > .card { background: linear-gradient(var(--meuble1), var(--meuble2)); border-color: var(--meuble-bord); }
+  /* v76 : le haut de Histoires = la planche-titre, trois signets (filtres) qui pendent de la planche, la recherche en pastille de verre */
+  #lib-tete { margin: 4px -6px 22px; }
+  #lib-tete .planche { margin: 0 6px; }
+  #lib-tete .plaque { font-size: .76rem; }
+  .signets { display: flex; justify-content: center; gap: 12px; margin: 0 10px; }
+  .signets .chip { border: 0; border-radius: 0 0 8px 8px; padding: 10px 14px 14px; font: 800 .74rem var(--f-texte); letter-spacing: .02em; color: #e9d9b5;
+    background: linear-gradient(180deg, #5a3f2c, #3a2717); box-shadow: 0 6px 10px rgba(0,0,0,.4), inset 0 -1px 0 rgba(255,220,160,.15);
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 82%, 0 100%); transition: transform .25s, background .25s; }
+  .signets .chip.on { background: linear-gradient(180deg, #ffd98a, #d9a74a); color: #2a1d00; transform: translateY(4px); box-shadow: 0 8px 14px rgba(0,0,0,.45), 0 0 14px rgba(242,196,109,.45); }
+  .lib-recherche { display: flex; align-items: center; gap: 8px; margin: 16px 12px 0; padding: 4px 6px 4px 14px; border-radius: 999px; background: rgba(0,0,0,.32); border: 1px solid rgba(255,220,160,.18); box-shadow: inset 0 2px 6px rgba(0,0,0,.35); }
+  .lib-recherche .loupe { opacity: .7; }
+  .lib-recherche input { flex: 1; min-width: 0; border: 0; background: none; box-shadow: none; padding: 8px 0; color: var(--texte); font: 600 .95rem var(--f-texte); }
+  .lib-recherche input:focus { outline: none; }
+  .lib-recherche button { width: 36px; height: 36px; border-radius: 50%; border: 0; background: rgba(255,255,255,.08); color: var(--texte); cursor: pointer; font-size: 1rem; }
+  #lib-tete .status:empty { display: none; }
+  #lib-tete .status { margin: 10px 12px 0; }
 
   /* ───── Réglages : les tiroirs de la commode ───── */
   details.reglage { position: relative; background: linear-gradient(var(--meuble1), var(--meuble2)) !important; border: 1px solid var(--meuble-bord) !important; color: var(--meuble-txt); }
@@ -749,6 +764,8 @@
       <section id="etg-avec"></section>
       <section id="etg-persos"></section>
       <p class="etg-aide" id="etg-persos-aide"></p>
+      <section id="etg-lieu"></section>
+      <section id="etg-mechant"></section>
       <section id="etg-journee"></section>
       <section id="etg-souci"></section>
       <section id="etg-lecon"></section>
@@ -892,6 +909,7 @@
         </div>
         <input id="dessin" type="file" accept="image/*" style="display:none">
         <img id="dessin-apercu" class="cover" alt="" style="display:none; max-height:240px; object-fit:contain; background:#fff; margin-top:10px">
+        <input id="lieu" type="hidden"><input id="mechant" type="hidden">
         <label for="journee">Sa journée (ce qui s'est vraiment passé)</label>
         <textarea id="journee" placeholder="ex. Abby est allée au parc, elle a perdu sa mitaine rouge, grand-maman est venue souper…"></textarea>
         <label for="moral">Une leçon, tout en douceur</label>
@@ -976,16 +994,14 @@
 
 <!-- ============ BIBLIOTHÈQUE ============ -->
 <section id="v-lib" class="view">
-  <div class="card">
-    <div class="recherche">
-      <input id="lib-q" placeholder="🔎 Titre, prénom, un mot…" autocomplete="off">
-      <button class="sec" id="btn-drive-recup" title="Récupérer mes histoires du serveur">☁️</button>
-    </div>
-    <div class="chips" data-group="libf" style="display:flex; margin-top:10px">
-      <div class="chip on" data-v="tout">Toutes</div>
+  <div id="lib-tete">
+    <div class="planche" id="lib-planche"></div>
+    <div class="chips signets" data-group="libf">
+      <div class="chip on" data-v="tout">📚 Toutes</div>
       <div class="chip" data-v="fav">⭐ Favoris</div>
       <div class="chip" data-v="audio">🎧 Avec voix</div>
     </div>
+    <label class="lib-recherche"><span class="loupe">🔎</span><input id="lib-q" placeholder="Titre, prénom, un mot…" autocomplete="off"><button type="button" id="btn-drive-recup" title="Récupérer mes histoires du serveur">☁️</button></label>
     <div class="status" id="recup-status"></div>
   </div>
   <div id="lib-list"></div>
@@ -1188,7 +1204,7 @@
     <button type="button" id="t-quitter" title="Quitter le mode télé">✕</button>
   </div>
 </div>
-<p id="version-bas">Histoires du soir · <span class="vers">v75</span></p>
+<p id="version-bas">Histoires du soir · <span class="vers">v76</span></p>
 <div class="mini-lecteur" id="mini-lecteur" hidden>
   <div class="ml-vitesses" id="ml-vitesses" hidden></div>
   <div class="ml-rangee">
@@ -1644,7 +1660,7 @@ document.querySelectorAll('.chips').forEach(g => g.addEventListener('click', e =
 const chipVal = g => document.querySelector(`.chips[data-group="${g}"] .chip.on`).dataset.v;
 
 /* ==================== RÉGLAGES ==================== */
-const SETTINGS = ['k-gemini', 'm-gemini', 'lang', 'name', 'age', 'friends',
+const SETTINGS = ['k-gemini', 'm-gemini', 'lang', 'name', 'age', 'friends', 'lieu', 'mechant',
   'engine', 'g-voice', 'p-voice', 'p-rate', 'musique-vol', 'img-style', 'k-gcloud', 'gc-voice', 'gc-voice-studio', 'gc-voice-neural', 'gc-rate', 'gc-plafond', 'ms-voice', 'ms-rate', 'vit-mode'];
 const CHECKS = ['opt-musique', 'opt-suivre', 'opt-drive', 'opt-multivoix'];
 SETTINGS.forEach(id => { const v = store.get('set:' + id); if (v) $(id).value = v; });
@@ -1902,6 +1918,8 @@ function consignes(opts = {}) {
     ...enf.lignes,
     ...consignesPersos(),
     friends ? `Autres héros de l'histoire, aussi importants que le héros principal (chacun a son rôle, ses répliques et un moment où il aide) : ${friends}.` : '',
+    $('lieu').value.trim() ? `Où se passe l'histoire : ${$('lieu').value.trim()}. Le décor est présent et vivant (on le voit, on l'entend, on le sent) et joue un rôle dans l'aventure.` : '',
+    $('mechant').value.trim() ? `Le méchant de l'histoire : ${$('mechant').value.trim()}. Rigolo et jamais vraiment effrayant ; ${enf.noms.length > 1 ? 'les enfants le battent ensemble, chacun grâce à ses choix' : 'le héros le bat grâce à ses choix'} ; à la fin, il devient gentil ou ridicule.` : '',
     opts.sansIdee ? '' : (idea ? `Idée de départ : ${idea}` : (styleVal('graines') === 'oui' ? `Surprends-moi avec une idée originale et inattendue : pas de forêt enchantée, de lapin ni de renard par défaut. Pour t'inspirer, trois graines tirées au sort (prends-en UNE, mélange-les, ou invente mieux) : ${graines().join(' ; ')}.` : `Surprends-moi avec une idée originale et inattendue : pas de forêt enchantée, de lapin ni de renard par défaut.`)),
     opts.sansIdee ? '' : consigneRecentes(enf.noms),
     souciTxt ? `Petit défi de la vraie vie à apprivoiser : ${souciTxt}. Le héros vit une situation semblable, ressent la même émotion (nommée simplement, sans en faire un drame), découvre un ou deux trucs concrets qu'un enfant peut vraiment utiliser, et réussit. Ton rassurant, jamais moralisateur ; l'enfant doit se reconnaître et se sentir capable.` : '',
@@ -3221,17 +3239,20 @@ const CHOIX = [
   { k: 'animal', l: '🐾 Un animal', ph: 'ex. un hibou', idees: ['🦉 hibou', '🐶 chien', '🐱 chat', '🦄 licorne', '🐉 dragon', '🦊 renard', '🐢 tortue', '🦖 dinosaure'] },
   { k: 'personnage', l: '🦸 Un personnage', ph: 'ex. une sirène, Spider-Man, Elsa…', idees: ['🧜 sirène', '🧚 fée', '🦸 superhéros', '🤖 robot', '🧙 magicien', '👸 princesse', '🏴‍☠️ pirate', '👻 petit fantôme'] },
   { k: 'couleur', l: '🎨 Une couleur', ph: 'ex. mauve', idees: ['🔴 rouge', '🟠 orange', '🟡 jaune', '🟢 vert', '🔵 bleu', '🟣 mauve', '🩷 rose', '🌈 arc-en-ciel'] },
-  { k: 'mechant', l: '😈 Un méchant', ph: 'ex. un loup grognon', idees: ['🐺 loup grognon', '🧌 troll', '🧹 sorcière', '🍬 voleur de bonbons', '🐊 crocodile', '🌪️ tempête', '👾 extraterrestre', '🕷️ grosse araignée'] },
-  { k: 'lieu', l: '🗺️ Un lieu', ph: 'ex. un château', idees: ['🏰 château', '🌲 forêt', '🌊 fond de la mer', '🚀 espace', '🏝️ île', '🌋 volcan', '❄️ pôle Nord', '🍭 pays des bonbons'] },
+  /* v76 : le lieu et le méchant ne sont plus par enfant (deux enfants = deux lieux, ça ne marchait pas) : ce sont des tablettes de l'histoire (LIEUX, MECHANTS) */
+  { k: '_mechant', l: '😈 Un méchant', ph: 'ex. un loup grognon', idees: ['🐺 loup grognon', '🧌 troll', '🧹 sorcière', '🍬 voleur de bonbons', '🐊 crocodile', '🌪️ tempête', '👾 extraterrestre', '🕷️ grosse araignée'] },
+  { k: '_lieu', l: '🗺️ Un lieu', ph: 'ex. un château', idees: ['🏰 château', '🌲 forêt', '🌊 fond de la mer', '🚀 espace', '🏝️ île', '🌋 volcan', '❄️ pôle Nord', '🍭 pays des bonbons'] },
   { k: 'pouvoir', l: '✨ Un pouvoir magique', ph: 'ex. voler', idees: ['🕊️ voler', '🫥 devenir invisible', '💪 super force', '🗣️ parler aux animaux', '⚡ super vitesse', '🧊 tout geler', '🌱 faire pousser les plantes', '🦒 devenir géant'] }
 ];
+const IDEES_LIEUX = CHOIX.find(c => c.k === '_lieu').idees, IDEES_MECHANTS = CHOIX.find(c => c.k === '_mechant').idees;
+CHOIX.splice(0, CHOIX.length, ...CHOIX.filter(c => !c.k.startsWith('_')));
 let enfants = (() => { try { const l = JSON.parse(store.get('set:enfants', '[]')); return Array.isArray(l) && l.length ? l : [{ choix: {} }]; } catch { return [{ choix: {} }]; } })();
 const sansEmoji = s => s.replace(/^[^\p{L}\p{N}]+/u, '').trim();
 function blocChoix(i, ouvert) {
   const ch = enfants[i].choix || {};
   const n = CHOIX.filter(c => ch[c.k]).length;
   return `<details class="plus choix-enfant" data-i="${i}" ${ouvert ? 'open' : ''}>
-    <summary>🎨 Ses choix <small>· ${n ? n + ' choisi' + (n > 1 ? 's' : '') : 'objet, animal, méchant…'}</small></summary>
+    <summary>🎨 Ses choix <small>· ${n ? n + ' choisi' + (n > 1 ? 's' : '') : 'objet, animal, personnage…'}</small></summary>
     <div class="dedans">${CHOIX.map(c => `
       <label for="ch-${i}-${c.k}">${c.l}</label>
       <div class="avec-micro"><input id="ch-${i}-${c.k}" data-i="${i}" data-k="${c.k}" placeholder="${esc(c.ph)}" value="${esc(ch[c.k] || '')}" autocomplete="off"><button type="button" class="sec micro" data-dicter="ch-${i}-${c.k}" title="Dicter au micro">🎤</button></div>
@@ -3261,7 +3282,7 @@ function lireEnfants() {
   store.set('set:enfants', JSON.stringify(enfants));
   document.querySelectorAll('details.choix-enfant').forEach(d => {      // compteur « 3 choisis » à jour
     const n = CHOIX.filter(c => (enfants[+d.dataset.i]?.choix || {})[c.k]).length;
-    d.querySelector('summary small').textContent = '· ' + (n ? n + ' choisi' + (n > 1 ? 's' : '') : 'objet, animal, méchant…');
+    d.querySelector('summary small').textContent = '· ' + (n ? n + ' choisi' + (n > 1 ? 's' : '') : 'objet, animal, personnage…');
   });
   return enfants.map(e => ({ nom: e.nom || '', age: e.age || '5', absent: !!e.absent, choix: Object.fromEntries(Object.entries(e.choix || {}).filter(([, v]) => v)) }));
 }
@@ -3304,7 +3325,7 @@ function consignesEnfants() {
     const age = parseInt(tousLus[0]?.age, 10) || 5;
     return { lignes: [`Écris une histoire originale pour un enfant de ${age} ans. ${consigneAge(age)}`, 'Invente un héros attachant, avec un prénom inventé : aucun prénom n\'est imposé.'], noms: [] };
   }
-  const autres = l.slice(1).filter(e => e.nom || Object.keys(e.choix).length);
+  const autres = l.slice(1).filter(e => e.nom || Object.keys(e.choix || {}).some(k => e.choix[k] && CHOIX.some(c => c.k === k)));
   const tous = [l[0], ...autres];
   const plusieurs = tous.length > 1;
   const nomDe = (e, i) => e.nom || (i ? `l'enfant ${i + 1} (invente-lui un prénom)` : 'le héros');
@@ -3317,19 +3338,17 @@ function consignesEnfants() {
     lignes.push(`Écris une histoire originale pour un enfant de ${l[0].age} ans. ${consigneAge(parseInt(l[0].age, 10) || 5)}`);
     lignes.push(l[0].nom ? `Le héros s'appelle ${l[0].nom} : c'est ${l[0].nom} qui a l'idée qui sauve la situation au moment fort.` : `Invente un héros attachant.`);
   }
+  const choixDe = e => Object.fromEntries(Object.entries(e.choix || {}).filter(([k, v]) => v && CHOIX.some(c => c.k === k)));   // v76 : lieu/méchant d'avant ignorés
+  tous.forEach(e => { e.choix = choixDe(e); });
   const avecChoix = tous.map((e, i) => ({ e, i })).filter(x => Object.keys(x.e.choix).length);
   if (avecChoix.length) {
     lignes.push(`${plusieurs ? 'Chaque enfant a fait SES propres choix' : 'L\'enfant a fait ses propres choix'}. Utilise-les TOUS, avec les mêmes mots, pour qu'${plusieurs ? 'il reconnaisse les siens' : 'il les reconnaisse'} en écoutant :`);
     for (const { e, i } of avecChoix) {
-      const ch = Object.entries(e.choix).filter(([k]) => k !== 'mechant').map(([k, v]) => `${NOMS_CHOIX[k]} : ${v}`);
+      const ch = Object.entries(e.choix).map(([k, v]) => `${NOMS_CHOIX[k]} : ${v}`);
       if (ch.length) lignes.push(`- ${nomDe(e, i)} : ${ch.join(' ; ')}.`);
     }
     lignes.push(`Règles : l'objet, l'animal, le personnage et le pouvoir d'un enfant sont À LUI dans l'histoire (c'est lui qui les trouve, les utilise ou s'en fait un ami) et servent à son moment de gloire ; sa couleur colore ses choses à lui (ex. « son hibou mauve ») ; chaque lieu choisi est visité pendant l'aventure.`);
   }
-  const mechants = avecChoix.map(({ e, i }) => e.choix.mechant ? `${e.choix.mechant} (choisi par ${nomDe(e, i)})` : '').filter(Boolean);
-  if (mechants.length) lignes.push(mechants.length > 1
-    ? `Les méchants choisis forment UNE SEULE BANDE qui cause le problème de l'histoire : ${mechants.join(', ')}. Ils restent rigolos et jamais vraiment effrayants ; les enfants les battent ENSEMBLE, chacun grâce à ses choix ; à la fin, la bande devient gentille ou ridicule.`
-    : `Le méchant de l'histoire : ${mechants[0]}. Rigolo et jamais vraiment effrayant ; ${plusieurs ? 'les enfants le battent ensemble, chacun grâce à ses choix' : 'le héros le bat grâce à ses choix'} ; à la fin, il devient gentil ou ridicule.`);
   return { lignes, noms: tous.map(e => e.nom).filter(Boolean) };
 }
 
@@ -4688,6 +4707,7 @@ function plancheSVG() {
     <rect x="0" y="0" width="400" height="30" rx="3" fill="none" stroke="rgba(0,0,0,.5)" stroke-width=".8"/></svg>`;
 }
 /* ==================== BIBLIOTHÈQUE ==================== */
+$('lib-planche').innerHTML = plancheSVG() + '<span class="plaque">Mes histoires</span>';
 let vignettes = [];
 async function renderLib() {
   majBadgeNouvelles();
@@ -5110,7 +5130,7 @@ if (!cleGemini()) document.querySelector('#res-cles').closest('details').open = 
     $('etg-choix').innerHTML = enfants.map((e, i) => {
       if (e.absent) return '';
       const n = CHOIX.filter(c => (e.choix || {})[c.k]).length;
-      return `<button type="button" class="ses-choix" data-enfant="${i}"><span>🎨</span><span class="sc-txt"><b>${e.nom ? 'Les choix de ' + esc(e.nom) : 'Ses choix'}</b><small>${n ? n + ' choisi' + (n > 1 ? 's' : '') : 'objet, animal, méchant…'}</small></span></button>`;
+      return `<button type="button" class="ses-choix" data-enfant="${i}"><span>🎨</span><span class="sc-txt"><b>${e.nom ? 'Les choix de ' + esc(e.nom) : 'Ses choix'}</b><small>${n ? n + ' choisi' + (n > 1 ? 's' : '') : 'objet, animal, personnage…'}</small></span></button>`;
     }).join('');
   }
   $('etg-choix').onclick = e => { const b = e.target.closest('[data-enfant]'); if (b) feuilleEnfant(+b.dataset.enfant); };
@@ -5310,11 +5330,14 @@ if (!cleGemini()) document.querySelector('#res-cles').closest('details').open = 
     etgQui(); etgGenre();
     etgListe($('etg-avec'), 'friends', 'Avec qui d\'autre ?', AVEC, 'ex. son chien Biscuit, sa cousine Léa', null, 'avec');
     etgPersos();
+    etgListe($('etg-lieu'), 'lieu', 'Où ça se passe ?', IDEES_LIEUX, 'ex. un château, le fond de la mer', null, 'lieu');          // v76
+    etgListe($('etg-mechant'), 'mechant', 'Un méchant ?', IDEES_MECHANTS, 'ex. un loup grognon', null, 'mechant');                 // v76
     etgListe($('etg-journee'), 'journee', 'Sa journée', JOURNEE, 'ex. elle a perdu sa mitaine rouge au parc', null, 'journee');
     etgSouci();
     etgListe($('etg-lecon'), 'moral', 'Une leçon ?', LECONS, 'ex. dire bonjour aux voisins', majLecons, 'lecon');
     etgChevet();
     store.set('set:mood', chipVal('mood')); store.set('set:mood-autre', $('mood-autre').value);
+    saveSettings();                                               // v76 : lieu, méchant, avec qui… gardés dès qu'on touche un livre
   }
   /* au démarrage : l'ambiance d'hier, les enfants relus, le statut des personnages sous leur tablette */
   $('mood-autre').value = store.get('set:mood-autre', '');
