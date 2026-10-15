@@ -64,6 +64,7 @@
   header h1 em { font-style: normal; color: var(--accent); }
   header p { margin: 4px 0 0; color: var(--doux); font-size: .88rem; }
   .vers { opacity: .55; }
+  #version-bas { text-align: center; color: var(--doux); font-size: .72rem; margin: 22px 0 4px; }
 
   /* ───── blocs ───── */
   .card { background: var(--surface); border: 1px solid var(--ligne); border-radius: var(--r); padding: 16px; margin: 14px 0; box-shadow: var(--ombre); }
@@ -251,6 +252,8 @@
   nav button span { display: block; font-size: 1.32rem; margin-bottom: 1px; filter: grayscale(.4); }
   nav button.on { color: var(--accent); }
   nav button.on span { filter: none; }
+  nav button { position: relative; }
+  #lib-badge { position: absolute; top: 3px; left: calc(50% + 8px); min-width: 17px; height: 17px; padding: 0 5px; border-radius: 9px; background: var(--accent); color: #fff; font: 700 .64rem/17px var(--f-texte); font-style: normal; box-sizing: border-box; }
   .view { display: none; } .view.on { display: block; }
 
   /* ───── bibliothèque ───── */
@@ -579,7 +582,8 @@
   .fabrication[hidden] { display: none; }
   .fab-tete { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
   .fab-tete b { font: 800 .78rem var(--f-texte); letter-spacing: .08em; text-transform: uppercase; color: var(--bois-txt); text-shadow: var(--bois-lueur); }
-  #fab-x { border: 0; background: var(--meuble-creux); color: var(--meuble-txt); width: 30px; height: 26px; border-radius: 8px; cursor: pointer; transition: transform .2s; }
+  .fab-btns { display: flex; gap: 6px; }
+  #fab-x, #fab-fermer { border: 0; background: var(--meuble-creux); color: var(--meuble-txt); width: 30px; height: 26px; border-radius: 8px; cursor: pointer; transition: transform .2s; }
   .fabrication.reduit #fab-x { transform: rotate(180deg); }
   .fab-ligne { display: grid; grid-template-columns: 26px 1fr 1.1fr 46px; align-items: center; gap: 8px; padding: 5px 0; }
   .fab-ligne[hidden] { display: none; }
@@ -701,13 +705,11 @@
 <button id="nuit-sortie">☀️ Quitter</button>
 <header>
   <h1>Histoires <em>du soir</em></h1>
-  <p>Écrites par Gemini · racontées en voix d'ici · <span class="vers">v64</span></p>
 </header>
 
 <!-- ============ CRÉER ============ -->
 <section id="v-create" class="view on">
   <div id="form-card">
-    <p class="etg-intro">Allume les livres de ton histoire. Une tablette déborde ? Glisse-la vers la droite. Ce que tu écris avec « ✏️ Choisir » devient un livre pour toujours (garde le doigt dessus pour le retirer).</p>
     <div id="etageres">
       <section id="etg-qui"></section>
       <p class="etg-aide" id="etg-qui-aide"></p>
@@ -1147,6 +1149,7 @@
     <button type="button" id="t-quitter" title="Quitter le mode télé">✕</button>
   </div>
 </div>
+<p id="version-bas">Histoires du soir · <span class="vers">v65</span></p>
 <div class="mini-lecteur" id="mini-lecteur" hidden>
   <div class="ml-vitesses" id="ml-vitesses" hidden></div>
   <div class="ml-rangee">
@@ -1158,7 +1161,7 @@
   </div>
 </div>
 <div class="fabrication" id="fabrication" hidden aria-live="polite">
-  <div class="fab-tete"><b id="fab-titre">Fabrication de l'histoire</b><button type="button" id="fab-x" title="Réduire / agrandir">▾</button></div>
+  <div class="fab-tete"><b id="fab-titre">Fabrication de l'histoire</b><span class="fab-btns"><button type="button" id="fab-x" title="Réduire / agrandir">▾</button><button type="button" id="fab-fermer" title="Cacher ce panneau">✕</button></span></div>
   <div class="fab-ligne" data-ph="histoire"><span class="fab-ic">📝</span><span class="fab-nom">Histoire<small class="fab-det"></small></span><span class="fab-barre"><i></i></span><span class="fab-pct"></span></div>
   <div class="fab-ligne" data-ph="images"><span class="fab-ic">🎨</span><span class="fab-nom">Images<small class="fab-det"></small></span><span class="fab-barre"><i></i></span><span class="fab-pct"></span></div>
   <div class="fab-ligne" data-ph="voix"><span class="fab-ic">🔊</span><span class="fab-nom">Voix<small class="fab-det"></small></span><span class="fab-barre"><i></i></span><span class="fab-pct"></span></div>
@@ -1169,7 +1172,7 @@
 
 <nav>
   <button data-v="v-create" class="on"><span>✨</span>Créer</button>
-  <button data-v="v-lib"><span>📚</span>Histoires</button>
+  <button data-v="v-lib"><span>📚</span>Histoires<i id="lib-badge" hidden></i></button>
   <button data-v="v-set"><span>⚙️</span>Réglages</button>
 </nav>
 
@@ -2374,14 +2377,17 @@ async function ecranAllume(oui) {
   } else if (!oui && verrouFab) { try { verrouFab.release(); } catch {} verrouFab = null; }
 }
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && veutAllume) ecranAllume(true); });
-let fabFin = null, fabReduit = false;
+let fabFin = null, fabReduit = false, fabCache = false;   // v65 : fabCache = panneau fermé d'un ✕
 const fabEstime = (t0, attendu) => { const f = (Date.now() - t0) / attendu; return f < 1 ? 90 * f : 90 + 8 * (1 - Math.exp(-(f - 1) * 2)); };
-function fabMaj(ph, o) { FAB[ph] = o === null ? null : { ...(FAB[ph] || {}), ...o }; fabDessiner(); }
+function fabMaj(ph, o) {
+  if (o && !Object.values(FAB).some(Boolean)) fabCache = false;    // une nouvelle fabrication : le panneau revient
+  FAB[ph] = o === null ? null : { ...(FAB[ph] || {}), ...o }; fabDessiner();
+}
 function fabDessiner() {
   const el = $('fabrication');
   const lignes = Object.entries(FAB).filter(([, x]) => x);
-  if (!lignes.length) { el.hidden = true; return; }
-  el.hidden = false; el.classList.toggle('reduit', fabReduit);
+  if (!lignes.length || fabCache) { el.hidden = true; if (!lignes.length) return; }
+  else { el.hidden = false; el.classList.toggle('reduit', fabReduit); }
   for (const ph of Object.keys(FAB)) {
     const x = FAB[ph], row = el.querySelector(`[data-ph="${ph}"]`);
     row.hidden = !x; if (!x) continue;
@@ -2398,6 +2404,7 @@ function fabDessiner() {
   if (!actif) fabFin = setTimeout(() => { FAB.histoire = FAB.images = FAB.voix = null; fabDessiner(); }, 8000);
 }
 $('fab-x').onclick = () => { fabReduit = !fabReduit; fabDessiner(); };
+$('fab-fermer').onclick = () => { fabCache = true; fabDessiner(); };
 setInterval(() => { if (!$('fabrication').hidden && Object.values(FAB).some(x => x?.etat === 'actif' && x.fn)) fabDessiner(); }, 400);
 
 /* La voix s'enregistre toute seule dès que le texte est prêt (sans jouer) : « Raconter » joue alors tout de suite. */
@@ -2569,7 +2576,7 @@ async function rangerTravail(suivi, v) {
     let s = await DB.get(v.id).catch(() => null);
     if (!s) {
       s = { id: v.id, createdAt: I.cree || v.cree, titre: R.titre, histoire: R.histoire, meta: I.meta || {}, illusNb: I.illusNb || 0,
-        ...(I.extra || {}), ecriture: I.ecriture || 'simple', fab: true };
+        ...(I.extra || {}), ecriture: I.ecriture || 'simple', fab: true, nouvelle: true };
       delete s.avecDessin;
       if (I.persoRepris?.length) s.persoRepris = I.persoRepris;
       if (s.interactive) { s.parts = [{ texte: R.histoire, choixA: R.choixA, choixB: R.choixB }]; s.partAudio = []; }
@@ -2585,11 +2592,9 @@ async function rangerTravail(suivi, v) {
       voixServeur.set(s.id, new Promise((ok, ko) => { suivi.voixFin = { ok, ko }; }));
       voixServeur.get(s.id).catch(() => {});
     }
-    if (suivi.afficher || !current) {
-      showStory(s);
-      status($('gen-status'), '<span class="spin"></span>Histoire écrite ! Les images et la voix arrivent…');
-      if (suivi.afficher) $('story-card').scrollIntoView({ behavior: 'smooth' });
-    }
+    /* v65 : l'histoire ne s'ouvre plus au bas de Créer : elle attend dans 📚 Histoires, rayon « Nouvelles » */
+    if (suivi.afficher) status($('gen-status'), '<span class="spin"></span>Histoire écrite ! Elle t’attend dans 📚 Histoires (rayon « Nouvelles ») ; les images et la voix arrivent.');
+    majBadgeNouvelles();
   }
   const s = suivi.s; if (!s) return;
   // 2. les images, une à une
@@ -4176,7 +4181,7 @@ async function creer(fn, extra = {}) {
     store.set(cleDuree, String(Math.round(+store.get(cleDuree, 0) ? +store.get(cleDuree) * .6 + duree * .4 : duree)));
     fabMaj('histoire', { etat: 'fini', fn: null, det: `écrite en ${Math.round(duree / 1000)} s` });
     const s = {
-      id: Date.now().toString(36), createdAt: Date.now(), titre: j.titre, histoire: j.histoire,
+      id: Date.now().toString(36), createdAt: Date.now(), titre: j.titre, histoire: j.histoire, nouvelle: true,
       meta: { name: consignesEnfants().noms.join(' et ') || $('name').value.trim(), friends: $('friends').value.trim(), mood: chipVal('mood') }, illusNb: imagesVoulues(), ...extra
     };
     const repris = persosPourHistoire(); if (repris.length) s.persoRepris = repris;
@@ -4186,15 +4191,13 @@ async function creer(fn, extra = {}) {
     if (s.avecDessin && dessin) { s.image = dessin.blob; s.dessin = true; }
     delete s.avecDessin;
     await DB.put(s);
-    showStory(s);
-    srvSauver(s); majRecentes();
-    st('✔ Histoire prête !');
+    srvSauver(s); majRecentes(); majBadgeNouvelles();                 // v65 : elle attend dans 📚 Histoires
+    st('✔ Histoire écrite ! Elle t’attend dans 📚 Histoires (rayon « Nouvelles »).');
     $('gen-status').className = 'status ok';
     imageEnFond(s);
     if (!s.illusNb || !cleGemini()) fabMaj('images', null);
     voixAuto(s);
     extrairePersonnages(s).catch(() => {});                  // ses personnages, pour pouvoir les ramener plus tard
-    $('story-card').scrollIntoView({ behavior: 'smooth' });
   } catch (e) {
     status($('gen-status'), esc(e.message), 'err');
     fabMaj('histoire', { etat: 'err', fn: null, det: e.message.slice(0, 90) }); FAB.images = FAB.voix = null; fabDessiner();
@@ -4298,6 +4301,7 @@ async function enregistrer(texte, onStatus, prog, moteurImpose) {
 $('btn-read').onclick = async () => {
   const s = current;
   if (!s) return;
+  if (s.nouvelle) { delete s.nouvelle; DB.put(s).then(() => srvSauver(s)).catch(() => {}); majBadgeNouvelles(); }   // v65 : première écoute → rejoint les autres
   if (voixServeur.has(s.id) && !s.audio) {                  // v49 : la voix se fabrique sur le serveur : on l'attend
     const btn = $('btn-read'); btn.disabled = true;
     status($('tts-status'), '<span class="spin"></span>La voix arrive du serveur (voir le pourcentage en bas)… elle partira toute seule.');
@@ -4606,9 +4610,15 @@ async function srvSupprimer(sid) {
   if (rid) await apiMaison(`/api/collections/${COL_HIST}/records/${rid}`, { method: 'DELETE' });
 }
 
+/* v65 : une histoire pas encore écoutée (« nouvelle ») a son rayon dans Histoires et un compteur sur l'onglet */
+async function majBadgeNouvelles() {
+  try { const n = (await DB.liste()).filter(s => s.nouvelle).length; const b = $('lib-badge'); b.hidden = !n; b.textContent = n; } catch {}
+}
+majBadgeNouvelles();
 /* ==================== BIBLIOTHÈQUE ==================== */
 let vignettes = [];
 async function renderLib() {
+  majBadgeNouvelles();
   vignettes.forEach(u => URL.revokeObjectURL(u)); vignettes = [];
   const q = $('lib-q').value.trim().toLowerCase(), f = chipVal('libf');
   let list = [...(await DB.liste())].sort((a, b) => b.createdAt - a.createdAt);
@@ -4629,9 +4639,11 @@ async function renderLib() {
     const m = d.toLocaleDateString('fr-CA', { month: 'long', year: 'numeric' });
     return m.charAt(0).toUpperCase() + m.slice(1);
   };
-  const rayons = [];
+  const rayons = [], neuves = f === 'tout' && !q ? list.filter(s => s.nouvelle) : [];
+  if (neuves.length) rayons.push({ nom: '✨ Nouvelles · pas encore écoutées', l: neuves });   // v65
   if (f === 'tout' && !q && list.some(s => s.fav)) rayons.push({ nom: '⭐ Mes favoris', l: list.filter(s => s.fav) });
   for (const s of list) {
+    if (neuves.includes(s)) continue;
     const nom = periode(s.createdAt), r = rayons.find(x => x.nom === nom);
     r ? r.l.push(s) : rayons.push({ nom, l: [s] });
   }
