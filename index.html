@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0d1030">
+<meta name="theme-color" content="#08080e">
 <title>Histoires du soir</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -20,8 +20,8 @@
   /* ═══════════════ Trois thèmes, un seul jeu de jetons ═══════════════
      Veilleuse : nuit profonde et or doux · Livre d'images : ciel pâle, marine, corail · Doudou : lavande, très rond. */
   :root, html[data-look="veilleuse"] {
-    --fond: #0d1030; --fond-img: radial-gradient(120% 60% at 50% -10%, #2a2f78 0%, #0d1030 62%);
-    --surface: rgba(255,255,255,.05); --surface-pleine: #171b4a; --surface2: rgba(255,255,255,.08);
+    --fond: #08080e; --fond-img: radial-gradient(120% 60% at 50% -10%, #1f2033 0%, #08080e 62%);   /* v83 : plus noir que bleu */
+    --surface: rgba(255,255,255,.05); --surface-pleine: #16161f; --surface2: rgba(255,255,255,.08);
     --ligne: rgba(255,255,255,.09); --texte: #eef0ff; --titre: #fff4d6; --doux: #9aa1d0;
     --accent: #f2c46d; --accent-txt: #1d1a3a; --accent-grad: linear-gradient(180deg, #ffd98a, #f2c46d);
     --accent2: #f6a6c1; --ok: #6ee7b7; --err: #fca5a5; --lu: rgba(242,196,109,.14);
@@ -329,7 +329,7 @@
     font: 800 .8rem var(--f-texte); color: var(--texte); }
   .theme-carte.on { border-color: var(--accent); }
   .theme-carte .ap { height: 74px; border-radius: 11px; margin-bottom: 6px; position: relative; overflow: hidden; }
-  .ap.veilleuse { background: radial-gradient(circle at 74% 30%, #fff4d6 0 9px, transparent 10px), radial-gradient(1.5px 1.5px at 25% 30%, #fff 50%, transparent), radial-gradient(1.5px 1.5px at 45% 55%, #fff 50%, transparent), linear-gradient(180deg, #2b3290, #0d1030); }
+  .ap.veilleuse { background: radial-gradient(circle at 74% 30%, #fff4d6 0 9px, transparent 10px), radial-gradient(1.5px 1.5px at 25% 30%, #fff 50%, transparent), radial-gradient(1.5px 1.5px at 45% 55%, #fff 50%, transparent), linear-gradient(180deg, #2b3290, #08080e); }
   .ap.veilleuse::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: 9px; height: 10px; border-radius: 6px; background: #f2c46d; }
   .ap.livre { background: radial-gradient(circle at 75% 28%, #ffd45c 0 9px, transparent 10px), linear-gradient(180deg, transparent 62%, #8fd18a 62%), linear-gradient(180deg, #8ec5f5, #e8f1fb); }
   .ap.livre::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: 9px; height: 10px; border-radius: 6px; background: #ff7a59; }
@@ -409,7 +409,7 @@
     --bois1: #5a3f2c; --bois2: #3a2717; --bois-txt: #f2c46d; --bois-lueur: 0 0 8px rgba(242,196,109,.6);
     --meuble1: #3e2a1c; --meuble2: #2a1c12; --meuble-bord: rgba(255,220,160,.14); --meuble-txt: #f1e8d8; --meuble-creux: rgba(0,0,0,.24);
     --poignee: #a07c4c; --livre-mix: 55%; --livre-fond: #11132b; --livre-off: saturate(.8);
-    --livre-on: inset -5px 0 0 rgba(0,0,0,.15), 0 0 18px 4px rgba(242,196,109,.5), 0 0 0 2px #f2c46d; --fondu: rgba(13,16,48,.96);
+    --livre-on: inset -5px 0 0 rgba(0,0,0,.15), 0 0 18px 4px rgba(242,196,109,.5), 0 0 0 2px #f2c46d; --fondu: rgba(8,8,14,.96);
   }
   html[data-look="livre"] {
     --bois1: #e2c391; --bois2: #c49a64; --bois-txt: #5a3a14; --bois-lueur: none;
@@ -425,7 +425,7 @@
   }
   html[data-look="veilleuse"] header { position: relative; }
   html[data-look="veilleuse"] header::after { content: "🪔"; position: absolute; right: 4px; top: 20px; font-size: 1.8rem; filter: drop-shadow(0 0 14px rgba(255,200,110,.8)); }
-  html[data-look="veilleuse"] { --fond-img: radial-gradient(120% 40% at 85% 0%, rgba(255,200,110,.16), transparent 60%), radial-gradient(120% 60% at 50% -10%, #2a2f78 0%, #0d1030 62%); }
+  html[data-look="veilleuse"] { --fond-img: radial-gradient(120% 40% at 85% 0%, rgba(255,200,110,.16), transparent 60%), radial-gradient(120% 60% at 50% -10%, #1f2033 0%, #08080e 62%); }
 
   /* ───── une tablette de livres ───── */
   .etg-intro { color: var(--doux); font-size: .9rem; margin: 2px 0 6px; }
@@ -605,8 +605,8 @@
   body.nuit .fermer-histoire { display: none; }
   /* v82 : la fiche = une couverture de livre (cuir bleu nuit, double filet doré, coins ornés), titre centré, étiquettes de l'histoire */
   #story-card { position: relative; margin-top: 18px; padding: 22px 18px 18px; border: 0; border-radius: 22px;
-    background: radial-gradient(120% 70% at 50% 0%, rgba(242,196,109,.12), transparent 55%), linear-gradient(170deg, #1d2160 0%, #141849 55%, #0f1238 100%);
-    box-shadow: 0 18px 40px rgba(0,0,0,.55), inset 0 0 0 1px rgba(242,196,109,.55), inset 0 0 0 5px rgba(20,24,73,.9), inset 0 0 0 6px rgba(242,196,109,.28); }
+    background: radial-gradient(120% 70% at 50% 0%, rgba(242,196,109,.12), transparent 55%), linear-gradient(170deg, var(--carte1, #1d1d2b) 0%, var(--carte2, #131319) 55%, var(--carte3, #0c0c12) 100%);
+    box-shadow: 0 18px 40px rgba(0,0,0,.55), inset 0 0 0 1px rgba(242,196,109,.55), inset 0 0 0 5px var(--carte-filet, rgba(19,19,25,.9)), inset 0 0 0 6px rgba(242,196,109,.28); }
   #story-card::before, #story-card::after { content: "✦"; position: absolute; top: 9px; color: rgba(242,196,109,.7); font-size: .8rem; pointer-events: none; }
   #story-card::before { left: 13px; } #story-card::after { right: 52px; }
   body.lib-lecture #lib-tete { display: none; }
@@ -625,6 +625,16 @@
     box-shadow: 0 2px 6px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.5); }
   #story-card .petites button.sec { border: 1px solid rgba(242,196,109,.28); background: rgba(255,255,255,.05); border-radius: 999px; }
   body.nuit .s-infos, body.nuit .s-orne, body.nuit #story-card::after { display: none; }
+  /* v83 : apparences claires (Livre d'images, Doudou) : la fiche en parchemin clair, pour que boutons et texte se lisent */
+  html:not([data-look="veilleuse"]) #story-card { --carte1: #fffaf0; --carte2: #fbf1dc; --carte3: #f4e6c8; --carte-filet: rgba(251,241,220,.95); }
+  html:not([data-look="veilleuse"]) #story-card #s-title { color: #3a2c1e; text-shadow: none; }
+  html:not([data-look="veilleuse"]) #story-card .chap { color: #9a5a12; text-shadow: none; }
+  html:not([data-look="veilleuse"]) .s-info { background: rgba(255,255,255,.7); border-color: rgba(160,110,40,.3); color: #3a2c1e; }
+  html:not([data-look="veilleuse"]) .s-info small { color: #9a5a12; }
+  html:not([data-look="veilleuse"]) #story-card .petites button.sec { background: #fff; border-color: rgba(160,110,40,.35); color: #3a2c1e; }
+  html:not([data-look="veilleuse"]) #story-card::before, html:not([data-look="veilleuse"]) #story-card::after { color: #c9962a; }
+  html:not([data-look="veilleuse"]) #story-card .story, html:not([data-look="veilleuse"]) #story-card .hint { color: #3a2c1e; }
+  html:not([data-look="veilleuse"]) a { color: #9a3a12; text-decoration: underline; }
   #story-card .chap { display: inline-block; color: var(--bois-txt); text-shadow: var(--bois-lueur); }
   body.nuit #story-card::before { display: none; }
 
@@ -1241,7 +1251,7 @@
     <button type="button" id="t-quitter" title="Quitter le mode télé">✕</button>
   </div>
 </div>
-<p id="version-bas">Histoires du soir · <span class="vers">v82</span></p>
+<p id="version-bas">Histoires du soir · <span class="vers">v83</span></p>
 <div class="mini-lecteur" id="mini-lecteur" hidden>
   <div class="ml-vitesses" id="ml-vitesses" hidden></div>
   <div class="ml-rangee">
@@ -4904,7 +4914,7 @@ rafraichirSession().then(() => { majCompteServeur(); majResumes?.(); if (srvActi
 if (srvActif()) setTimeout(async () => { for (const s of await DB.all()) if (s.srvAttente) await srvSauver(s); }, 3000);
 
 /* ==================== INTERFACE : thèmes, choix qui s'ouvrent, réglages ==================== */
-const THEMES = { veilleuse: ['#0d1030', 'Veilleuse'], livre: ['#e8f1fb', 'Livre d\'images'], doudou: ['#efe7ff', 'Doudou'] };
+const THEMES = { veilleuse: ['#08080e', 'Veilleuse'], livre: ['#e8f1fb', 'Livre d\'images'], doudou: ['#efe7ff', 'Doudou'] };
 function appliquerTheme(t) {
   if (!THEMES[t]) t = 'veilleuse';
   document.documentElement.dataset.look = t;
