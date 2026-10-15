@@ -106,6 +106,7 @@
   .choix { position: relative; display: block; width: 100%; border: 0; border-radius: 22px; padding: 0; margin: 0; cursor: pointer; font: inherit; color: #fff; text-align: left;
     background: #15080a; overflow: visible; box-shadow: 0 0 22px rgba(255,140,40,.22); transition: transform .35s cubic-bezier(.2,1.2,.4,1), opacity .35s, filter .35s; }
   .choix:active { transform: scale(.98); }
+  .av-discret { display: block; text-align: center; margin: 2px auto 0; padding: 4px 10px; color: var(--doux); opacity: .32; font: 600 .68rem var(--f-texte); cursor: pointer; width: max-content; }
   .choix:disabled { opacity: .45; filter: saturate(.4); cursor: default; }
   .chx-fond { position: absolute; inset: 0; border-radius: 22px; overflow: hidden; background: radial-gradient(90% 120% at 50% 110%, #7a2a0a 0%, #3a1208 45%, #15080a 100%); }
   .chx-fond::before { content: ""; position: absolute; inset: 0; background: radial-gradient(60% 80% at 50% 110%, rgba(255,160,60,.55), transparent 70%); animation: chx-respire 2.2s ease-in-out infinite; }
@@ -1327,7 +1328,7 @@
     <button type="button" id="t-quitter" title="Quitter le mode télé">✕</button>
   </div>
 </div>
-<p id="version-bas">Histoires du soir · <span class="vers">v91</span></p>
+<p id="version-bas">Histoires du soir · <span class="vers">v92</span></p>
 <div class="mini-lecteur" id="mini-lecteur" hidden>
   <div class="ml-vitesses" id="ml-vitesses" hidden></div>
   <div class="ml-rangee">
@@ -4310,9 +4311,17 @@ $('s-text').addEventListener('dblclick', e => { if (e.target.closest('p[data-i]'
    Le son de chaque scène (selon sa variante) s'enregistre une fois et resservira : s.sonsScenes[clé] ; image : s.illusImages[idScène].
    Invariant : s.histoire / s.audio / s.image = la scène en cours (le reste de l'app lit une histoire simple). */
 const aventureScene = s => s.aventure.scenes[s.partie.scene] || s.aventure.scenes[s.aventure.debut];
-const aventureVrai = (s, cle) => cle.startsWith('!') ? !s.partie.memoire[cle.slice(1)] : !!s.partie.memoire[cle];
+/* v92 : une condition = 'cle', '!cle', 'N+:a,b,c' (au moins N de ces clés), et plusieurs avec « & » */
+function aventureVrai(s, cond) {
+  return String(cond).split('&').every(c => {
+    c = c.trim(); const non = c.startsWith('!'); if (non) c = c.slice(1);
+    const m = c.match(/^(\d+)\+:(.+)$/);
+    const v = m ? m[2].split(',').filter(k => s.partie.memoire[k.trim()]).length >= +m[1] : !!s.partie.memoire[c];
+    return non ? !v : v;
+  });
+}
 function aventureTexte(s, sc) {
-  return String(sc.texte || '').replace(/\{(!?[\w-]+)\?([^|}]*)(?:\|([^}]*))?\}/g, (_, cle, oui, non) => aventureVrai(s, cle) ? oui : (non || ''))
+  return String(sc.texte || '').replace(/\{(!?[\w+:,&!-]+)\?([^|}]*)(?:\|([^}]*))?\}/g, (_, cle, oui, non) => aventureVrai(s, cle) ? oui : (non || ''))
     .replace(/[ \t]{2,}/g, ' ').replace(/ +([.,!?;:])/g, '$1').trim();
 }
 const aventureChoix = (s, sc) => (sc.choix || []).filter(c => !c.si || aventureVrai(s, c.si));
@@ -4372,7 +4381,9 @@ function aventureMajChoix(s) {
     status($('choix-status'), `${sc.fin.emoji || '🏁'} Fin : ${esc(sc.fin.nom || 'fin')} · ${s.partie.fins.length} fin${s.partie.fins.length > 1 ? 's' : ''} découverte${s.partie.fins.length > 1 ? 's' : ''} sur ${nbFins}`);
     return;
   }
-  $('choix-btns').innerHTML = l.map((c, i) => boutonChoix('ABCD'[i] || '•', c.t, `data-av="${i}"`)).join('');
+  // v92 : un choix « discret » (ex. rentrer au dodo) = un tout petit lien pâle sous les boutons, absent du mode télé (ce n'est pas un <button>)
+  $('choix-btns').innerHTML = l.map((c, i) => c.discret ? '' : boutonChoix('ABCD'[l.slice(0, i).filter(x => !x.discret).length] || '•', c.t, `data-av="${i}"`)).join('')
+    + l.map((c, i) => c.discret ? `<span class="av-discret" role="link" tabindex="0" data-av="${i}">${esc(c.t)}</span>` : '').join('');
   status($('choix-status'), `🗺️ ${esc(sc.lieu || '')}${sc.lieu ? ' · ' : ''}à toi de choisir !`);
 }
 /* ==================== CHOIX (histoire interactive) ==================== */
