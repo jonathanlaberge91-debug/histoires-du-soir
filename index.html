@@ -1321,7 +1321,7 @@
     <button type="button" id="t-quitter" title="Quitter le mode télé">✕</button>
   </div>
 </div>
-<p id="version-bas">Histoires du soir · <span class="vers">v88</span></p>
+<p id="version-bas">Histoires du soir · <span class="vers">v89</span></p>
 <div class="mini-lecteur" id="mini-lecteur" hidden>
   <div class="ml-vitesses" id="ml-vitesses" hidden></div>
   <div class="ml-rangee">
@@ -4035,7 +4035,7 @@ function showStory(s) {
   current = s;
   $('story-card').style.display = 'block';
   afficherCouverture(s);
-  $('s-chap').textContent = s.chap > 1 ? `📖 Chapitre ${s.chap}` : s.interactive ? '🔀 L\'enfant choisit la suite' : '📖 Histoire complète';
+  $('s-chap').textContent = s.super ? '✨ Super histoire · écrite par Claude' : s.chap > 1 ? `📖 Chapitre ${s.chap}` : s.interactive ? '🔀 L\'enfant choisit la suite' : '📖 Histoire complète';
   $('s-title').textContent = s.titre;
   majInfos(s);
   ecranBlob = null; litIdx = -1;
@@ -4932,6 +4932,8 @@ async function renderLib() {
     const m = d.toLocaleDateString('fr-CA', { month: 'long', year: 'numeric' });
     return m.charAt(0).toUpperCase() + m.slice(1);
   };
+  // v89 : les « Super histoires » (écrites par Claude dans Claude Code, déposées sur le serveur) ont leur tablette à elles, tout en bas
+  const supers = list.filter(s => s.super); list = list.filter(s => !s.super);
   const rayons = [], neuves = f === 'tout' && !q ? list.filter(s => s.nouvelle) : [];
   if (neuves.length) rayons.push({ nom: '✨ Nouvelles · pas encore écoutées', l: neuves });   // v65
   if (f === 'tout' && !q && list.some(s => s.fav)) rayons.push({ nom: '⭐ Mes favoris', l: list.filter(s => s.fav) });
@@ -4953,6 +4955,7 @@ async function renderLib() {
     </div>`;
   };
   el.classList.add('rayons');
+  if (supers.length) rayons.push({ nom: '✨ Super histoires', l: supers, sup: true });
   el.innerHTML = rayons.map(r => `<section class="lib-rayon"><div class="lib-livres">${r.l.map(livre).join('')}</div>
     <div class="planche">${plancheSVG()}<span class="plaque">${esc(r.nom)} <small>${r.l.length}</small></span></div></section>`).join('');
 }
