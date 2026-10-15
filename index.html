@@ -648,6 +648,10 @@
 
   /* ═══════════════ v50 : plusieurs voix par histoire ═══════════════ */
   .versions, .modeles { display: flex; flex-direction: column; gap: 8px; margin: 10px 0 4px; }
+  .v-vitesses { display: flex; gap: 6px; }
+  .vv { flex: 1; padding: 9px 2px; border-radius: 10px; border: 2px solid var(--ligne); background: var(--surface2); color: var(--texte); font: 800 .82rem var(--f-texte); cursor: pointer; }
+  .vv small { display: block; font-size: .62rem; font-weight: 700; color: var(--doux); }
+  .vv.on { border-color: var(--accent); background: var(--lu); }
   .version { display: flex; align-items: stretch; gap: 6px; }
   .v-jouer { flex: 1; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--r-petit); border: 2px solid var(--ligne);
     background: var(--surface2); color: var(--texte); font: inherit; text-align: left; cursor: pointer; }
@@ -1204,7 +1208,7 @@
     <button type="button" id="t-quitter" title="Quitter le mode télé">✕</button>
   </div>
 </div>
-<p id="version-bas">Histoires du soir · <span class="vers">v77</span></p>
+<p id="version-bas">Histoires du soir · <span class="vers">v78</span></p>
 <div class="mini-lecteur" id="mini-lecteur" hidden>
   <div class="ml-vitesses" id="ml-vitesses" hidden></div>
   <div class="ml-rangee">
@@ -2743,11 +2747,11 @@ function versionsDe(s) {
 }
 function versionActuelle(s) {
   if (!aUneVoix(s)) return null;
-  return { nom: s.voixNom || '', cle: s.voixCle || '', cree: s.voixCree || s.createdAt, vitMoteur: s.vitMoteur, vitNeutre: s.vitNeutre, vitNoeuds: s.vitNoeuds,
+  return { nom: s.voixNom || '', cle: s.voixCle || '', cree: s.voixCree || s.createdAt, vitMoteur: s.vitMoteur, vitNeutre: s.vitNeutre, vitNoeuds: s.vitNoeuds, vit: s.vit,
     ...(s.arbre ? { audioNoeuds: s.audioNoeuds } : { audio: s.audio }) };
 }
 function poserVersion(s, v) {
-  Object.assign(s, { voixNom: v.nom || '', voixCle: v.cle || '', voixCree: v.cree, vitMoteur: v.vitMoteur, vitNeutre: v.vitNeutre, vitNoeuds: v.vitNoeuds });
+  Object.assign(s, { voixNom: v.nom || '', voixCle: v.cle || '', voixCree: v.cree, vitMoteur: v.vitMoteur, vitNeutre: v.vitNeutre, vitNoeuds: v.vitNoeuds, vit: v.vit });
   if (s.arbre) { s.audioNoeuds = v.audioNoeuds || {}; s.partAudio = audioChemin(s); s.audio = null; }
   else s.audio = v.audio;
 }
@@ -2809,21 +2813,28 @@ function feuilleAutreVoix(s) {
       <select data-k="${k}">${m.voix.map(v => `<option value="${esc(v)}" ${v === m.defaut ? 'selected' : ''}>${esc(nomCourtVoix(m.moteur, v))}</option>`).join('')}</select></label>`).join('')}</div>
     ${ms.length ? '' : '<p class="hint">Aucune voix chargée : va dans ⚙️ Réglages → Qui raconte, et touche ↻ pour les voix Google.</p>'}
     <label class="check"><input type="checkbox" id="v-multi" ${$('opt-multivoix').checked ? 'checked' : ''}>Une voix par personnage</label>
+    <p class="hint" id="v-vit-titre" style="margin:12px 0 6px">Vitesse de la voix (gravée dans l'enregistrement) :</p>
+    <div class="v-vitesses" id="v-vitesses">${[0.8, 0.9, 1, 1.1, 1.25].map(f => `<button type="button" class="vv ${f === 1 ? 'on' : ''}" data-f="${f}">${String(f).replace('.', ',')}×${f === 1 ? '<small>normale</small>' : ''}</button>`).join('')}</div>
     <p class="hint" id="v-deja"></p>
     <button type="button" class="big" id="v-go">🎙️ Enregistrer cette voix</button>`);
   const choix = () => {
     const k = +f.querySelector('input[name="modele"]:checked').value, m = ms[k], voix = f.querySelector(`select[data-k="${k}"]`).value;
     const multi = m.multi && $('v-multi').checked;
-    return { m, voix, multi, cle: cleVoix(m, voix, multi), nom: `${m.titre} · ${nomCourtVoix(m.moteur, voix)}${multi ? ' · une voix par personnage' : ''}` };
+    const fv = m.moteur === 'gemini' ? 1 : parseFloat(f.querySelector('.vv.on')?.dataset.f || '1');           // v78 : la vitesse gravée (1 = normale, rien de gravé)
+    const vit = fv !== 1 ? ' · ' + String(fv).replace('.', ',') + '×' : '';
+    return { m, voix, multi, f: fv, cle: cleVoix(m, voix, multi) + (fv !== 1 ? ':' + fv : ''), nom: `${m.titre} · ${nomCourtVoix(m.moteur, voix)}${multi ? ' · une voix par personnage' : ''}${vit}` };
   };
   const maj = () => {
     if (!ms.length) return;
     const c = choix();
     f.querySelectorAll('.modele').forEach(l => l.classList.toggle('on', l.querySelector('input').checked));
     $('v-multi').closest('label').style.display = c.m.multi ? '' : 'none';
-    $('v-deja').textContent = deja.has(c.cle) ? '✓ Cette voix est déjà enregistrée : elle sera refaite.' : '';
+    $('v-vitesses').style.display = $('v-vit-titre').style.display = c.m.moteur === 'gemini' ? 'none' : '';
+    $('v-deja').textContent = deja.has(c.cle) ? '✓ Cette voix, à cette vitesse, est déjà enregistrée : elle sera refaite.' : '';
   };
-  f.onchange = maj; f.onclick = e => { if (e.target.closest('select')) { const l = e.target.closest('.modele'); l.querySelector('input').checked = true; maj(); } };
+  f.onchange = maj; f.onclick = e => {
+    const vv = e.target.closest('.vv'); if (vv) { f.querySelectorAll('.vv').forEach(x => x.classList.toggle('on', x === vv)); maj(); return; }
+    if (e.target.closest('select')) { const l = e.target.closest('.modele'); l.querySelector('input').checked = true; maj(); } };
   maj();
   $('v-go').onclick = () => { if (!ms.length) return; const c = choix(); fermerFeuille(); enregistrerVersion(s, c); };
 }
@@ -2833,7 +2844,14 @@ async function enregistrerVersion(s, c) {
   const btn = $('btn-voix'), lire = $('btn-read');
   btn.disabled = lire.disabled = true;
   const st = m => status($('tts-status'), m);
-  const avant = { engine: $('engine').value, ms: $('ms-voice').value, g: $('g-voice').value, multi: $('opt-multivoix').checked, gc: GC_PALIERS.map(pl => $(pl.champ).value) };
+  const avant = { engine: $('engine').value, ms: $('ms-voice').value, g: $('g-voice').value, multi: $('opt-multivoix').checked, gc: GC_PALIERS.map(pl => $(pl.champ).value),
+    vitMode: $('vit-mode').value, gcRate: $('gc-rate').value, msRate: $('ms-rate').value };
+  const f = c.f || 1;
+  if (f !== 1) {                                            // v78 : vitesse gravée dans le son (Google : ×0,9 de base ; Microsoft : % autour de −10)
+    $('vit-mode').value = 'voix';
+    $('gc-rate').value = String(Math.min(1.15, Math.max(.7, Math.round(.9 * f * 20) / 20)));
+    $('ms-rate').value = String(Math.min(10, Math.max(-30, Math.round((90 * f - 100) / 5) * 5)));
+  }
   FAB.histoire = FAB.images = null;
   fabMaj('voix', { etat: 'actif', pct: 1, fn: null, det: c.nom + '…' });
   let v;
@@ -2864,9 +2882,10 @@ async function enregistrerVersion(s, c) {
     palierImpose = null;
     $('engine').value = avant.engine; $('ms-voice').value = avant.ms; $('g-voice').value = avant.g; $('opt-multivoix').checked = avant.multi;
     GC_PALIERS.forEach((pl, k) => { $(pl.champ).value = avant.gc[k]; });
+    $('vit-mode').value = avant.vitMode; $('gc-rate').value = avant.gcRate; $('ms-rate').value = avant.msRate;
     btn.disabled = lire.disabled = false;
   }
-  Object.assign(v, { nom: c.nom, cle: c.cle, cree: Date.now() });
+  Object.assign(v, { nom: c.nom, cle: c.cle, cree: Date.now(), vit: f !== 1 ? f : undefined });
   const actuelle = versionActuelle(s);
   s.autresVoix = (s.autresVoix || []).filter(x => x.cle !== c.cle);           // même voix refaite : remplacée
   if (actuelle && actuelle.cle !== c.cle) s.autresVoix.unshift(actuelle);
@@ -3911,8 +3930,10 @@ function texteALire(s) {
   if (s.interactive && s.parts.length < NB_PARTIES) return s.parts[s.parts.length - 1].texte;
   return s.histoire;
 }
-const vitesseHistoire = s => vitesseLecture();          // v51 : une seule vitesse d'écoute, pour toutes les voix
-const vitesseNoeud = (s, c) => vitesseLecture();
+/* v51 : une seule vitesse d'écoute, pour toutes les voix. v78 : une voix enregistrée AVEC une vitesse (s.vit, gravée dans le son)
+   joue telle quelle à la vitesse d'écoute par défaut (0,9×) ; le bouton de vitesse du lecteur reste un réglage relatif. */
+const vitesseHistoire = s => s?.vit ? vitesseLecture() / .9 : vitesseLecture();
+const vitesseNoeud = (s, c) => vitesseHistoire(s);
 let lectureEnFile = false;
 function appliquerVitesseLecteur() {
   const f = lectureEnFile ? file[fileIdx] : null;
@@ -5490,6 +5511,7 @@ function teleMontrerBoutons() {
   tele.boutons = setTimeout(() => $('tele')?.classList.remove('boutons'), 3500);
 }
 $('player').addEventListener('ended', () => { if (tele && current) tele.fini = current.parts?.length || 0; });   // v77 : la partie est écoutée
+$('player').addEventListener('ended', () => { if (current && !(current.interactive && current.parts?.length < NB_PARTIES)) voixChoisie.delete(current.id); });   // v78 : la prochaine réécoute redemande la voix
 async function teleOuvrir() {
   if (!current || tele) return;
   const t = $('tele');
