@@ -1327,7 +1327,7 @@
     <button type="button" id="t-quitter" title="Quitter le mode télé">✕</button>
   </div>
 </div>
-<p id="version-bas">Histoires du soir · <span class="vers">v90</span></p>
+<p id="version-bas">Histoires du soir · <span class="vers">v91</span></p>
 <div class="mini-lecteur" id="mini-lecteur" hidden>
   <div class="ml-vitesses" id="ml-vitesses" hidden></div>
   <div class="ml-rangee">
@@ -2865,7 +2865,7 @@ function etiquetteVoix(moteur) {
   if (moteur === 'gemini') { const v = $('g-voice').value; return { voixNom: `Gemini · ${v}`, voixCle: ['gemini', '', v, ''].join(':'), voixCree: Date.now() }; }
   return { voixCree: Date.now() };
 }
-const versionsPossibles = s => !!s && !(s.interactive && !s.arbre);
+const versionsPossibles = s => !!s && !s.aventure && !(s.interactive && !s.arbre);
 function versionsDe(s) {
   const l = aUneVoix(s) ? [{ actif: true, nom: nomVoix(s.voixNom, s.vitMoteur), cle: s.voixCle || '', cree: s.voixCree || s.createdAt }] : [];
   (s.autresVoix || []).forEach((v, i) => l.push({ ...v, i, nom: nomVoix(v.nom, v.vitMoteur) }));
@@ -4037,11 +4037,12 @@ function reparerArbre(s) {
 
 function showStory(s) {
   arreterParole();
+  if (s.aventure) aventurePoser(s);                               // v91
   if (reparerArbre(s)) DB.put(s).catch(() => {});
   current = s;
   $('story-card').style.display = 'block';
   afficherCouverture(s);
-  $('s-chap').textContent = s.super ? '✨ Super histoire · écrite par Claude' : s.chap > 1 ? `📖 Chapitre ${s.chap}` : s.interactive ? '🔀 L\'enfant choisit la suite' : '📖 Histoire complète';
+  $('s-chap').textContent = s.aventure ? `🗺️ Grande aventure${s.titreScene ? ' · ' + s.titreScene : ''}` : s.super ? '✨ Super histoire · écrite par Claude' : s.chap > 1 ? `📖 Chapitre ${s.chap}` : s.interactive ? '🔀 L\'enfant choisit la suite' : '📖 Histoire complète';
   $('s-title').textContent = s.titre;
   majInfos(s);
   ecranBlob = null; litIdx = -1;
@@ -4143,6 +4144,7 @@ $('player').addEventListener('pause', () => { if (!$('player').ended) musiquePau
 $('player').addEventListener('ended', () => {
   if (fileIdx + 1 < file.length) { fileIdx++; preparerReperes(file[fileIdx]); $('player').src = file[fileIdx].url; $('player').play().catch(() => {}); return; }
   eclairer(-1);
+  if (current?.aventure) { aventureGarderSon(current); DB.put(current).catch(() => {}); if (!aventureScene(current).fin) { musiquePause(); return; } }   // v91
   if (!(current?.interactive && current.parts.length < NB_PARTIES)) finDeLecture(); else musiquePause();
 });
 function jouerFile(f) {
@@ -4298,6 +4300,81 @@ $('s-text').addEventListener('click', e => {
 // Pas de mot surligné par le double-clic de la souris.
 $('s-text').addEventListener('dblclick', e => { if (e.target.closest('p[data-i]')) window.getSelection()?.removeAllRanges(); });
 
+/* ==================== GRANDES AVENTURES (v91) ====================
+   Écrites SEULEMENT par Claude (dans Claude Code) ; l'app ne fait que les lire. Une aventure = une CARTE de scènes :
+     s.aventure = { debut: 'S1', scenes: { S1: { lieu, texte, choix: [{ t, vers, si, donne, ote }], fin: { nom, emoji } } } }
+   - texte : paragraphes séparés par une ligne vide ; variantes selon la mémoire : {cle?si vrai|sinon} ou {!cle?si faux|sinon}
+   - choix.si : 'cle' ou '!cle' (le choix n'apparaît que si…) ; choix.donne / choix.ote : ['cle', …] (la mémoire de la partie)
+   - plusieurs scènes mènent à la même scène : c'est ce qui permet beaucoup de choix sans exploser le nombre de versions.
+   La partie en cours : s.partie = { scene, memoire: {}, vues: [], fins: [] } (gardée : on reprend où on était).
+   Le son de chaque scène (selon sa variante) s'enregistre une fois et resservira : s.sonsScenes[clé] ; image : s.illusImages[idScène].
+   Invariant : s.histoire / s.audio / s.image = la scène en cours (le reste de l'app lit une histoire simple). */
+const aventureScene = s => s.aventure.scenes[s.partie.scene] || s.aventure.scenes[s.aventure.debut];
+const aventureVrai = (s, cle) => cle.startsWith('!') ? !s.partie.memoire[cle.slice(1)] : !!s.partie.memoire[cle];
+function aventureTexte(s, sc) {
+  return String(sc.texte || '').replace(/\{(!?[\w-]+)\?([^|}]*)(?:\|([^}]*))?\}/g, (_, cle, oui, non) => aventureVrai(s, cle) ? oui : (non || ''))
+    .replace(/[ \t]{2,}/g, ' ').replace(/ +([.,!?;:])/g, '$1').trim();
+}
+const aventureChoix = (s, sc) => (sc.choix || []).filter(c => !c.si || aventureVrai(s, c.si));
+const cleSon = (id, texte) => { let h = 0; for (const ch of texte) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return id + ':' + h.toString(36); };
+function aventurePoser(s) {                                       // la scène en cours devient « l'histoire » affichée
+  if (!s.partie) s.partie = { scene: s.aventure.debut, memoire: {}, vues: [], fins: [] };
+  const sc = aventureScene(s), t = aventureTexte(s, sc);
+  s.histoire = t; s.titreScene = sc.lieu || '';
+  s.sonsScenes = s.sonsScenes || {};
+  s.audio = s.sonsScenes[cleSon(s.partie.scene, t)] || null;
+  const img = s.illusImages?.[s.partie.scene] || s.illusImages?.[s.aventure.debut];
+  if (img) s.image = img;
+}
+function aventureGarderSon(s) {                                   // le son qu'on vient d'enregistrer pour la scène en cours
+  if (!s?.aventure || !s.audio) return;
+  s.sonsScenes = s.sonsScenes || {};
+  s.sonsScenes[cleSon(s.partie.scene, s.histoire)] = s.audio;
+}
+async function aventureAller(s, vers, choix) {
+  aventureGarderSon(s);
+  if (choix) { (choix.donne || []).forEach(k => { s.partie.memoire[k] = true; }); (choix.ote || []).forEach(k => { delete s.partie.memoire[k]; }); }
+  if (vers === '__debut') s.partie = { scene: s.aventure.debut, memoire: {}, vues: [], fins: s.partie.fins || [] };
+  else s.partie.scene = vers;
+  if (!s.partie.vues.includes(s.partie.scene)) s.partie.vues.push(s.partie.scene);
+  const sc = aventureScene(s);
+  if (sc.fin && !s.partie.fins.includes(s.partie.scene)) s.partie.fins.push(s.partie.scene);
+  aventurePoser(s);
+  if (tele) tele.fini = -1;
+  await DB.put(s);
+  showStory(s);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  $('btn-read').click();                                          // la scène suivante se raconte toute seule
+  aventurePrecharger(s);
+}
+/* pendant qu'on écoute, on enregistre déjà les scènes où mènent les choix (elles partiront tout de suite) */
+let prechargeEnCours = null;
+async function aventurePrecharger(s) {
+  if (prechargeEnCours === s.id) return; prechargeEnCours = s.id;
+  try {
+    for (const c of aventureChoix(s, aventureScene(s))) {
+      if (c.vers === '__debut' || current !== s) continue;
+      const sc = s.aventure.scenes[c.vers]; if (!sc) continue;
+      const memoire = { ...s.partie.memoire }; (c.donne || []).forEach(k => { memoire[k] = true; }); (c.ote || []).forEach(k => { delete memoire[k]; });
+      const t = aventureTexte({ ...s, partie: { ...s.partie, memoire } }, sc), k = cleSon(c.vers, t);
+      if (s.sonsScenes?.[k]) continue;
+      const r = await enregistrer(t, () => {}, () => {}).catch(() => null);
+      if (r?.blob) { s.sonsScenes[k] = r.blob; await DB.put(s).catch(() => {}); }
+    }
+  } finally { prechargeEnCours = null; }
+}
+function aventureMajChoix(s) {
+  const zone = $('choix-zone'), sc = aventureScene(s), l = aventureChoix(s, sc);
+  zone.style.display = 'block';
+  const nbFins = Object.values(s.aventure.scenes).filter(x => x.fin).length;
+  if (sc.fin) {
+    $('choix-btns').innerHTML = boutonChoix('🔁', 'Recommencer l’aventure', 'data-av="__debut"');
+    status($('choix-status'), `${sc.fin.emoji || '🏁'} Fin : ${esc(sc.fin.nom || 'fin')} · ${s.partie.fins.length} fin${s.partie.fins.length > 1 ? 's' : ''} découverte${s.partie.fins.length > 1 ? 's' : ''} sur ${nbFins}`);
+    return;
+  }
+  $('choix-btns').innerHTML = l.map((c, i) => boutonChoix('ABCD'[i] || '•', c.t, `data-av="${i}"`)).join('');
+  status($('choix-status'), `🗺️ ${esc(sc.lieu || '')}${sc.lieu ? ' · ' : ''}à toi de choisir !`);
+}
 /* ==================== CHOIX (histoire interactive) ==================== */
 /* v70 : un bouton de choix « Braises » (lettre ou emoji dans la pastille de feu, texte, braises, contour, étincelles) */
 function boutonChoix(lettre, texte, attrs = '') {
@@ -4307,6 +4384,7 @@ function boutonChoix(lettre, texte, attrs = '') {
 }
 function majChoix() {
   const s = current, zone = $('choix-zone');
+  if (s?.aventure) return aventureMajChoix(s);
   if (s?.arbre && (s.parts?.length ?? 0) >= NB_PARTIES) {
     zone.style.display = 'block';
     $('choix-btns').innerHTML = boutonChoix('🔀', 'Recommencer et choisir autrement', 'data-recommencer');
@@ -4323,6 +4401,13 @@ function majChoix() {
   status($('choix-status'), `Partie ${s.parts.length} sur ${NB_PARTIES} — à toi de choisir !`);
 }
 $('choix-btns').addEventListener('click', async e => {
+  const av = e.target.closest('[data-av]');
+  if (av && current?.aventure) {                                  // v91 : grande aventure
+    const s = current; arreterParole(); $('player').pause();
+    if (av.dataset.av === '__debut') return aventureAller(s, '__debut');
+    const c = aventureChoix(s, aventureScene(s))[+av.dataset.av]; if (c) aventureAller(s, c.vers, c);
+    return;
+  }
   const b = e.target.closest('[data-c], [data-recommencer]'); if (!b || !current) return;
   const s = current, p = s.parts[s.parts.length - 1];
   if (b.dataset.recommencer !== undefined && s.arbre) {      // rejouer en choisissant autrement
@@ -4722,8 +4807,9 @@ function srvSauver(s) {
 async function srvEnvoyer(id) {
   const s = await DB.get(id);
   if (!s || (s.interactive && !s.parts?.length)) return;
-  const { audio, image, partAudio, audioNoeuds, illusImages, srv, srvId, srvAudio, srvImage, srvIllus, srvNoeuds, srvAttente,
+  const { audio: audio0, sonsScenes, image: image0, partAudio, audioNoeuds, illusImages, srv, srvId, srvAudio, srvImage, srvIllus, srvNoeuds, srvAttente,
     drive, driveAudio, driveImage, driveIllus, driveNoeuds, driveAttente, ...story } = s;
+  const audio = s.aventure ? null : audio0, image = s.aventure ? null : image0;   // v91 : une aventure n'envoie que ses images de scènes
   const fd = new FormData();
   fd.append('hid', s.id); fd.append('titre', s.titre || ''); fd.append('enfant', s.meta?.name || '');
   fd.append('fav', s.fav ? 'true' : 'false'); fd.append('creeLe', String(s.createdAt || Date.now()));
@@ -5773,6 +5859,8 @@ function teleMontrerBoutons() {
   clearTimeout(tele.boutons);
   tele.boutons = setTimeout(() => $('tele')?.classList.remove('boutons'), 3500);
 }
+/* v91 : le son de la scène qu'on vient d'enregistrer est gardé pour cette scène (et le titre de la scène) */
+$('player').addEventListener('play', () => { if (current?.aventure && current.audio) aventureGarderSon(current); });
 $('player').addEventListener('ended', () => { if (tele && current) tele.fini = current.parts?.length || 0; });   // v77 : la partie est écoutée
 $('player').addEventListener('ended', () => { if (current && !(current.interactive && current.parts?.length < NB_PARTIES)) voixChoisie.delete(current.id); });   // v78 : la prochaine réécoute redemande la voix
 async function teleOuvrir() {
