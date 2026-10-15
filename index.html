@@ -1188,7 +1188,7 @@
     <button type="button" id="t-quitter" title="Quitter le mode télé">✕</button>
   </div>
 </div>
-<p id="version-bas">Histoires du soir · <span class="vers">v74</span></p>
+<p id="version-bas">Histoires du soir · <span class="vers">v75</span></p>
 <div class="mini-lecteur" id="mini-lecteur" hidden>
   <div class="ml-vitesses" id="ml-vitesses" hidden></div>
   <div class="ml-rangee">
@@ -2541,7 +2541,7 @@ async function creerServeur(fn, extra) {
       voix: { moteur: moteur === 'gcloud' || moteur === 'edge' || moteur === 'phone' ? moteur : 'auto', multivoix: $('opt-multivoix').checked, neutre: vitesseALaLecture(),
         gcRate: $('gc-rate').value, msRate: $('ms-rate').value, msVoix: $('ms-voice').value, plafond: gcPlafond(), modeles: [...new Set(['gemini-flash-latest', ...FALLBACK_MODELS])],
         gcVoix: Object.fromEntries(GC_PALIERS.map(pl => [pl.id, gcVoixDe(pl)])) },
-      info: { meta: { name: consignesEnfants().noms.join(' et ') || $('name').value.trim(), friends: $('friends').value.trim(), mood: chipVal('mood') },
+      info: { meta: { name: consignesEnfants().noms.join(' et '), friends: $('friends').value.trim(), mood: chipVal('mood') },
         illusNb: nb, extra: { ...extra, avecDessin: undefined }, persoRepris: repris, ecriture: voixGoogle ? 'google' : 'simple', cree: Date.now() }
     };
     const r = await fabFetch('/travaux', { method: 'POST', body: JSON.stringify(recette) });
@@ -3300,7 +3300,10 @@ function consigneAgeBase(age) {
 function consignesEnfants() {
   const tousLus = lireEnfants();
   const l = tousLus.filter(e => !e.absent);      // seulement ceux qui écoutent ce soir
-  if (!l.length) l.push(tousLus[0]);
+  if (!l.length) {                                // v75 : aucun enfant choisi → une histoire « pour un enfant », avec un héros inventé
+    const age = parseInt(tousLus[0]?.age, 10) || 5;
+    return { lignes: [`Écris une histoire originale pour un enfant de ${age} ans. ${consigneAge(age)}`, 'Invente un héros attachant, avec un prénom inventé : aucun prénom n\'est imposé.'], noms: [] };
+  }
   const autres = l.slice(1).filter(e => e.nom || Object.keys(e.choix).length);
   const tous = [l[0], ...autres];
   const plusieurs = tous.length > 1;
@@ -4233,7 +4236,7 @@ async function creer(fn, extra = {}) {
     fabMaj('histoire', { etat: 'fini', fn: null, det: `écrite en ${Math.round(duree / 1000)} s` });
     const s = {
       id: Date.now().toString(36), createdAt: Date.now(), titre: j.titre, histoire: j.histoire, nouvelle: true,
-      meta: { name: consignesEnfants().noms.join(' et ') || $('name').value.trim(), friends: $('friends').value.trim(), mood: chipVal('mood') }, illusNb: imagesVoulues(), ...extra
+      meta: { name: consignesEnfants().noms.join(' et '), friends: $('friends').value.trim(), mood: chipVal('mood') }, illusNb: imagesVoulues(), ...extra
     };
     const repris = persosPourHistoire(); if (repris.length) s.persoRepris = repris;
     if (extra.interactive) { s.parts = [{ texte: j.histoire, choixA: j.choixA, choixB: j.choixB }]; s.partAudio = []; }
@@ -4760,10 +4763,10 @@ $('lib-list').addEventListener('click', async e => {
   }
   const item = e.target.closest('.lib-item'); if (!item) return;
   voixChoisie.delete(item.dataset.id);
+  $('v-lib').insertBefore($('story-card'), $('lib-list'));          // v75 : la fiche s'ouvre ICI, dans Histoires (plus dans Créer)
   showStory(await DB.get(item.dataset.id));
   status($('gen-status'), '');
-  document.querySelector('nav button[data-v="v-create"]').click();
-  setTimeout(() => $('story-card').scrollIntoView({ behavior: 'smooth' }), 50);
+  setTimeout(() => $('story-card').scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
 });
 
 /* Premier lancement : aller aux réglages si clés manquantes */
@@ -5098,7 +5101,7 @@ if (!cleGemini()) document.querySelector('#res-cles').closest('details').open = 
       onLivre: i => {
         const e = enfants[i];
         if (!e.nom) return feuilleEnfant(i);
-        if (!e.absent && presents <= 1) return aide('etg-qui-aide', 'Il faut au moins un enfant qui écoute. Garde le doigt sur un livre pour le modifier.');
+        if (!e.absent && presents <= 1) aide('etg-qui-aide', 'Aucun enfant choisi : l\'histoire aura un héros inventé.');   // v75 : permis
         e.absent = !e.absent; sauverEnfants(); tout();
       },
       onLong: i => feuilleEnfant(i),
