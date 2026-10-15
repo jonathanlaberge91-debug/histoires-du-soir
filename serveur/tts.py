@@ -4,8 +4,9 @@ Voix québécoises Microsoft (lecture à voix haute d'Edge) :
   POST /histoires/tts            {"texte", "voix", "vitesse" (%), "hauteur" (Hz)}  -> audio/mpeg
   GET  /histoires/tts/voix       -> liste des voix permises
 Partage d'une histoire (lien pour la famille, et adresse que le haut-parleur Google peut lire) :
-  POST /histoires/partage        {"titre", "texte", "prenom", "audio": {b64, type}, "image": {b64, type}}  -> {id, url, audio}
-  GET  /histoires/ecouter/<id>   -> page d'écoute (couverture, lecteur, texte)
+  POST /histoires/partage        {"titre", "texte", "prenom", "audio": {b64, type}, "image": {b64, type}, "images": [{avant, b64, type}],
+                                  "reperes": [début de chaque paragraphe, en s], "vitesse"}  -> {id, url, audio}
+  GET  /histoires/ecouter/<id>   -> page d'écoute : le texte suit la voix, la dernière image reste en haut, mode télé plein écran, vitesse
   GET  /histoires/partage/<id>/audio | /image
 
 Voix : gratuites et sans compte, mais NON OFFICIELLES (même service que « Lire à voix haute » d'Edge) :
@@ -294,10 +295,20 @@ async def partager(req):
         return refuse(req, 400, "requête illisible")
     titre = str(b.get("titre", "")).strip()[:200] or "Une histoire du soir"
     texte = str(b.get("texte", "")).strip()[:30000]
+    # repères : le début de chaque paragraphe dans le son (calculés par l'app en écoutant le son) ; sinon la page fait au prorata
+    reperes = b.get("reperes")
+    if isinstance(reperes, list) and len(reperes) <= 600 and all(isinstance(x, (int, float)) and 0 <= x < 36000 for x in reperes):
+        reperes = [round(float(x), 2) for x in reperes]
+    else:
+        reperes = None
+    try:
+        vitesse = min(2.0, max(0.5, float(b.get("vitesse", 0.9))))
+    except (TypeError, ValueError):
+        vitesse = 0.9
     jeton = secrets.token_urlsafe(18)       # pour retirer le partage plus tard (gardé par l'app)
     infos = {"titre": titre, "texte": texte, "prenom": str(b.get("prenom", "")).strip()[:60], "cree": int(time.time()),
              "retrait": jeton,
-             "audio": ext_a, "image": ext_i, "illus": [a for a, _ in illus]}
+             "audio": ext_a, "image": ext_i, "illus": [a for a, _ in illus], "reperes": reperes, "vitesse": vitesse}
     faire_place((len(audio) if audio else 0) + (len(image) if image else 0) + sum(len(x) for _, x in illus) + len(texte) * 2)
     pid = secrets.token_urlsafe(9)
     d = os.path.join(PARTAGES, pid)
@@ -357,23 +368,148 @@ async def fichier_partage(req):
 
 
 PAGE = """<!doctype html><html lang="fr"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{titre}</title>
-<meta property="og:title" content="{titre}"><meta property="og:description" content="Une histoire du soir{pour}">
-{og_image}
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>__TITRE__</title>
+<meta property="og:title" content="__TITRE__"><meta property="og:description" content="Une histoire du soir__POUR__">
+__OG_IMAGE__
 <style>
-body{{margin:0;background:#0f0d2e;color:#f5f3ff;font:18px/1.7 system-ui,sans-serif}}
-main{{max-width:680px;margin:auto;padding:24px 18px 60px}}
-h1{{font-size:1.6rem;line-height:1.3;margin:12px 0 4px}} .pour{{color:#a5a1d6;font-size:.95rem}}
-img{{width:100%;border-radius:16px;margin-top:8px}} audio{{width:100%;margin:18px 0}}
-p{{margin:0 0 .9em}} .pied{{color:#a5a1d6;font-size:.85rem;margin-top:30px;text-align:center}}
-</style></head><body><main>
-{image}
-<h1>🌙 {titre}</h1><div class="pour">Une histoire du soir{pour}</div>
-{audio}
-{texte}
+:root{--fond:#0f0d2e;--txt:#f5f3ff;--doux:#a5a1d6;--accent:#f2c46d;--surface:#1a1740}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--fond);color:var(--txt);font:18px/1.7 system-ui,sans-serif}
+main{max-width:680px;margin:auto;padding:0 18px 70px}
+/* l'image du moment, figée en haut (la dernière dessinée avant le paragraphe lu) */
+#ecran{position:sticky;top:0;z-index:3;margin:0 -18px;background:var(--fond);padding:8px 10px 10px}
+#ecran .cadre{position:relative;height:34vh;max-height:340px;min-height:160px;border-radius:16px;overflow:hidden;background:#000;box-shadow:0 10px 24px rgba(0,0,0,.5)}
+#ecran img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;transition:opacity .6s}
+#ecran img.flou{object-fit:cover;filter:blur(22px) brightness(.55);transform:scale(1.15)}
+#ecran img.bas{opacity:0}
+#ecran.vide{display:none}
+h1{font-size:1.5rem;line-height:1.3;margin:14px 0 2px} .pour{color:var(--doux);font-size:.95rem}
+audio{width:100%;margin:14px 0 6px}
+.barre{display:flex;flex-direction:column;gap:10px;margin:0 0 16px}
+.barre .vit{display:flex;gap:5px;align-items:center;color:var(--doux);font-size:.85rem;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.barre .vit::-webkit-scrollbar{display:none}
+.barre .vit button{flex:none;padding:6px 10px}
+.barre button{border:1px solid rgba(242,196,109,.35);background:var(--surface);color:var(--txt);border-radius:999px;padding:7px 11px;font:700 .85rem system-ui,sans-serif;cursor:pointer}
+.barre button.on{background:var(--accent);color:#2a1d00;border-color:var(--accent)}
+.barre #btn-tele{padding:11px;font-size:.95rem}
+.texte p{margin:0 0 .9em;padding:4px 8px;border-radius:10px;transition:background .3s,color .3s}
+body.suit .texte p{color:#8f8bb5}
+body.suit .texte p.lit{color:var(--txt);background:rgba(242,196,109,.14)}
+.texte img{width:100%;border-radius:16px;margin:4px 0 12px}
+.pied{color:var(--doux);font-size:.85rem;margin-top:30px;text-align:center}
+/* ───── mode télé (plein écran) ───── */
+#tele{position:fixed;inset:0;z-index:50;background:#000;display:none;color:#fff;font-family:system-ui,sans-serif}
+#tele.on{display:grid;grid-template-rows:1fr auto auto;grid-template-columns:minmax(0,1fr)}
+#tele .scene{position:relative;overflow:hidden;background:#000}
+#tele .scene img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;transition:opacity .6s}
+#tele .scene img.flou{object-fit:cover;filter:blur(28px) brightness(.45);transform:scale(1.15)}
+#tele .scene img.bas{opacity:0}
+#tele .sous{min-width:0;overflow-wrap:anywhere;padding:12px 24px;font-size:clamp(18px,2.6vw,30px);line-height:1.45;text-align:center;text-shadow:0 2px 6px #000;min-height:3.2em;display:flex;align-items:center;justify-content:center}
+#tele .sous.vide{opacity:.5}
+#tele .ctrl{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;min-width:0;padding:8px 16px calc(12px + env(safe-area-inset-bottom));background:rgba(0,0,0,.6)}
+#tele .ctrl button{border:0;background:rgba(255,255,255,.12);color:#fff;border-radius:999px;height:40px;min-width:40px;padding:0 12px;font:700 .9rem system-ui,sans-serif;cursor:pointer}
+#tele .ctrl button.on{background:var(--accent);color:#2a1d00}
+#tele .ctrl .piste{flex:1;height:8px;border-radius:4px;background:rgba(255,255,255,.2);position:relative;cursor:pointer}
+#tele .ctrl .piste i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:var(--accent);width:0}
+#tele .ctrl small{color:#ccc;font-size:.8rem;min-width:70px;text-align:center}
+#tele .ctrl .vit{display:flex;gap:4px;flex-basis:100%;justify-content:center;order:2}
+#tele .ctrl .vit button{height:32px;min-width:0;padding:0 9px;font-size:.78rem}
+@media (orientation:landscape){
+  #tele.on{grid-template-columns:58% minmax(0,1fr);grid-template-rows:1fr auto}
+  #tele .scene{grid-row:1;grid-column:1}
+  #tele .sous{grid-row:1;grid-column:2;font-size:clamp(18px,2.4vw,34px);padding:16px 28px;overflow:auto;text-align:left}
+  #tele .ctrl{grid-row:2;grid-column:1/3}
+}
+</style></head><body>
+<main>
+<div id="ecran" class="vide"><div class="cadre"><img class="flou" alt=""><img class="haut" alt=""><img class="bas" alt=""></div></div>
+<h1>🌙 __TITRE__</h1><div class="pour">Une histoire du soir__POUR__</div>
+__AUDIO__
+<div class="barre" id="barre" hidden>
+  <div class="vit" id="vitesses">Vitesse</div>
+  <button type="button" id="btn-tele">📺 Plein écran</button>
+</div>
+<div class="texte" id="texte"></div>
 <div class="pied">Histoires du soir · Groupe Laberge</div>
-</main></body></html>"""
+</main>
+<div id="tele"><div class="scene"><img class="flou" alt=""><img class="haut" alt=""><img class="bas" alt=""></div>
+  <div class="sous vide" id="t-sous"></div>
+  <div class="ctrl"><button type="button" id="t-jouer">▶️</button><div class="piste" id="t-piste"><i></i></div><small id="t-temps"></small><div class="vit" id="t-vitesses"></div><button type="button" id="t-x">✕</button></div>
+</div>
+<script>
+const D = __DATA__;
+const $ = id => document.getElementById(id);
+const N = D.paras.length, VITESSES = [0.7, 0.8, 0.9, 1, 1.1, 1.25, 1.5];
+const esc = t => t.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+// le texte, avec les illustrations à leur place (devant le paragraphe « avant »)
+$('texte').innerHTML = D.paras.map((p, i) => D.illus.map((a, k) => a === i ? `<img src="${D.base}/illus/${k}" alt="" loading="lazy">` : '').join('') + `<p data-i="${i}">${esc(p)}</p>`).join('');
+// ───── l'image du moment : la dernière illustration placée avant le paragraphe, sinon la couverture
+function imagePour(i) { let k = -1, n0 = -1; D.illus.forEach((a, j) => { if (a <= i && a > n0) { n0 = a; k = j; } }); return k >= 0 ? `${D.base}/illus/${k}` : D.image ? `${D.base}/image` : null; }
+function montrer(cont, u) {
+  if (!u) return; if (cont.dataset.u === u) return; cont.dataset.u = u;
+  const haut = cont.querySelector('img.haut'), bas = cont.querySelector('img.bas');
+  bas.src = u; cont.querySelector('img.flou').src = u;
+  bas.classList.replace('bas', 'haut'); haut.classList.replace('haut', 'bas');
+}
+function majImages(i) { const u = imagePour(i); if (u) { $('ecran').classList.remove('vide'); montrer($('ecran').querySelector('.cadre'), u); montrer($('tele').querySelector('.scene'), u); } }
+majImages(0);
+// ───── la voix : le texte suit (repères calculés par l'app, sinon au prorata des lettres), vitesse, mode télé
+const a = document.querySelector('audio');
+if (a) {
+  $('barre').hidden = false;
+  let vit = parseFloat(localStorage.getItem('histoires-vitesse')) || D.vitesse || 0.9;
+  const boutonsVit = (cont, cls) => { cont.insertAdjacentHTML('beforeend', VITESSES.map(v => `<button type="button" data-v="${v}" class="${v === vit ? 'on' : ''}">${String(v).replace('.', ',')}×</button>`).join('')); cont.onclick = e => { const b = e.target.closest('[data-v]'); if (b) poserVitesse(+b.dataset.v); }; };
+  function poserVitesse(v) { vit = v; a.playbackRate = v; try { localStorage.setItem('histoires-vitesse', v); } catch {} document.querySelectorAll('[data-v]').forEach(b => b.classList.toggle('on', +b.dataset.v === v)); }
+  boutonsVit($('vitesses')); boutonsVit($('t-vitesses')); a.playbackRate = vit;
+  a.addEventListener('play', () => { a.playbackRate = vit; });
+  // repères : début de chaque paragraphe (s)
+  let reperes = Array.isArray(D.reperes) && D.reperes.length === N ? D.reperes : null;
+  const longueurs = D.paras.map(p => p.length + 8), total = longueurs.reduce((x, y) => x + y, 0);
+  function debuts() {
+    if (reperes) return reperes;
+    if (!a.duration || !isFinite(a.duration)) return null;
+    const out = []; let acc = 0; for (const l of longueurs) { out.push(acc / total * a.duration); acc += l; } return out;
+  }
+  let lit = -1, suspendu = 0;
+  addEventListener('wheel', () => { suspendu = Date.now(); }, { passive: true });
+  addEventListener('touchmove', () => { suspendu = Date.now(); }, { passive: true });
+  function eclairer(i) {
+    if (i === lit) return; lit = i;
+    document.querySelectorAll('.texte p.lit').forEach(p => p.classList.remove('lit'));
+    const p = document.querySelector(`.texte p[data-i="${i}"]`);
+    if (p) { p.classList.add('lit'); if (Date.now() - suspendu > 6000 && !$('tele').classList.contains('on')) p.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+    $('t-sous').textContent = i >= 0 ? D.paras[i] : D.titre; $('t-sous').classList.toggle('vide', i < 0);
+    majImages(Math.max(0, i));
+  }
+  function suivre() {
+    const d = debuts(); if (!d) return;
+    let i = 0; for (let k = 0; k < N; k++) if (a.currentTime >= d[k]) i = k;
+    eclairer(i);
+    $('t-piste').querySelector('i').style.width = (a.duration ? a.currentTime / a.duration * 100 : 0) + '%';
+    const f = t => Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0');
+    $('t-temps').textContent = a.duration ? f(a.currentTime) + ' / ' + f(a.duration) : '';
+  }
+  a.addEventListener('timeupdate', suivre);
+  a.addEventListener('play', () => { document.body.classList.add('suit'); suivre(); $('t-jouer').textContent = '⏸️'; });
+  a.addEventListener('pause', () => { $('t-jouer').textContent = '▶️'; });
+  a.addEventListener('ended', () => { document.body.classList.remove('suit'); eclairer(-1); $('t-jouer').textContent = '▶️'; });
+  $('t-sous').textContent = D.titre;
+  // mode télé : plein écran, paysage si possible
+  $('btn-tele').onclick = async () => {
+    $('tele').classList.add('on');
+    try { await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); } catch {}
+    try { await screen.orientation.lock('landscape'); } catch {}
+    if (a.paused) a.play().catch(() => {});
+  };
+  async function quitterTele() { $('tele').classList.remove('on'); try { await screen.orientation.unlock(); } catch {} if (document.fullscreenElement) { try { await document.exitFullscreen(); } catch {} } }
+  $('t-x').onclick = quitterTele;
+  document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) $('tele').classList.remove('on'); });
+  $('t-jouer').onclick = () => { a.paused ? a.play() : a.pause(); };
+  $('t-piste').onclick = e => { const r = $('t-piste').getBoundingClientRect(); if (a.duration) a.currentTime = (e.clientX - r.left) / r.width * a.duration; };
+  document.querySelector('.scene').onclick = () => $('t-jouer').click();
+}
+</script></body></html>"""
 
 
 async def ecouter(req):
@@ -383,17 +519,14 @@ async def ecouter(req):
         return web.Response(text="Cette histoire n'existe plus.", status=404, content_type="text/plain")
     t = html.escape(infos["titre"])
     pour = f" pour {html.escape(infos['prenom'])}" if infos.get("prenom") else ""
-    img_url = f"{PUBLIC}/histoires/partage/{pid}/image"
-    corps = PAGE.format(
-        titre=t, pour=pour,
-        og_image=f'<meta property="og:image" content="{img_url}">' if infos.get("image") else "",
-        image=f'<img src="{img_url}" alt="">' if infos.get("image") else "",
-        audio=f'<audio controls preload="metadata" src="{PUBLIC}/histoires/partage/{pid}/audio"></audio>' if infos.get("audio") else "",
-        texte="".join(
-            "".join(f'<img src="{PUBLIC}/histoires/partage/{pid}/illus/{k}" alt="">' for k, a in enumerate(infos.get("illus") or []) if a == i)
-            + f"<p>{html.escape(p.strip())}</p>"
-            for i, p in enumerate(x for x in infos.get("texte", "").split("\n\n") if x.strip())),
-    )
+    base = f"{PUBLIC}/histoires/partage/{pid}"
+    paras = [x.strip() for x in infos.get("texte", "").split("\n\n") if x.strip()]
+    data = {"titre": infos["titre"], "base": base, "paras": paras, "illus": infos.get("illus") or [], "image": bool(infos.get("image")),
+            "reperes": infos.get("reperes"), "vitesse": infos.get("vitesse") or 0.9}
+    corps = (PAGE.replace("__TITRE__", t).replace("__POUR__", pour)
+             .replace("__OG_IMAGE__", f'<meta property="og:image" content="{base}/image">' if infos.get("image") else "")
+             .replace("__AUDIO__", f'<audio controls preload="metadata" src="{base}/audio"></audio>' if infos.get("audio") else "")
+             .replace("__DATA__", json.dumps(data, ensure_ascii=False).replace("</", "<\\/")))
     return web.Response(text=corps, content_type="text/html", headers={"Cache-Control": "no-cache"})
 
 

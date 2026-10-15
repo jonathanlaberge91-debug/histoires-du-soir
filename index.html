@@ -1130,7 +1130,7 @@
     <button type="button" id="t-quitter" title="Quitter le mode télé">✕</button>
   </div>
 </div>
-<p id="version-bas">Histoires du soir · <span class="vers">v66</span></p>
+<p id="version-bas">Histoires du soir · <span class="vers">v67</span></p>
 <div class="mini-lecteur" id="mini-lecteur" hidden>
   <div class="ml-vitesses" id="ml-vitesses" hidden></div>
   <div class="ml-rangee">
@@ -3281,7 +3281,7 @@ async function audioComplet(s) {
 }
 function sigPartage(s, audio) {
   const illus = Object.values(clesParParagraphe(s)).filter(c => s.illusImages?.[c]);
-  return [audio ? audio.size : 0, s.image ? s.image.size : 0, s.histoire.length, illus.length].join(':');
+  return [audio ? audio.size : 0, s.image ? s.image.size : 0, s.histoire.length, illus.length, 'r67'].join(':');   // v67 : repères envoyés → republier une fois
 }
 /* Met l'histoire (texte, voix, couverture) sur ton serveur : lien pour la famille + adresse pour le haut-parleur */
 async function publier(s, st) {
@@ -3292,7 +3292,13 @@ async function publier(s, st) {
   if (s.partage?.sig === sig) return s.partage;
   st?.('<span class="spin"></span>Préparation du lien…');
   const corps = { titre: s.titre, texte: paras(stripTags(s.histoire)).join('\n\n'), prenom: s.meta?.name || '' };
-  if (audio) corps.audio = { b64: await b64(audio), type: audio.type || 'audio/mpeg' };
+  if (audio) {
+    corps.audio = { b64: await b64(audio), type: audio.type || 'audio/mpeg' };
+    // v67 : la page partagée fait suivre le texte comme l'app : on lui donne le début de chaque paragraphe (écoute du son)
+    const rep = await reperesAudio(audio, s.histoire).catch(() => null);
+    if (rep && rep.length === paras(s.histoire).length) corps.reperes = rep.map(x => Math.round(x * 100) / 100);
+    corps.vitesse = vitesseLecture();
+  }
   if (s.image) corps.image = { b64: await b64(s.image), type: s.image.type || 'image/jpeg' };
   if (illus.length) corps.images = await Promise.all(illus.map(async ([i, c]) => ({ avant: parseInt(i, 10), b64: await b64(s.illusImages[c]), type: 'image/jpeg' })));
   const r = await fetchRelais(URL_RELAIS + '/histoires/partage', { method: 'POST', headers: entetesRelais(), body: JSON.stringify(corps) });
