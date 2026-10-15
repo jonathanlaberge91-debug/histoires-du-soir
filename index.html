@@ -609,6 +609,27 @@
     box-shadow: 0 18px 40px rgba(0,0,0,.55), inset 0 0 0 1px rgba(242,196,109,.55), inset 0 0 0 5px var(--carte-filet, rgba(19,19,25,.9)), inset 0 0 0 6px rgba(242,196,109,.28); }
   #story-card::before, #story-card::after { content: "✦"; position: absolute; top: 9px; color: rgba(242,196,109,.7); font-size: .8rem; pointer-events: none; }
   #story-card::before { left: 13px; } #story-card::after { right: 52px; }
+  /* v84 : la couverture en grand, collée en haut de la fiche, le titre posé dessus sur un fondu sombre */
+  #story-card::before, #story-card::after { display: none; }
+  .s-couv { position: relative; margin: -22px -18px 0; min-height: 210px; border-radius: 22px 22px 0 0; overflow: hidden; background: #0c0c12; }
+  .s-couv .cover { width: 100%; height: 100%; min-height: 210px; max-height: 300px; object-fit: cover; margin: 0; border-radius: 0; display: block; }
+  .s-couv.vide { background: radial-gradient(circle at 78% 24%, #fff4d6 0 13px, rgba(255,244,214,.22) 14px 28px, transparent 29px),
+      radial-gradient(1.5px 1.5px at 18% 22%, #fff 50%, transparent), radial-gradient(1.5px 1.5px at 44% 12%, #fff 50%, transparent), radial-gradient(1px 1px at 62% 30%, #fff 50%, transparent),
+      linear-gradient(172deg, transparent 60%, #1f3a2e 60.5%), linear-gradient(188deg, transparent 54%, #2a4f3a 54.5%), linear-gradient(#1f2650, #4a3f80 60%, #b07a6a); }
+  .s-couv-titre { position: absolute; left: 0; right: 0; bottom: 0; padding: 64px 18px 14px; background: linear-gradient(transparent, rgba(8,8,14,.94)); }
+  #story-card .s-couv .chap { display: block; text-align: left; margin: 0; color: var(--accent); font: 800 .7rem var(--f-texte); letter-spacing: .12em; text-transform: uppercase; text-shadow: 0 1px 4px #000; }
+  #story-card .s-couv #s-title { text-align: left; padding: 0 0 0; margin: 2px 0 0; font: 700 1.6rem/1.12 var(--f-titre); color: #fff4d6 !important; text-shadow: 0 2px 10px #000 !important; }
+  .s-pour { color: #d8d2c0; font-size: .86rem; margin-top: 4px; text-shadow: 0 1px 4px #000; }
+  #story-card .s-infos { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; scrollbar-width: none; margin: 14px -18px 0; padding: 0 18px 2px; }
+  .s-infos::-webkit-scrollbar { display: none; }
+  #story-card .s-info { flex: none; white-space: nowrap; }
+  .s-voix { text-align: center; color: var(--doux); font-size: .78rem; margin-top: 7px; }
+  .s-voix:empty { display: none; }
+  #story-card .petites { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; overflow: visible; padding: 2px 0 6px; margin-top: 14px; }
+  #story-card .petites button.sec[id] { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 10px 2px; border-radius: 14px; font: 700 .7rem/1.15 var(--f-texte); text-align: center; min-width: 0; }
+  #story-card .petites .o-ic { font-size: 1.3rem; line-height: 1; }
+  #story-card .petites button[style*="none"] { display: none !important; }
+  body.nuit .s-couv, body.nuit .s-voix { display: none !important; }
   body.lib-lecture #lib-tete { display: none; }
   body.lib-lecture #v-lib #story-card { margin-top: 4px; }
   #story-card .chap { display: block; text-align: center; color: var(--accent); text-shadow: 0 0 8px rgba(242,196,109,.5); margin: 2px 0 2px; }
@@ -621,7 +642,7 @@
     color: #eef0ff; font: 700 .8rem/1.15 var(--f-texte); max-width: 100%; }
   .s-info i { font-style: normal; font-size: 1rem; }
   .s-info small { display: block; color: var(--accent); font: 800 .6rem var(--f-texte); letter-spacing: .08em; text-transform: uppercase; opacity: .85; }
-  #story-card .fermer-histoire { top: 12px; right: 12px; border: 0; background: radial-gradient(circle at 35% 30%, #ffe9a0, #c9a24a 60%, #8a6a22); color: #2a1d00;
+  #story-card .fermer-histoire { top: 12px; right: 12px; z-index: 4; border: 0; background: radial-gradient(circle at 35% 30%, #ffe9a0, #c9a24a 60%, #8a6a22); color: #2a1d00;
     box-shadow: 0 2px 6px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.5); }
   #story-card .petites button.sec { border: 1px solid rgba(242,196,109,.28); background: rgba(255,255,255,.05); border-radius: 999px; }
   body.nuit .s-infos, body.nuit .s-orne, body.nuit #story-card::after { display: none; }
@@ -967,11 +988,11 @@
   </div>
 
   <div class="card" id="story-card" style="display:none">
-    <img id="cover" class="cover" alt="" style="display:none">
     <button type="button" class="fermer-histoire" id="btn-fermer-histoire" title="Fermer (l'histoire reste dans Histoires)">✕</button>
-    <div class="chap" id="s-chap"></div>
-    <h2 id="s-title"></h2>
-    <div class="s-orne" aria-hidden="true">✦</div>
+    <div class="s-couv vide" id="s-couv">
+      <img id="cover" class="cover" alt="" style="display:none">
+      <div class="s-couv-titre"><div class="chap" id="s-chap"></div><h2 id="s-title"></h2><div class="s-pour" id="s-pour"></div></div>
+    </div>
     <div class="s-infos" id="s-infos"></div>
     <div class="hint" id="drive-info" style="margin-top:0"></div>
     <div class="hint" id="illus-status" style="margin-top:2px"></div>
@@ -979,6 +1000,7 @@
       <button class="sec" id="btn-read">🔊 Raconter</button>
       <button class="sec" id="btn-nuit" title="Mode nuit">🌙</button>
     </div>
+    <div class="s-voix" id="s-voix"></div>
     <div class="petites">
       <button class="sec" id="btn-tele">📺 Mode télé</button>
       <button class="sec" id="btn-voix">🎙️ Autre voix</button>
@@ -1251,7 +1273,7 @@
     <button type="button" id="t-quitter" title="Quitter le mode télé">✕</button>
   </div>
 </div>
-<p id="version-bas">Histoires du soir · <span class="vers">v83</span></p>
+<p id="version-bas">Histoires du soir · <span class="vers">v84</span></p>
 <div class="mini-lecteur" id="mini-lecteur" hidden>
   <div class="ml-vitesses" id="ml-vitesses" hidden></div>
   <div class="ml-rangee">
@@ -2421,7 +2443,7 @@ function majIllustrations(s) {
 function majBoutonIllustrer(s) {
   const complet = s.illus?.scenes?.length && s.illus.scenes.every(x => s.illusImages?.[x.cle]);
   $('btn-illustrer').style.display = !complet && !illustrationsEnCours.has(s.id) && cleGemini() ? '' : 'none';
-  $('btn-illustrer').textContent = s.illus?.scenes?.length ? '🎨 Finir les illustrations' : '🎨 Illustrer';
+  $('btn-illustrer').textContent = s.illus?.scenes?.length ? '🎨 Finir les images' : '🎨 Illustrer'; outil($('btn-illustrer'));
   if (!illustrationsEnCours.has(s.id)) $('illus-status').textContent = complet ? `🎨 ${s.illus.scenes.length} illustration${s.illus.scenes.length > 1 ? 's' : ''}` : '';
 }
 $('btn-illustrer').onclick = () => { if (current) { illustrer(current, true); majBoutonIllustrer(current); } };
@@ -2448,9 +2470,12 @@ function paragrapheVisible() {
   for (const p of document.querySelectorAll('#s-text p[data-i]')) { if (p.getBoundingClientRect().top < ligne) k = +p.dataset.i; else break; }
   return k;
 }
+let couvVisible = false;
+new IntersectionObserver(l => { couvVisible = l[0].isIntersecting; majEcran(); }, { threshold: .25 }).observe(document.getElementById('s-couv'));
 function majEcran() {
   const e = $('ecran-image');
   if (!current || $('story-card').style.display === 'none') { e.classList.remove('on'); return; }
+  if (litIdx < 0 && couvVisible) { e.classList.remove('on'); return; }   // v84 : la couverture en grand est déjà à l'écran
   const { blob, attente } = imagePourParagraphe(current, paragrapheVisible());
   const premiere = !blob && illustrationsEnCours.has(current.id);      // rien encore dessiné : un cadre d'attente
   e.classList.toggle('on', !!blob || premiere);
@@ -2950,6 +2975,14 @@ function majBoutonVoix(s) {
   if (n > 1 && aUneVoix(s)) $('btn-read').textContent = `▶️ Écouter (${n} voix)`;
 }
 $('btn-voix').onclick = () => { if (current) feuilleAutreVoix(current); };
+/* v84 : les outils de la fiche en grille d'icônes (icône au-dessus, nom court dessous) */
+const NOMS_OUTILS = { 'btn-tele': 'Télé', 'btn-voix': 'Autre voix', 'btn-suite': 'La suite', 'btn-regen': 'Une autre', 'btn-partager': 'Partager',
+  'btn-cast': 'Haut-parleur', 'btn-livre': 'Livre PDF', 'btn-departager': 'Retirer le partage', 'btn-tags': 'Balises' };
+function outil(b) {
+  const t = b.textContent.trim(), m = t.match(/^(\S+)\s+(.*)$/); if (!m) return;
+  b.innerHTML = `<span class="o-ic">${m[1]}</span><span class="o-t">${NOMS_OUTILS[b.id] || m[2]}</span>`;
+}
+document.querySelectorAll('#story-card .petites button').forEach(outil);
 
 /* ==================== VOIX QUÉBÉCOISE MICROSOFT (relais du serveur) ==================== */
 const URL_TTS_EDGE = location.hostname === '95.groupelaberge.ca' ? '/histoires/tts' : 'https://95.groupelaberge.ca/histoires/tts';
@@ -3909,6 +3942,7 @@ function afficherCouverture(s) {
   if (img.dataset.url) URL.revokeObjectURL(img.dataset.url);
   if (s.image) { img.dataset.url = img.src = URL.createObjectURL(s.image); img.style.display = 'block'; }
   else { img.style.display = 'none'; img.removeAttribute('src'); img.dataset.url = ''; }
+  $('s-couv').classList.toggle('vide', !s.image);                 // v84 : sans image, un ciel de nuit
 }
 /* Paragraphes de chaque partie (histoire interactive) : [début, fin) */
 function plagesParties(s) {
@@ -3950,7 +3984,7 @@ function showStory(s) {
   current = s;
   $('story-card').style.display = 'block';
   afficherCouverture(s);
-  $('s-chap').textContent = s.chap > 1 ? `Chapitre ${s.chap}` : s.interactive ? '🔀 L\'enfant choisit la suite' : '';
+  $('s-chap').textContent = s.chap > 1 ? `📖 Chapitre ${s.chap}` : s.interactive ? '🔀 L\'enfant choisit la suite' : '📖 Histoire complète';
   $('s-title').textContent = s.titre;
   majInfos(s);
   ecranBlob = null; litIdx = -1;
@@ -4696,17 +4730,18 @@ async function fichierServeur(rec, nom, jf) {
 /* v82 : les étiquettes de l'histoire (seulement ce qu'on sait : les vieilles histoires en ont moins) */
 function majInfos(s) {
   const m = s.meta || {}, sansEmoji = t => String(t || '').replace(/^[^\p{L}\p{N}]+/u, '').trim();
-  const ambiance = m.ambiance || (m.mood && m.mood !== 'autre' ? (document.querySelector(`.chips[data-group="mood"] .chip[data-v="${m.mood}"]`)?.textContent || '') : '');
-  const l = [
-    ['👧', 'Pour', m.name || 'un héros inventé'],
-    ['📖', 'Format', s.interactive ? 'L\'enfant choisit la suite' : s.chap > 1 ? `La suite · chapitre ${s.chap}` : 'Histoire complète'],
-    ['🎭', 'Ambiance', sansEmoji(ambiance)],
-    ['🗺️', 'Lieu', m.lieu], ['😈', 'Méchant', m.mechant], ['👥', 'Avec', m.friends],
-    ['⏱️', 'Durée', sansEmoji(m.duree)], ['🌱', 'Petit souci', sansEmoji(m.souci)], ['💛', 'Leçon', m.lecon],
-    ['🎙️', 'Voix', s.voixNom], ['📅', 'Écrite le', new Date(s.createdAt).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric' })]
-  ].filter(x => x[2]);
   const maj1 = v => { v = String(v); return v.charAt(0).toUpperCase() + v.slice(1); };
+  const ambiance = m.ambiance || (m.mood && m.mood !== 'autre' ? (document.querySelector(`.chips[data-group="mood"] .chip[data-v="${m.mood}"]`)?.textContent || '') : '');
+  // v84 : « pour qui » et la date sous le titre ; la voix sous Raconter ; le reste en étiquettes qui défilent
+  $('s-pour').textContent = `Une histoire pour ${m.name || 'un héros inventé'} · ${new Date(s.createdAt).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long' })}`;
+  const l = [
+    ['🎭', 'Ambiance', sansEmoji(ambiance)], ['🗺️', 'Lieu', m.lieu], ['😈', 'Méchant', m.mechant], ['👥', 'Avec', m.friends],
+    ['⏱️', 'Durée', sansEmoji(m.duree)], ['🌱', 'Petit souci', sansEmoji(m.souci)], ['💛', 'Leçon', m.lecon]
+  ].filter(x => x[2]);
   $('s-infos').innerHTML = l.map(([e, k, v]) => `<span class="s-info"><i>${e}</i><span><small>${k}</small>${esc(maj1(v))}</span></span>`).join('');
+  $('s-infos').style.display = l.length ? '' : 'none';
+  const n = typeof versionsDe === 'function' ? versionsDe(s).length : 0;
+  $('s-voix').textContent = s.voixNom ? `🎙️ ${s.voixNom}${n > 1 ? ` · ${n} voix enregistrées` : ''}` : '';
 }
 function fermerHistoire() {
   document.body.classList.remove('lib-lecture');                  // v82 : la recherche et les filtres reviennent
