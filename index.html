@@ -1328,7 +1328,7 @@
     <button type="button" id="t-quitter" title="Quitter le mode télé">✕</button>
   </div>
 </div>
-<p id="version-bas">Histoires du soir · <span class="vers">v92</span></p>
+<p id="version-bas">Histoires du soir · <span class="vers">v93</span></p>
 <div class="mini-lecteur" id="mini-lecteur" hidden>
   <div class="ml-vitesses" id="ml-vitesses" hidden></div>
   <div class="ml-rangee">
@@ -4322,7 +4322,7 @@ function aventureVrai(s, cond) {
 }
 function aventureTexte(s, sc) {
   return String(sc.texte || '').replace(/\{(!?[\w+:,&!-]+)\?([^|}]*)(?:\|([^}]*))?\}/g, (_, cle, oui, non) => aventureVrai(s, cle) ? oui : (non || ''))
-    .replace(/[ \t]{2,}/g, ' ').replace(/ +([.,!?;:])/g, '$1').trim();
+    .replace(/[ \t]{2,}/g, ' ').replace(/ +([.,])/g, '$1').trim();   // v92 : l'espace avant ! ? ; : reste (à la française)
 }
 const aventureChoix = (s, sc) => (sc.choix || []).filter(c => !c.si || aventureVrai(s, c.si));
 const cleSon = (id, texte) => { let h = 0; for (const ch of texte) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return id + ':' + h.toString(36); };
