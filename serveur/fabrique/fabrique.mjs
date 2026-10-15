@@ -192,7 +192,7 @@ async function planifier(t, s) {
     'Tu prépares les illustrations d\'un livre d\'histoire pour enfants. Écris EN ANGLAIS (pour le dessinateur).',
     `- « fiche » : la description visuelle FIXE de CHAQUE personnage qui apparaît dans une scène (5 au plus), comme des personnages de DESSIN ANIMÉ, FIDÈLE à ce que l'histoire en dit. Pour un ENFANT ou un adulte : nom, coiffure, vêtements, accessoires et leurs COULEURS exactes ; JAMAIS d'âge, de corps ni de peau. Pour un ANIMAL, une CRÉATURE ou un MÉCHANT : commence par son ESPÈCE et sa FORME telles que l'histoire les décrit (ex. une araignée = huit pattes, un corps rond, des yeux ; un dragon = ailes, queue, écailles ; un loup = museau, oreilles pointues, queue), puis ses couleurs et ses détails ; ne le change JAMAIS en autre chose (pas de boule de poils, pas de nuage, pas de vague silhouette). Une courte phrase par personnage (25 mots au plus), très concrète. Exemple : "Abby: cartoon kid with curly red hair, yellow raincoat, red boots. Biscuit: small light brown cartoon puppy with a blue collar. Grumble: a big round purple cartoon spider with eight thin legs, six shiny eyes and a tiny green hat."`,
     `- Les personnages et les choses gardent EXACTEMENT ce que l'histoire en dit (espèce, nombre de pattes, couleurs, taille, objets qu'ils portent) dans la fiche ET dans chaque scène ; si l'histoire donne un détail, il doit se voir.`,
-    (t.recette.info?.meta?.mechant || '') ? `- Le méchant de cette histoire est : ${(t.recette.info?.meta?.mechant || '')}. Il doit être reconnaissable au premier coup d'œil dans la fiche et dans chaque scène où il est (sa vraie espèce, sa vraie forme), dessiné drôle et gentil, jamais effrayant.` : '',
+    (t.recette.info?.meta?.mechant || '') ? `- Le méchant de cette histoire est : ${(t.recette.info?.meta?.mechant || '')}. Il doit être reconnaissable au premier coup d'œil dans la fiche et dans chaque scène où il est (sa vraie espèce, sa vraie forme), ${{ mignon: 'dessiné drôle et mignon, jamais effrayant', fidele: 'dessiné comme l\'histoire le décrit, un peu impressionnant mais pas effrayant', effrayant: 'dessiné impressionnant et sombre (yeux brillants, ombre), jamais horrible ni sanglant' }[I.mechantLook] || 'drôle et mignon'}.` : '',
     I.ficheAvant ? `- Ces personnages ont déjà été dessinés dans les chapitres précédents : reprends EXACTEMENT cette fiche, en ajoutant seulement les nouveaux : ${I.ficheAvant}` : '',
     I.persoRepris?.length ? `- Ces personnages reviennent d'histoires déjà illustrées : mets-les dans la fiche avec EXACTEMENT cette description : ${I.persoRepris.map(x => x.nom + ': ' + x.visuel).join(' ')}` : '',
     I.dessin ? '- L\'enfant a fait un dessin pour cette histoire : décris les personnages comme dans son dessin.' : '',
@@ -223,15 +223,15 @@ async function planifier(t, s) {
     scenes.splice(0, scenes.length, ...scenes.filter((sc, k, l) => l.findIndex(x => x.cle === sc.cle) === k));
   }
   if (s.arbre && scenes[0].cle !== 'n') scenes[0].cle = 'n';
-  return { fiche: String(j.fiche || ''), style: I.style || 'aquarelle', lumiere: I.lumiere || 'histoire', scenes };
+  return { fiche: String(j.fiche || ''), style: I.style || 'aquarelle', lumiere: I.lumiere || 'histoire', mechantLook: I.mechantLook || 'mignon', scenes };
 }
 async function dessinerGemini(illus, sc, refs, modeles) {
   const texte = [
     `Illustrate this scene for a children's picture book, in a ${STYLES_GEMINI[illus.style] || STYLES_GEMINI.aquarelle}, landscape format: ${sc.description}`,
     `Characters: ${illus.fiche}`,
     refs.length ? 'Keep the characters EXACTLY as in the reference image: same faces, hair, clothes, colors and art style. Only the scene, pose and setting change.' : '',
-    'Draw EVERY character exactly as described above: same species, same body shape (count the legs, wings, tails), same colors and outfits. A creature or villain must stay clearly recognizable as what it is (a spider is a spider with eight legs, never a fluffy ball) — just drawn cute and friendly.',
-    'Gentle and reassuring, nothing scary. No text, no letters, no speech bubbles.'
+    `Draw EVERY character exactly as described above: same species, same body shape (count the legs, wings, tails), same colors and outfits. A creature or villain must stay clearly recognizable as what it is (a spider is a spider with eight legs, never a fluffy ball) — ${{ mignon: 'just drawn cute and friendly', fidele: 'drawn as the story describes it, a little impressive but not scary', effrayant: 'drawn impressive and dark (glowing eyes, deep shadows), never gory or horrific' }[illus.mechantLook] || 'cute and friendly'}.`,
+    illus.mechantLook === 'effrayant' ? 'A storybook mood with some thrill, but nothing gory. No text, no letters, no speech bubbles.' : 'Gentle and reassuring, nothing scary. No text, no letters, no speech bubbles.'
   ].filter(Boolean).join('\n');
   const parts = [{ text: texte }, ...refs.map(r => ({ inlineData: { mimeType: r.type || 'image/jpeg', data: r.b64 } }))];
   let derniere = '';
