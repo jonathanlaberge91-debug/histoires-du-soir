@@ -1328,7 +1328,7 @@
     <button type="button" id="t-quitter" title="Quitter le mode télé">✕</button>
   </div>
 </div>
-<p id="version-bas">Histoires du soir · <span class="vers">v94</span></p>
+<p id="version-bas">Histoires du soir · <span class="vers">v95</span></p>
 <div class="mini-lecteur" id="mini-lecteur" hidden>
   <div class="ml-vitesses" id="ml-vitesses" hidden></div>
   <div class="ml-rangee">
@@ -4955,11 +4955,12 @@ async function srvRecupererFaire(silencieux) {
       const a = await DB.get(h.hid).catch(() => null);
       if (!a?.aventure || !h.updated || a.srvMaj === h.updated) continue;
       const rec = await (await apiMaison(`/api/collections/${COL_HIST}/records/${h.id}`)).json();
-      const manque = (rec.illus || []).filter(f => { const c = rec.cles?.illus?.[numFichier(f)]; return c && !a.illusImages?.[c]; });
+      const manque = (rec.illus || []).filter(f => { const c = rec.cles?.illus?.[numFichier(f)]; return c && (!a.illusImages?.[c] || a.srvNoms?.[c] !== f); });   // v95 : image refaite sur le serveur = nouveau nom → on la reprend
       if (manque.length) {
         const { token: jf } = await (await apiMaison('/api/files/token', { method: 'POST' })).json();
         a.illusImages = a.illusImages || {};
-        for (const f of manque) a.illusImages[rec.cles.illus[numFichier(f)]] = await fichierServeur(rec, f, jf);
+        a.srvNoms = a.srvNoms || {};
+        for (const f of manque) { const c = rec.cles.illus[numFichier(f)]; a.illusImages[c] = await fichierServeur(rec, f, jf); a.srvNoms[c] = f; }
         a.srvIllus = Object.keys(a.illusImages).sort().map(c => c + ':' + a.illusImages[c].size).join(',');
       }
       a.srvMaj = rec.updated; await DB.put(a);
@@ -4982,7 +4983,8 @@ async function srvRecupererFaire(silencieux) {
       if (rec.image) { s.image = await fichierServeur(rec, rec.image, jf); s.srvImage = String(s.image.size); }
       if (rec.illus?.length) {
         s.illusImages = {};
-        for (const f of rec.illus) { const c = rec.cles?.illus?.[numFichier(f)]; if (c) s.illusImages[c] = await fichierServeur(rec, f, jf); }
+        s.srvNoms = {};
+        for (const f of rec.illus) { const c = rec.cles?.illus?.[numFichier(f)]; if (c) { s.illusImages[c] = await fichierServeur(rec, f, jf); s.srvNoms[c] = f; } }
         s.srvIllus = Object.keys(s.illusImages).sort().map(c => c + ':' + s.illusImages[c].size).join(',');
       }
       if (rec.noeuds?.length) {
