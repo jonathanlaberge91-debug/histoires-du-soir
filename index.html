@@ -1328,7 +1328,7 @@
     <button type="button" id="t-quitter" title="Quitter le mode télé">✕</button>
   </div>
 </div>
-<p id="version-bas">Histoires du soir · <span class="vers">v95</span></p>
+<p id="version-bas">Histoires du soir · <span class="vers">v96</span></p>
 <div class="mini-lecteur" id="mini-lecteur" hidden>
   <div class="ml-vitesses" id="ml-vitesses" hidden></div>
   <div class="ml-rangee">
@@ -4818,7 +4818,7 @@ function srvSauver(s) {
 async function srvEnvoyer(id) {
   const s = await DB.get(id);
   if (!s || (s.interactive && !s.parts?.length)) return;
-  const { audio: audio0, sonsScenes, image: image0, partAudio, audioNoeuds, illusImages, srv, srvId, srvAudio, srvImage, srvIllus, srvNoeuds, srvAttente,
+  const { audio: audio0, sonsScenes, image: image0, partAudio, audioNoeuds, illusImages, srv, srvId, srvAudio, srvImage, srvIllus, srvNoeuds, srvAttente, srvSons, srvClesSons,
     drive, driveAudio, driveImage, driveIllus, driveNoeuds, driveAttente, ...story } = s;
   const audio = s.aventure ? null : audio0, image = s.aventure ? null : image0;   // v91 : une aventure n'envoie que ses images de scènes
   const fd = new FormData();
@@ -4844,7 +4844,7 @@ async function srvEnvoyer(id) {
     champs.srvNoeuds = sigN;
   }
   // Table numéro → clé, toujours celle des fichiers actuels (inchangés = mêmes clés, même ordre)
-  if (champs.srvIllus || champs.srvNoeuds) fd.append('cles', JSON.stringify({ illus: clesIllus, noeuds }));   // v94 : seulement si des fichiers partent
+  if (champs.srvIllus || champs.srvNoeuds) fd.append('cles', JSON.stringify({ illus: clesIllus, noeuds, ...(srvClesSons ? { sons: srvClesSons } : {}) }));   // v96 : la table des voix reste   // v94 : seulement si des fichiers partent
   const maj = async ch => {
     const s2 = await DB.get(id); if (!s2) return;
     Object.assign(s2, ch);
@@ -4897,6 +4897,17 @@ async function srvToutEnvoyer() {
 }
 $('btn-drive-tout').onclick = () => { saveSettings(); srvToutEnvoyer(); };
 /* Fichier protégé : il faut un petit jeton de fichier (valable quelques minutes) */
+/* v96 : VOIX D'UNE GRANDE AVENTURE enregistrées par le serveur (une voix par personnage, la même dans toutes les
+   scènes) : UN fichier (champ audio) = tous les sons à la suite ; cles.sons = { cleSon: [début, longueur] }.
+   Elles remplacent les sons faits sur l'appareil (distribution fixe pour toute l'aventure). */
+async function sonsAventure(a, rec, jf) {
+  if (!a.aventure || !rec.audio || !rec.cles?.sons || a.srvSons === rec.audio) return false;
+  const tout = await fichierServeur(rec, rec.audio, jf);
+  a.sonsScenes = a.sonsScenes || {};
+  for (const [cle, [debut, n]] of Object.entries(rec.cles.sons)) a.sonsScenes[cle] = tout.slice(debut, debut + n, 'audio/mpeg');
+  a.srvSons = rec.audio; a.srvClesSons = rec.cles.sons;
+  return true;
+}
 async function fichierServeur(rec, nom, jf) {
   const r = await fetch(`${URL_MAISON}/api/files/${COL_HIST}/${rec.id}/${encodeURIComponent(nom)}?token=${encodeURIComponent(jf)}`);
   if (!r.ok) throw new Error('fichier illisible sur le serveur (' + r.status + ')');
@@ -4956,8 +4967,11 @@ async function srvRecupererFaire(silencieux) {
       if (!a?.aventure || !h.updated || a.srvMaj === h.updated) continue;
       const rec = await (await apiMaison(`/api/collections/${COL_HIST}/records/${h.id}`)).json();
       const manque = (rec.illus || []).filter(f => { const c = rec.cles?.illus?.[numFichier(f)]; return c && (!a.illusImages?.[c] || a.srvNoms?.[c] !== f); });   // v95 : image refaite sur le serveur = nouveau nom → on la reprend
-      if (manque.length) {
+      const veutSons = !!(rec.audio && rec.cles?.sons && a.srvSons !== rec.audio);
+      let sonsArrives = false;
+      if (manque.length || veutSons) {
         const { token: jf } = await (await apiMaison('/api/files/token', { method: 'POST' })).json();
+        sonsArrives = await sonsAventure(a, rec, jf).catch(() => false);
         a.illusImages = a.illusImages || {};
         a.srvNoms = a.srvNoms || {};
         for (const f of manque) { const c = rec.cles.illus[numFichier(f)]; a.illusImages[c] = await fichierServeur(rec, f, jf); a.srvNoms[c] = f; }
@@ -4965,7 +4979,7 @@ async function srvRecupererFaire(silencieux) {
       }
       a.srvMaj = rec.updated; await DB.put(a);
       if (current?.id === a.id) current.srvMaj = rec.updated;
-      if (manque.length && current?.id === a.id) { Object.assign(current, { illusImages: a.illusImages, srvIllus: a.srvIllus }); aventurePoser(current); afficherCouverture(current); majEcran(); }
+      if ((manque.length || sonsArrives) && current?.id === a.id) { Object.assign(current, { illusImages: a.illusImages, srvIllus: a.srvIllus, sonsScenes: a.sonsScenes, srvSons: a.srvSons, srvClesSons: a.srvClesSons }); aventurePoser(current); afficherCouverture(current); majEcran(); if (current.audio) setAudio(current); }
     }
     const ici = new Set((await DB.all()).map(s => s.id));
     const enAttente = new Map((await DB.all()).filter(s => s.attente).map(s => [s.id, s]));
@@ -4979,7 +4993,8 @@ async function srvRecupererFaire(silencieux) {
       const s = rec.donnees;
       if (!s || s.id !== h.hid) continue;                        // contenu inattendu : ignoré
       const { token: jf } = await (await apiMaison('/api/files/token', { method: 'POST' })).json();
-      if (rec.audio) { s.audio = await fichierServeur(rec, rec.audio, jf); s.srvAudio = s.audio.size + ':' + s.audio.type; }
+      if (s.aventure) await sonsAventure(s, rec, jf).catch(() => {});
+      else if (rec.audio) { s.audio = await fichierServeur(rec, rec.audio, jf); s.srvAudio = s.audio.size + ':' + s.audio.type; }
       if (rec.image) { s.image = await fichierServeur(rec, rec.image, jf); s.srvImage = String(s.image.size); }
       if (rec.illus?.length) {
         s.illusImages = {};

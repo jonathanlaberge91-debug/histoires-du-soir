@@ -739,6 +739,118 @@ const serveur = http.createServer(async (req, res) => {
     if (!res.headersSent) json(res, e.code === 413 ? 413 : 500, { erreur: e.code === 413 ? e.message : 'erreur du serveur' });
   }
 });
+/* ==================== VOIX D'UNE GRANDE AVENTURE (v96, 2026-10-17) ====================
+   Lancé à la main sur le serveur (pas par l'app) :
+     node fabrique.mjs --aventure-voix <aventure.json> <dossier de sortie> <voix du narrateur>
+   1. toutes les versions de texte que les scènes peuvent prendre (selon la mémoire de la partie) ;
+   2. UNE distribution pour toute l'aventure : Gemini liste les personnages, chacun reçoit SA voix Google (Chirp 3 HD),
+      la même dans toutes les scènes (avant : chaque scène distribuait ses voix → un personnage changeait de voix) ;
+   3. chaque version est enregistrée avec cette distribution → <dossier>/s<k>.mp3 + index.json { cles: { cleSon: fichier } }.
+   Les fonctions de la partie sont des COPIES d'index.html (aventureVrai, aventureTexte, cleSon) : la clé doit être identique. */
+function avVrai(memoire, cond) {
+  return String(cond).split('&').every(c => {
+    c = c.trim(); const non = c.startsWith('!'); if (non) c = c.slice(1);
+    const m = c.match(/^(\d+)\+:(.+)$/);
+    const v = m ? m[2].split(',').filter(k => memoire[k.trim()]).length >= +m[1] : !!memoire[c];
+    return non ? !v : v;
+  });
+}
+function avTexte(memoire, sc) {
+  return String(sc.texte || '').replace(/\{(!?[\w+:,&!-]+)\?([^|}]*)(?:\|([^}]*))?\}/g, (_, cle, oui, non) => avVrai(memoire, cle) ? oui : (non || ''))
+    .replace(/[ \t]{2,}/g, ' ').replace(/ +([.,])/g, '$1').trim();
+}
+const avCleSon = (id, texte) => { let h = 0; for (const ch of texte) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return id + ':' + h.toString(36); };
+function avVersions(av) {
+  const versions = new Map();                     // cleSon → { scene, texte }
+  const vus = new Set(), file = [{ scene: av.debut, mem: {} }];
+  while (file.length && vus.size < 50000) {
+    const { scene, mem } = file.shift();
+    const etat = scene + '|' + Object.keys(mem).sort().join(',');
+    if (vus.has(etat)) continue; vus.add(etat);
+    const sc = av.scenes[scene]; if (!sc) continue;
+    const t = avTexte(mem, sc), k = avCleSon(scene, t);
+    if (!versions.has(k)) versions.set(k, { scene, texte: t });
+    for (const c of (sc.choix || []).filter(c => !c.si || avVrai(mem, c.si))) {
+      if (c.vers === '__debut') { file.push({ scene: av.debut, mem: {} }); continue; }
+      const m2 = { ...mem }; (c.donne || []).forEach(x => { m2[x] = true; }); (c.ote || []).forEach(x => { delete m2[x]; });
+      file.push({ scene: c.vers, mem: m2 });
+    }
+  }
+  return versions;
+}
+const SCHEMA_DISTRIB = { type: 'OBJECT', properties: { personnages: { type: 'ARRAY', items: { type: 'OBJECT', properties: {
+  nom: { type: 'STRING' }, genre: { type: 'STRING', enum: ['f', 'm'] }, age: { type: 'STRING', enum: ['enfant', 'adulte', 'vieux'] } }, required: ['nom', 'genre', 'age'] } } }, required: ['personnages'] };
+const SCHEMA_SEGS = { type: 'OBJECT', properties: { segments: { type: 'ARRAY', items: { type: 'OBJECT', properties: { qui: { type: 'STRING' }, texte: { type: 'STRING' } }, required: ['qui', 'texte'] } } }, required: ['segments'] };
+async function avSegments(texte, noms) {
+  const propre = paras(stripTags(texte)).join('\n\n');
+  const user = [
+    'Voici une scène d\'une histoire pour enfants. Découpe-la en morceaux pour une lecture à plusieurs voix.',
+    '- Recopie TOUT le texte, mot pour mot, sans rien ajouter, enlever ni corriger, dans l\'ordre.',
+    '- Un morceau est soit de la narration (qui = "narrateur"), soit les paroles d\'un personnage : seulement les mots entre guillemets « » qu\'il prononce, sans les guillemets. L\'incise (« dit le renard ») reste au narrateur.',
+    `- « qui » est EXACTEMENT un de ces noms : narrateur, ${noms.join(', ')}. Paroles de plusieurs personnages à la fois ou d'un inconnu : narrateur.`,
+    '---', propre
+  ].join('\n');
+  const norme = x => String(x || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+  const attendu = propre.replace(/[«»]/g, '').length, dansTexte = norme(propre);
+  for (let essai = 0; essai < 3; essai++) {
+    try {
+      const j = await geminiJson({ system: SYS_VOIX, user, schema: SCHEMA_SEGS, temperature: .2 });
+      const segs = (j.segments || []).filter(x => { const n = norme(x.texte); return !n || dansTexte.includes(n.slice(0, 60)); });
+      const total = segs.reduce((n, x) => n + (x.texte || '').length, 0);
+      if (segs.length && total >= attendu * .85 && total <= attendu * 1.15) return segs;
+    } catch (e) { log('découpage :', e.message); }
+  }
+  return [{ qui: 'narrateur', texte: propre }];                  // dernier recours : tout au narrateur
+}
+async function aventureVoix(fichier, sortie, narr) {
+  const av = JSON.parse(await fs.readFile(fichier, 'utf8')).aventure;
+  const versions = avVersions(av);
+  const total = [...versions.values()].reduce((n, v) => n + v.texte.length, 0);
+  log(`aventure : ${Object.keys(av.scenes).length} scènes, ${versions.size} versions de texte, ${total} caractères`);
+  const pl = PALIERS[0];
+  if (utilise(pl.id) + Math.round(total * 1.3) > 995000) throw new Error('palier Chirp 3 HD plein ce mois-ci');
+  // 1. la distribution, une fois pour toute l'aventure
+  const tout = [...new Set([...versions.values()].map(v => stripTags(v.texte)))].join('\n\n---\n\n');
+  const d = await geminiJson({ system: 'Tu prépares la distribution des voix d\'un livre audio pour enfants.', schema: SCHEMA_DISTRIB, temperature: .2, user: [
+    'Voici TOUTES les scènes d\'une aventure pour enfants. Donne chaque personnage qui PARLE (paroles entre « ») au moins une fois,',
+    'avec son nom tel qu\'il apparaît le plus souvent, son genre (f ou m) et son âge (enfant, adulte, vieux). Un animal ou une créature : selon son caractère.',
+    'Un même personnage n\'apparaît qu\'une fois (pas de doublon avec un surnom).', '---', tout].join('\n') });
+  const liste = await listeGoogle(pl, narr.slice(0, 5));
+  const pool = g => liste.filter(v => v.g === g && v.n !== narr).map(v => v.n);
+  const F = pool('FEMALE'), M = pool('MALE'), roles = {};
+  let iF = 0, iM = 0;
+  for (const p of d.personnages || []) {
+    const l = p.genre === 'm' ? M : F; if (!l.length) continue;
+    const i = p.genre === 'm' ? iM++ : iF++;
+    const vit = p.age === 'enfant' ? 1.06 : p.age === 'vieux' ? .95 : 1;
+    roles[p.nom] = { voix: l[i % l.length], vit, genre: p.genre, age: p.age };
+  }
+  log('distribution :', Object.entries(roles).map(([n, r]) => `${n} → ${court(r.voix)}`).join(', '));
+  // 2. chaque version, avec CETTE distribution
+  await fs.mkdir(sortie, { recursive: true });
+  const index = { narrateur: narr, distribution: roles, cles: {} };
+  const noms = Object.keys(roles), liste2 = [...versions.entries()];
+  const vitesse = .9;
+  let k = 0;
+  for (const [cle, v] of liste2) {
+    const segs = regrouper(await avSegments(v.texte, noms), roles, 1000, '\n\n');
+    const morceaux = await enParallele(3, segs.length, async i => {
+      const r = roles[segs[i].qui];
+      return gcMorceau(segs[i].t, pl, r ? r.voix : narr, vitesse * (r ? r.vit : 1));
+    });
+    const nom = `s${k}.mp3`;
+    await fs.writeFile(path.join(sortie, nom), Buffer.concat(morceaux));
+    index.cles[cle] = nom; k++;
+    log(`${k}/${liste2.length} ${v.scene} (${segs.length} morceaux, ${new Set(segs.map(x => x.qui)).size} voix)`);
+    await fs.writeFile(path.join(sortie, 'index.json'), JSON.stringify(index));
+  }
+  log('fini :', k, 'sons');
+}
+if (process.argv[2] === '--aventure-voix') {
+  try { await aventureVoix(process.argv[3], process.argv[4], process.argv[5] || 'fr-CA-Chirp3-HD-Achernar'); process.exit(0); }
+  catch (e) { log('ÉCHEC :', e.message); process.exit(1); }
+}
+
 await relireTravaux();
 await cleVapid();
 serveur.requestTimeout = 120000;
