@@ -1,0 +1,21 @@
+[Unit]
+Description=Histoires du soir - aligneur texte/voix (faster-whisper, 127.0.0.1:8126)
+After=network-online.target
+
+[Service]
+ExecStart=/opt/histoires-aligner/venv/bin/python /opt/histoires-aligner/aligner.py
+DynamicUser=yes
+Restart=always
+RestartSec=5
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+StateDirectory=histoires-aligner
+Environment=HF_HOME=/var/lib/histoires-aligner/hf
+MemoryMax=2G
+CPUQuota=400%
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

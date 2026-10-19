@@ -815,9 +815,9 @@
   .t-titre { position: absolute; left: 4vw; top: 4vh; right: 30vw; font: 700 clamp(16px, 4.2vh, 40px)/1.15 var(--f-titre); color: #fff4d6;
     text-shadow: 0 2px 10px rgba(0,0,0,.8); opacity: 0; transition: opacity .4s; }
   .tele.boutons .t-titre, .tele.sans-image .t-titre { opacity: .95; }
-  .t-sous { position: absolute; left: 7vw; right: 7vw; bottom: 5vh; text-align: center; font: 600 clamp(17px, 4.6vh, 48px)/1.38 var(--f-histoire);
-    padding: .45em .9em; border-radius: 20px; background: rgba(5,6,20,.62); text-shadow: 0 2px 6px rgba(0,0,0,.7); max-height: 40vh; overflow: hidden;
-    transition: opacity .5s; box-shadow: 0 10px 40px rgba(0,0,0,.4); }
+  .t-sous { position: absolute; left: 50%; transform: translateX(-50%); width: max-content; max-width: 76vw; bottom: 3.5vh; text-align: center;
+    font: 600 clamp(14px, 3.3vh, 34px)/1.3 var(--f-histoire); padding: .3em .8em; border-radius: 14px; background: rgba(5,6,20,.55);
+    text-shadow: 0 2px 6px rgba(0,0,0,.8); max-height: 22vh; overflow: hidden; transition: opacity .5s; }   /* v97 : plus petit, une phrase ou deux */
   .t-sous.vide { opacity: 0; }
   .t-boutons { position: absolute; right: 3vw; top: 3vh; display: flex; gap: 12px; opacity: 0; pointer-events: none; transition: opacity .3s; }
   .tele.boutons .t-boutons { opacity: 1; pointer-events: auto; }
@@ -835,10 +835,17 @@
   .t-choix .chx-l { width: 44px; height: 44px; font-size: 1.1rem; }
   @media (orientation: portrait) {                         /* le cell n'a pas voulu tourner : image en haut, texte dessous */
     .t-img, .t-flou { height: 58%; }
-    .t-sous { bottom: 4vh; max-height: 34vh; font-size: clamp(17px, 2.6vh, 30px); }
+    .t-sous { bottom: 4vh; max-width: 90vw; max-height: 30vh; font-size: clamp(15px, 2.4vh, 26px); }
     .t-choix { flex-direction: column; top: 66%; gap: 22px; } .t-choix .choix { max-width: none; } .t-choix .chx-t { font-size: clamp(18px, 3vh, 30px); }
   }
   body.tele-on .mini-lecteur, body.tele-on .fabrication, body.tele-on nav { display: none !important; }
+  /* v97 : « Quelle voix ce soir ? » et les autres fenêtres s'ouvrent PAR-DESSUS l'écran télé (avant : cachées dessous,
+     et invisibles en plein écran → ▶️ Raconter semblait ne rien faire) */
+  body.tele-on #etg-voile { z-index: 80; } body.tele-on .etg-feuille { z-index: 81; }
+  body.tele-on.etg-mini #etg-voile { z-index: 82; } body.tele-on .etg-feuille.mini { z-index: 83; }
+  .t-message { position: absolute; left: 50%; top: calc(50% + clamp(44px, 9vh, 80px)); transform: translateX(-50%); max-width: 80vw; text-align: center;
+    font: 600 clamp(13px, 2.6vh, 22px)/1.35 var(--f-texte); color: #fff4d6; background: rgba(5,6,20,.6); padding: .4em .9em; border-radius: 12px; }
+  .t-message:empty { display: none; }
 
   /* ═══════════════ v59 : style des histoires ═══════════════ */
   details.sous-reglage { margin-top: 10px; border: 1px solid var(--meuble-bord); border-radius: var(--r-petit); background: var(--meuble-creux); }
@@ -1319,6 +1326,7 @@
   <img class="t-flou" alt=""><img class="t-img bas" alt=""><img class="t-img haut" alt="">
   <div class="t-titre" id="t-titre"></div>
   <button type="button" class="t-depart" id="t-depart">▶️ Raconter</button>
+  <div class="t-message" id="t-message"></div>
   <div class="t-choix" id="t-choix" hidden></div>
   <div class="t-sous vide" id="t-sous"></div>
   <div class="t-boutons">
@@ -1328,7 +1336,7 @@
     <button type="button" id="t-quitter" title="Quitter le mode télé">✕</button>
   </div>
 </div>
-<p id="version-bas">Histoires du soir · <span class="vers">v96</span></p>
+<p id="version-bas">Histoires du soir · <span class="vers">v97</span></p>
 <div class="mini-lecteur" id="mini-lecteur" hidden>
   <div class="ml-vitesses" id="ml-vitesses" hidden></div>
   <div class="ml-rangee">
@@ -3539,7 +3547,7 @@ async function publier(s, st) {
   if (audio) {
     corps.audio = { b64: await b64(audio), type: audio.type || 'audio/mpeg' };
     // v67 : la page partagée fait suivre le texte comme l'app : on lui donne le début de chaque paragraphe (écoute du son)
-    const rep = await reperesAudio(audio, s.histoire).catch(() => null);
+    const rep = await reperesServeur(audio, s.histoire).catch(() => null) || await reperesAudio(audio, s.histoire).catch(() => null);
     if (rep && rep.length === paras(s.histoire).length) corps.reperes = rep.map(x => Math.round(x * 100) / 100);
     corps.vitesse = vitesseLecture();
   }
@@ -4240,7 +4248,37 @@ function reperesAudio(blob, texte) {
 function preparerReperes(seg) {
   if (!seg?.blob || seg.reperes !== undefined) return;
   seg.reperes = null;
-  reperesAudio(seg.blob, seg.texte).then(r => { if (r && r.length === seg.fin - seg.debut) seg.reperes = r; });
+  reperesAudio(seg.blob, seg.texte).then(r => { if (r && r.length === seg.fin - seg.debut && !seg.exact) seg.reperes = r; });
+  reperesServeur(seg.blob, seg.texte).then(r => { if (r && r.length === seg.fin - seg.debut) { seg.reperes = r; seg.exact = true; } });
+}
+
+/* v97 : REPÈRES EXACTS. Les pauses du son se trompaient parfois de 5 à 10 s (mesuré le 2026-10-19 sur « Le robot qui
+   faisait bip » et « La pizza qui fait gling » : un personnage qui parle plus vite ou plus lentement que le narrateur
+   décale la devinette). Le serveur ÉCOUTE maintenant le son (Whisper, service histoires-aligner) et renvoie l'heure
+   exacte du début de chaque paragraphe : écart mesuré ≈ 0,3 s. Les pauses servent en attendant la réponse (10 à 60 s
+   la 1re fois, puis instantané : gardé ici et sur le serveur) et quand le serveur ne répond pas. */
+const reperesExactsCache = new WeakMap();
+async function empreinte(blob, texte) {
+  const h = await crypto.subtle.digest('SHA-256', await new Blob([blob, '\u0000' + texte]).arrayBuffer());
+  return [...new Uint8Array(h)].slice(0, 12).map(x => x.toString(16).padStart(2, '0')).join('');
+}
+function reperesServeur(blob, texte) {
+  let m = reperesExactsCache.get(blob);
+  if (!m) reperesExactsCache.set(blob, m = new Map());
+  if (!m.has(texte)) m.set(texte, (async () => {
+    const N = paras(texte).length;
+    if (N < 2) return [0];
+    const cle = 'rep:' + await empreinte(blob, texte);
+    try { const x = JSON.parse(localStorage.getItem(cle) || 'null'); if (Array.isArray(x) && x.length === N) return x; } catch {}
+    if (!jetonMaison() && !cleRelais()) return null;
+    const r = await fetchRelais(URL_RELAIS + '/histoires/tts/aligner', { method: 'POST', headers: entetesRelais(),
+      body: JSON.stringify({ audio: await b64(blob), paragraphes: paras(texte) }) });
+    const j = await r.json().catch(() => null);
+    if (!r.ok || !j?.ok || !Array.isArray(j.debuts) || j.debuts.length !== N) return null;
+    try { localStorage.setItem(cle, JSON.stringify(j.debuts)); } catch {}
+    return j.debuts;
+  })().catch(() => null));
+  return m.get(texte);
 }
 
 /* Après un choix : on lit LA partie choisie, et seulement elle. Avant (jusqu'à v51), « Raconter » voyait au
@@ -4278,7 +4316,7 @@ async function lireDepuis(i) {
   const pl = $('player'), seg = file[idx];
   if (idx !== fileIdx || !pl.getAttribute('src')) { fileIdx = idx; preparerReperes(seg); pl.src = seg.url; }
   if (!pl.duration || !isFinite(pl.duration)) await new Promise(ok => pl.addEventListener('loadedmetadata', ok, { once: true }));
-  const rep = seg.reperes || (seg.blob ? await reperesAudio(seg.blob, seg.texte) : null);
+  const rep = seg.reperes || (seg.blob ? await Promise.race([reperesServeur(seg.blob, seg.texte), sleep(1500).then(() => null)]) || await reperesAudio(seg.blob, seg.texte) : null);
   let t;
   if (rep && rep.length === seg.fin - seg.debut) t = rep[i - seg.debut];
   else {                                                 // repli : prorata du texte
@@ -5879,7 +5917,8 @@ function teleMaj() {
   // le sous-titre : le paragraphe lu (sinon le titre)
   const p = litIdx >= 0 ? document.querySelector(`#s-text p[data-i="${litIdx}"]`) : null;
   const txt = p ? [...p.childNodes].filter(n => !(n.classList && n.classList.contains('tag'))).map(n => n.textContent).join('').replace(/\s+/g, ' ').trim() : '';   // v64 : sans les mots des balises (« whispers »…), qui ne sont pas lus
-  if (txt !== tele.txt) { tele.txt = txt; $('t-sous').textContent = txt; $('t-sous').classList.toggle('vide', !txt); }
+  const morceau = teleMorceau(txt);                       // v97 : seulement la phrase en cours (et sa voisine si courte)
+  if (morceau !== tele.txt) { tele.txt = morceau; $('t-sous').textContent = morceau; $('t-sous').classList.toggle('vide', !morceau); }
   $('t-titre').textContent = current.titre || '';
   // les choix d'une histoire à choix : seulement quand la partie a été ÉCOUTÉE jusqu'au bout (v77 ; avant, ils
   // apparaissaient dès l'ouverture et cachaient le ▶️ Raconter). Sans son du tout (texte seul) : tout de suite.
@@ -5894,7 +5933,30 @@ function teleMaj() {
   }
   // lecture : le gros ▶️ si rien n'a encore commencé
   $('t-depart').hidden = teleCommence() || !!choix.length;
+  const msg = teleCommence() ? '' : $('tts-status').textContent.replace(/\s+/g, ' ').trim();
+  if ($('t-message').textContent !== msg) $('t-message').textContent = msg;
   $('t-jouer').textContent = (parole?.actif ? !parole.pause : !pl.paused) ? '⏸️' : '▶️';
+}
+/* v97 : le paragraphe en morceaux d'une ou deux phrases (≈ 150 lettres), et le morceau que la voix est en train de dire
+   (au prorata du temps passé dans le paragraphe, d'après les repères ; sans repères : le paragraphe entier, plus petit) */
+function teleMorceaux(txt) {
+  const phrases = txt.match(/[^.!?…»]+(?:[.!?…]+\s*»?|»|$)\s*/g)?.map(x => x.trim()).filter(Boolean) || [txt];
+  const out = [];
+  for (const p of phrases) { const d = out[out.length - 1]; if (d && d.length + p.length < 150) out[out.length - 1] = d + ' ' + p; else out.push(p); }
+  return out;
+}
+function teleMorceau(txt) {
+  if (!txt) return '';
+  const m = teleMorceaux(txt);
+  if (m.length < 2) return txt;
+  const pl = $('player'), seg = file[fileIdx];
+  if (!seg?.reperes || litIdx < seg.debut || litIdx >= seg.fin || !pl.duration) return txt;
+  const k = litIdx - seg.debut, t0 = seg.reperes[k], t1 = k + 1 < seg.reperes.length ? seg.reperes[k + 1] : pl.duration;
+  const f = Math.max(0, Math.min(.999, (pl.currentTime - t0) / Math.max(t1 - t0, .1)));
+  const tot = m.reduce((n, x) => n + x.length, 0);
+  let acc = 0;
+  for (const x of m) { acc += x.length; if (f * tot < acc) return x; }
+  return m[m.length - 1];
 }
 function teleMontrerBoutons() {
   if (!tele) return;
@@ -5911,7 +5973,7 @@ async function teleOuvrir() {
   const t = $('tele');
   tele = { blob: undefined, txt: null, choix: null };
   t.hidden = false; document.body.classList.add('tele-on');
-  try { await t.requestFullscreen?.({ navigationUI: 'hide' }); } catch {}
+  try { await document.documentElement.requestFullscreen?.({ navigationUI: 'hide' }); } catch {}   // v97 : toute la page (les fenêtres restent visibles)
   try { await screen.orientation?.lock?.('landscape'); } catch {}           // possible seulement en plein écran (Android)
   try { tele.verrou = await navigator.wakeLock?.request('screen'); } catch {}
   tele.minuterie = setInterval(teleMaj, 300);

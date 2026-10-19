@@ -76,6 +76,7 @@ file_google = defaultdict(deque)
 
 os.makedirs(PARTAGES, exist_ok=True)
 file_ip = defaultdict(deque)
+file_aligner = defaultdict(deque)
 file_partage = defaultdict(deque)
 en_cours = asyncio.Semaphore(3)
 
@@ -176,6 +177,24 @@ async def google(req):
         return refuse(req, 504, "Google n'a pas répondu à temps")
     except Exception as e:
         return refuse(req, 502, f"Google injoignable ({type(e).__name__})")
+
+
+async def aligner(req):
+    """v97 : heure exacte du début de chaque paragraphe dans le son (service histoires-aligner, Whisper)."""
+    o = req.headers.get("Origin")
+    if o and o not in ORIGINES:
+        return refuse(req, 403, "origine refusée")
+    if not await cle_ok(req):
+        return refuse(req, 401, "connecte-toi à l'app Maison (95.groupelaberge.ca) puis reviens dans Histoires")
+    if trop(file_aligner, ip_de(req), 120, FENETRE):
+        return refuse(req, 429, "trop de demandes, réessaie dans quelques minutes")
+    try:
+        corps = await req.read()
+        async with ClientSession(timeout=ClientTimeout(total=600)) as s:
+            async with s.post("http://127.0.0.1:8126/aligner", data=corps, headers={"Content-Type": "application/json"}) as r:
+                return cors(req, web.json_response(await r.json(), status=r.status))
+    except Exception:
+        return refuse(req, 503, "aligneur indisponible")
 
 
 async def voix(req):
@@ -555,6 +574,8 @@ app.router.add_post("/histoires/tts", tts)
 app.router.add_route("OPTIONS", "/histoires/tts/google", options)
 app.router.add_post("/histoires/tts/google", google)
 app.router.add_get("/histoires/tts/voix", voix)
+app.router.add_route("OPTIONS", "/histoires/tts/aligner", options)
+app.router.add_post("/histoires/tts/aligner", aligner)
 app.router.add_post("/histoires/partage", partager)
 app.router.add_route("OPTIONS", "/histoires/partage/{id}/retirer", options)
 app.router.add_post("/histoires/partage/{id}/retirer", retirer)
