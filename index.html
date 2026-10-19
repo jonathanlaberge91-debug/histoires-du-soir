@@ -1336,7 +1336,7 @@
     <button type="button" id="t-quitter" title="Quitter le mode télé">✕</button>
   </div>
 </div>
-<p id="version-bas">Histoires du soir · <span class="vers">v97</span></p>
+<p id="version-bas">Histoires du soir · <span class="vers">v98</span></p>
 <div class="mini-lecteur" id="mini-lecteur" hidden>
   <div class="ml-vitesses" id="ml-vitesses" hidden></div>
   <div class="ml-rangee">
@@ -4851,7 +4851,20 @@ function srvSauver(s) {
   }
   const id = s.id;
   srvFile = srvFile.then(() => srvEnvoyer(id)).catch(() => {});
+  prealigner(id);                                      // v98 : le texte exact se calcule tout de suite, sans attendre l'écoute
   return srvFile;
+}
+/* v98 : dès qu'une voix est enregistrée (ou arrive du serveur), on demande au serveur le début exact de chaque
+   paragraphe — l'histoire entière et chaque morceau d'une histoire à choix — même si personne n'ouvre ni n'écoute
+   l'histoire. À la première écoute, c'est déjà prêt (gardé ici et sur le serveur). Un à la fois. */
+let alignFile = Promise.resolve();
+function prealigner(id) {
+  alignFile = alignFile.then(async () => {
+    const s = await DB.get(id);
+    if (!s || s.aventure) return;
+    if (s.audio) await reperesServeur(s.audio, s.histoire);
+    for (const c of Object.keys(s.audioNoeuds || {}).sort()) if (s.audioNoeuds[c] && s.arbre?.[c]?.texte) await reperesServeur(s.audioNoeuds[c], s.arbre[c].texte);
+  }).catch(() => {});
 }
 async function srvEnvoyer(id) {
   const s = await DB.get(id);
